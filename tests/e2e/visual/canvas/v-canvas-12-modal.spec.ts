@@ -221,7 +221,7 @@ test.describe('V-CANVAS-12: Config Modal Extended', () => {
   })
 
   test('V-CANVAS-12-S23: first sheet opens viewport-centered', async ({ page }) => {
-    // Per CANVAS-229 (amends CANVAS-151): the first config sheet opens
+    // Per CANVAS-229: the first config sheet opens
     // viewport-centered; later sheets cascade +28px each.
     await page.goto('/workbench')
     await waitForCanvasLoad(page)

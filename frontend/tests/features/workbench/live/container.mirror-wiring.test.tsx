@@ -4,8 +4,9 @@
  * The container composes useSessionOwnership into the workbench chrome:
  * mirror banner below the breadcrumb, read-only canvas + locked toolbar while
  * mirroring, take-over dialogs, the holder-side "N watching" pill, the
- * throttled holder draft stream, the forced-take-over toast, and the
- * See connection deep-link to /settings/mcp.
+ * throttled holder draft stream, the forced-take-over toast, the
+ * See connection deep-link to /settings/mcp, and the environment an
+ * assistant's run leaves in the picker.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -16,8 +17,14 @@ import { WorkbenchContainer } from '@/features/workbench/live'
 import { ThemeProvider } from '@/design-system/theme-provider'
 import { ToastProvider, ToastContainer } from '@/components/ui/toast'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
-import { fetchTest } from '@/features/tests/api/crud'
+import { fetchTest, fetchTestWorkflow } from '@/features/tests/api/crud'
 import type { SessionOwnership } from '@/features/workbench/hooks/use-session-ownership'
+import type { MirroredRun } from '@/features/workbench/api/ownership'
+import { usePageBlockStore } from '@/stores/page-block-store'
+import { useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
+import { workbenchApi } from '@/features/workbench/api/workbench'
+import { fetchEnvironmentNames } from '@/features/settings/api/environments/crud'
+import { STORAGE_KEYS } from '@/hooks/use-canvas-state'
 
 // Lightweight apiClient over the global fetch mock - mirrors the
 // container.reset-guard harness.
@@ -70,6 +77,7 @@ vi.mock('@/features/suites/api/crud', () => ({
 vi.mock('@/features/settings/api/environments/crud', () => ({
   fetchEnvironmentNames: vi.fn().mockResolvedValue([
     { id: 'a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d', name: 'Development', tags: [] },
+    { id: 'b2c3d4e5-f6a7-4b5c-9d8e-0f1a2b3c4d5e', name: 'Lab', tags: [] },
   ]),
 }))
 
@@ -135,6 +143,7 @@ function idleOwnership(): SessionOwnership {
     mcpSessionId: null,
     browserSessionId: null,
     mirroredRun: null,
+    watchKind: null,
     browsingAway: false,
     browseAway: vi.fn(),
     rejoinMirror: vi.fn(),
@@ -340,6 +349,19 @@ describe('WorkbenchContainer - session ownership wiring', () => {
       expect(screen.getByTestId('mirror-follow-changes-button')).toHaveTextContent('Follow Changes')
     })
 
+    it("names an assistant's watched change on the banner", async () => {
+      setOwnership({
+        isMirroring: true,
+        holderLabel: 'Claude Code (MCP)',
+        holderKind: 'mcp',
+        mcpSessionId: 'sess-1',
+        watchKind: 'change',
+      })
+      renderContainer()
+
+      expect(await screen.findByTestId('mirror-banner')).toHaveTextContent('read-only, changing live')
+    })
+
     it('also shows Follow Changes on a person watch banner (two-tab mirroring)', async () => {
       const user = userEvent.setup()
       setOwnership({ isMirroring: true, holderLabel: 'Ashley', holderKind: 'person' })
@@ -400,6 +422,46 @@ describe('WorkbenchContainer - session ownership wiring', () => {
       expect(readout).toBeDisabled()
       expect(screen.getByTestId('action-focus-current-button')).toBeInTheDocument()
       expect(screen.queryByTestId('run-button')).not.toBeInTheDocument()
+    })
+
+    describe('an announced run starting in this tab (RUNM-11)', () => {
+      const RUN = {
+        sessionId: 'run-1',
+        testId: 'test-1',
+        testName: 'Nightly Smoke',
+        environmentId: 'env-1',
+        environmentName: 'Staging',
+        status: 'running' as const,
+      }
+      const realRequestFitView = useWorkflowStore.getState().requestFitView
+      const requestFitView = vi.fn()
+
+      beforeEach(() => {
+        useWorkflowStore.setState({ requestFitView })
+      })
+
+      afterEach(() => {
+        // The container is still mounted here: the store change re-renders it.
+        act(() => {
+          useWorkflowStore.setState({ requestFitView: realRequestFitView })
+        })
+      })
+
+      it("fits the whole test for the assistant's run, as the canvas's own Fit View does", async () => {
+        setOwnership({ isMirroring: true, holderLabel: 'Claude Code (MCP)', holderKind: 'mcp', mirroredRun: RUN })
+        renderContainer()
+
+        await screen.findByTestId('environment-selector')
+        expect(requestFitView).toHaveBeenCalledWith()
+      })
+
+      it("leaves the view alone for a person's run", async () => {
+        setOwnership({ isMirroring: true, holderLabel: 'Ashley', holderKind: 'person', mirroredRun: RUN })
+        renderContainer()
+
+        await screen.findByTestId('environment-selector')
+        expect(requestFitView).not.toHaveBeenCalledWith()
+      })
     })
 
     it('hints at the announced run while browsing', async () => {
@@ -528,6 +590,333 @@ describe('WorkbenchContainer - session ownership wiring', () => {
     })
   })
 
+  describe('the suites of the test a watching tab is shown', () => {
+    const RECOVERED_TEST = {
+      id: 'test-456',
+      name: 'Recovered Test',
+      description: '',
+      tags: [],
+      suite: null,
+      workflow: { nodes: [], edges: [] },
+    }
+    const CHECKOUT = {
+      ...RECOVERED_TEST,
+      id: 'test-7',
+      name: 'Checkout Flow',
+      suite_ids: ['suite-1'],
+      suite_variables: [{ name: 'base_url', type: 'string' }],
+      regression_variables: [{ name: 'region', type: 'string' }],
+    }
+    const SIGNUP = {
+      ...RECOVERED_TEST,
+      id: 'test-8',
+      name: 'Signup',
+      suite_ids: ['suite-2'],
+      suite_variables: [{ name: 'signup_url', type: 'string' }],
+      regression_variables: [],
+    }
+    const WATCHING_ASSISTANT = { isMirroring: true, holderLabel: 'Claude Code (MCP)', holderKind: 'mcp' as const }
+
+    afterEach(() => {
+      vi.mocked(fetchTest).mockReset().mockResolvedValue(RECOVERED_TEST as never)
+      act(() => {
+        usePageBlockStore.getState().clearBlock()
+      })
+    })
+
+    const MIRRORED_BLOCK = { id: 'mirrored-1', type: 'log', position: { x: 0, y: 0 }, data: { label: 'Log' } }
+
+    /** What a frame does to the store: its Blocks land, then the canvas takes its test. */
+    function showTest(testId: string | null, testName: string | null) {
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.applyMirroredGraph({ nodes: [MIRRORED_BLOCK] as never, edges: [], variables: [] })
+        store.setEditingTest(testId, testName)
+      })
+    }
+
+    function readsOf(testId: string): number {
+      return vi.mocked(fetchTest).mock.calls.filter(([id]) => id === testId).length
+    }
+
+    it('reads the suites and suite variables of a test a frame switches it to, as opening the test does', async () => {
+      vi.mocked(fetchTest).mockResolvedValue(CHECKOUT as never)
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      showTest('test-7', 'Checkout Flow')
+
+      await waitFor(() => {
+        expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual(['suite-1'])
+      })
+      const { namespaceVariables } = useWorkflowStore.getState()
+      expect(namespaceVariables.suite).toEqual([{ name: 'base_url', type: 'string' }])
+      expect(namespaceVariables.regression).toEqual([{ name: 'region', type: 'string' }])
+      expect(readsOf('test-7')).toBe(1)
+    })
+
+    it('clears the suites when a frame switches it to an unsaved draft', async () => {
+      showTest('test-x', 'Login')
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.setEditingTestSuiteIds(['suite-x'])
+        store.setNamespaceVariables('suite', [{ name: 'login_url', type: 'string' }])
+        store.setNamespaceVariables('regression', [{ name: 'tenant', type: 'string' }])
+      })
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      showTest(null, null)
+
+      await waitFor(() => {
+        expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual([])
+      })
+      const { namespaceVariables } = useWorkflowStore.getState()
+      expect(namespaceVariables.suite).toEqual([])
+      expect(namespaceVariables.regression).toEqual([])
+    })
+
+    it('blocks the workbench with the retry card when the read fails, and the retry applies the suites', async () => {
+      vi.mocked(fetchTest).mockRejectedValueOnce(new Error('Service Unavailable'))
+      vi.mocked(fetchTest).mockResolvedValue(CHECKOUT as never)
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      showTest('test-7', 'Checkout Flow')
+
+      await waitFor(() => {
+        expect(usePageBlockStore.getState().block?.title).toBe('Could not load suite variables')
+      })
+      expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual([])
+
+      await act(async () => {
+        await usePageBlockStore.getState().block?.retry()
+      })
+
+      expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual(['suite-1'])
+      expect(usePageBlockStore.getState().block).toBeNull()
+    })
+
+    it('keeps the suites of the latest test when an earlier read answers last', async () => {
+      let answerCheckout: (value: unknown) => void = () => {}
+      vi.mocked(fetchTest).mockImplementation((testId: string) => {
+        if (testId === 'test-7') {
+          return new Promise((resolve) => {
+            answerCheckout = resolve
+          }) as never
+        }
+        return Promise.resolve(SIGNUP as never)
+      })
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      showTest('test-7', 'Checkout Flow')
+      showTest('test-8', 'Signup')
+      await waitFor(() => {
+        expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual(['suite-2'])
+      })
+      await act(async () => {
+        answerCheckout(CHECKOUT)
+        await Promise.resolve()
+      })
+
+      expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual(['suite-2'])
+      expect(useWorkflowStore.getState().namespaceVariables.suite).toEqual([
+        { name: 'signup_url', type: 'string' },
+      ])
+    })
+
+    function notFound() {
+      return Object.assign(new Error('Test not found'), { status: 404 })
+    }
+
+    /** A watching tab that showed Login, with its suites, before a frame switches it to Checkout. */
+    async function watchLoginThenCheckout() {
+      showTest('test-x', 'Login')
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.setEditingTestSuiteIds(['suite-x'])
+        store.setNamespaceVariables('suite', [{ name: 'login_url', type: 'string' }])
+        store.setNamespaceVariables('regression', [{ name: 'tenant', type: 'string' }])
+      })
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+      showTest('test-7', 'Checkout Flow')
+    }
+
+    function expectSuitesDropped() {
+      const { editingTestSuiteIds, namespaceVariables } = useWorkflowStore.getState()
+      expect(editingTestSuiteIds).toEqual([])
+      expect(namespaceVariables.suite).toEqual([])
+      expect(namespaceVariables.regression).toEqual([])
+    }
+
+    it('drops the suites of a watched test that is gone, shows no dialog, and keeps mirroring', async () => {
+      vi.mocked(fetchTest).mockRejectedValue(notFound())
+
+      await watchLoginThenCheckout()
+
+      await waitFor(() => {
+        expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual([])
+      })
+      expectSuitesDropped()
+      expect(useDeletedTestStore.getState().info).toBeNull()
+      expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      expect(usePageBlockStore.getState().block).toBeNull()
+
+      // The next frames still land on the watched test, with no new read.
+      showTest('test-7', 'Checkout Flow')
+      showTest('test-7', 'Checkout Flow')
+      expect(useWorkflowStore.getState().editingTestId).toBe('test-7')
+      expect(useWorkflowStore.getState().nodes.map((node) => node.id)).toEqual(['mirrored-1'])
+      expect(screen.getByTestId('mirror-banner')).toBeInTheDocument()
+      expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      expect(readsOf('test-7')).toBe(1)
+    })
+
+    it('closes the retry card when the retry finds the watched test gone, and never clears the run session', async () => {
+      vi.mocked(fetchTest).mockRejectedValueOnce(new Error('Service Unavailable'))
+      vi.mocked(fetchTest).mockRejectedValue(notFound())
+      await watchLoginThenCheckout()
+      await waitFor(() => {
+        expect(usePageBlockStore.getState().block?.title).toBe('Could not load suite variables')
+      })
+
+      let retryFailure: unknown = null
+      await act(async () => {
+        await usePageBlockStore.getState().block?.retry().catch((error: unknown) => { retryFailure = error })
+      })
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+
+      expect(retryFailure).toBeNull()
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expectSuitesDropped()
+      expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      expect(vi.mocked(workbenchApi.clearSession)).not.toHaveBeenCalled()
+      expect(vi.mocked(workbenchApi.stopRun)).not.toHaveBeenCalled()
+    })
+
+    it('a holder whose open test is gone gets the deleted-test dialog once', async () => {
+      vi.mocked(fetchTest).mockRejectedValue(notFound())
+      setOwnership({ isHolder: true })
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.setNodes([MIRRORED_BLOCK] as never, { skipDirty: true })
+        store.setEditingTest('test-7', 'Checkout Flow')
+      })
+      const router = renderContainer()
+      await screen.findByTestId('workflow-canvas')
+
+      await act(async () => {
+        await router.navigate('/workbench?from=suite')
+      })
+
+      expect(await screen.findByTestId('deleted-test-modal')).toHaveTextContent('"Checkout Flow"')
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+      await waitFor(() => {
+        expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      })
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+      expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      expect(readsOf('test-7')).toBe(1)
+      expect(vi.mocked(workbenchApi.clearSession)).toHaveBeenCalled()
+    })
+
+    it("a browsing tab's Close on the deleted-test dialog never clears the run session on the server", async () => {
+      vi.mocked(fetchTest).mockRejectedValue(notFound())
+      setOwnership({ ...WATCHING_ASSISTANT, browsingAway: true })
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.setNodes([MIRRORED_BLOCK] as never, { skipDirty: true })
+        store.setEditingTest('test-7', 'Checkout Flow')
+      })
+      const router = renderContainer()
+      await screen.findByTestId('mirror-banner')
+      await act(async () => {
+        await router.navigate('/workbench?from=suite')
+      })
+      expect(await screen.findByTestId('deleted-test-modal')).toHaveTextContent('"Checkout Flow"')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+      await waitFor(() => {
+        expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      })
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      })
+
+      expect(vi.mocked(workbenchApi.clearSession)).not.toHaveBeenCalled()
+      expect(vi.mocked(workbenchApi.stopRun)).not.toHaveBeenCalled()
+    })
+
+    it('raises nothing when a test it has already moved past turns out to be gone', async () => {
+      let failCheckout: (reason: unknown) => void = () => {}
+      vi.mocked(fetchTest).mockImplementation((testId: string) => {
+        if (testId === 'test-7') {
+          return new Promise((_, reject) => {
+            failCheckout = reject
+          }) as never
+        }
+        return Promise.resolve(SIGNUP as never)
+      })
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      showTest('test-7', 'Checkout Flow')
+      showTest('test-8', 'Signup')
+      await waitFor(() => {
+        expect(useWorkflowStore.getState().editingTestSuiteIds).toEqual(['suite-2'])
+      })
+      await act(async () => {
+        failCheckout(notFound())
+        await Promise.resolve()
+      })
+
+      expect(useDeletedTestStore.getState().info).toBeNull()
+      expect(screen.queryByTestId('deleted-test-modal')).not.toBeInTheDocument()
+      expect(usePageBlockStore.getState().block).toBeNull()
+    })
+
+    it('reads nothing for the test it already shows when it starts watching', async () => {
+      showTest('test-x', 'Login')
+      setOwnership(WATCHING_ASSISTANT)
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      expect(readsOf('test-x')).toBe(0)
+    })
+
+    it('reads nothing while the watcher browses: opening a test reads its own suites', async () => {
+      setOwnership({ ...WATCHING_ASSISTANT, browsingAway: true })
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+
+      showTest('test-7', 'Checkout Flow')
+
+      expect(readsOf('test-7')).toBe(0)
+    })
+
+    it('reads nothing for the holder, whose own open and save set its suites', async () => {
+      setOwnership({ isHolder: true })
+      renderContainer()
+      await screen.findByTestId('workflow-canvas')
+
+      showTest('test-7', 'Checkout Flow')
+
+      expect(readsOf('test-7')).toBe(0)
+    })
+  })
+
   describe('write-borrow refresh', () => {
     it('re-converges the open test on storage when the slot returns from a write-only borrow', async () => {
       setOwnership({ isHolder: true })
@@ -548,6 +937,36 @@ describe('WorkbenchContainer - session ownership wiring', () => {
       })
     })
 
+    it('a tab browsing the changed test ends on the test as stored, saved, once the session is handed back', async () => {
+      setOwnership({ isMirroring: true, browsingAway: true, holderLabel: 'Claude Code (MCP)', holderKind: 'mcp' })
+      act(() => {
+        const store = useWorkflowStore.getState()
+        store.setNodes([{ id: 'before-1', type: 'log', position: { x: 0, y: 0 }, data: { label: 'Log' } }] as never, {
+          skipDirty: true,
+        })
+        store.setEditingTest('test-456', 'Recovered Test')
+        store.markSaved()
+      })
+      renderContainer()
+      await screen.findByTestId('mirror-banner')
+      vi.mocked(fetchTestWorkflow).mockResolvedValueOnce({
+        nodes: [{ id: 'after-1', type: 'log', position: { x: 0, y: 0 }, data: { label: 'Log' } }],
+        edges: [],
+      } as never)
+
+      act(() => {
+        setOwnership({ isHolder: true, inheritRefreshTick: 1 })
+        useWorkflowStore.getState().setEditingTest('test-456', 'Stale Name')
+      })
+
+      await waitFor(() => {
+        expect(useWorkflowStore.getState().nodes.map((node) => node.id)).toEqual(['after-1'])
+      })
+      expect(useWorkflowStore.getState().editingTestName).toBe('Recovered Test')
+      expect(useWorkflowStore.getState().isDirty).toBe(false)
+      expect(useWorkflowStore.getState().getSavedNodes().map((node) => node.id)).toEqual(['after-1'])
+    })
+
     it('does nothing on a write-borrow return with no open test', async () => {
       setOwnership({ isHolder: true })
       renderContainer()
@@ -564,6 +983,290 @@ describe('WorkbenchContainer - session ownership wiring', () => {
         await new Promise((resolve) => setTimeout(resolve, 20))
       })
       expect(vi.mocked(fetchTest)).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the environment picker after an assistant's run", () => {
+    const DEV_ID = 'a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d'
+    const LAB_ID = 'b2c3d4e5-f6a7-4b5c-9d8e-0f1a2b3c4d5e'
+    const DEV_ENV = { id: DEV_ID, name: 'Development', tags: [] }
+    const LAB_ENV = { id: LAB_ID, name: 'Lab', tags: [] }
+    const HOLDER ={ isHolder: true, holderLabel: 'This tab', holderKind: 'person' } as const
+    const ASSISTANT = { isMirroring: true, holderLabel: 'Claude Code (MCP)', holderKind: 'mcp' } as const
+    const PERSON = { isMirroring: true, holderLabel: 'Ashley', holderKind: 'person' } as const
+    const LAB_RUN: MirroredRun = {
+      sessionId: 'run-1',
+      testId: 'test-1',
+      testName: 'Nightly Smoke',
+      environmentId: LAB_ID,
+      environmentName: 'Lab',
+      status: 'running',
+    }
+
+    const picker = () => screen.getByTestId('environment-selector')
+
+    // A queued answer a test never read must not answer the next test's page load.
+    afterEach(() => {
+      vi.mocked(fetchEnvironmentNames).mockReset().mockResolvedValue([DEV_ENV, LAB_ENV])
+    })
+
+    async function settle(): Promise<void> {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+    }
+
+    // The ownership mock is not reactive: a store write re-renders the container on the new state.
+    function moveTo(overrides: Partial<SessionOwnership>): void {
+      act(() => {
+        setOwnership(overrides)
+        useWorkflowStore.setState({ edges: [] })
+      })
+    }
+
+    async function openTab(ownership: Partial<SessionOwnership>): Promise<void> {
+      setOwnership(ownership)
+      renderContainer()
+      await screen.findByTestId('environment-selector')
+      await waitFor(() => expect(vi.mocked(fetchEnvironmentNames)).toHaveBeenCalled())
+      await settle()
+    }
+
+    async function pick(user: ReturnType<typeof userEvent.setup>, envId: string): Promise<void> {
+      await user.click(picker())
+      await user.click(await screen.findByTestId(`env-${envId}`))
+    }
+
+    function runAndHandBack(run: MirroredRun): void {
+      moveTo({ ...ASSISTANT })
+      moveTo({ ...ASSISTANT, mirroredRun: run })
+      // A reconnect announces the same run again, as a fresh object.
+      moveTo({ ...ASSISTANT, mirroredRun: { ...run } })
+      moveTo({ ...ASSISTANT, mirroredRun: null })
+      moveTo({ ...HOLDER })
+    }
+
+    it("shows the run's environment in a picker that was empty before the run", async () => {
+      await openTab(HOLDER)
+      expect(picker()).toHaveTextContent(/^Select Environment$/)
+
+      runAndHandBack(LAB_RUN)
+
+      await waitFor(() => expect(picker()).toHaveTextContent(/^Lab$/))
+      expect(picker()).toBeEnabled()
+    })
+
+    it('replaces another environment the picker held before the run', async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+      expect(picker()).toHaveTextContent(/^Development$/)
+
+      runAndHandBack(LAB_RUN)
+
+      await waitFor(() => expect(picker()).toHaveTextContent(/^Lab$/))
+    })
+
+    it("takes the run's environment as a pick: remembered, and first under Recent", async () => {
+      const user = userEvent.setup()
+      localStorage.setItem(STORAGE_KEYS.REMEMBER_SELECTION, 'true')
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+
+      runAndHandBack(LAB_RUN)
+
+      await waitFor(() => expect(localStorage.getItem(STORAGE_KEYS.SELECTED_ENV)).toBe(LAB_ID))
+      await user.click(picker())
+      const recent = await screen.findAllByTestId(/^env-recent-/)
+      expect(recent.map((row) => row.dataset.testid)).toEqual([`env-recent-${LAB_ID}`, `env-recent-${DEV_ID}`])
+    })
+
+    it("stays as it was when the run's environment no longer exists", async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+
+      runAndHandBack({ ...LAB_RUN, environmentId: 'c3d4e5f6-a7b8-4c5d-8e9f-1a2b3c4d5e6f', environmentName: 'Retired' })
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+    })
+
+    it("stays as it was when the run's environment was deleted on the server during the run", async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+      // The tab's list still has Lab; the server no longer does.
+      vi.mocked(fetchEnvironmentNames).mockResolvedValueOnce([DEV_ENV])
+
+      runAndHandBack(LAB_RUN)
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+      expect(vi.mocked(fetchEnvironmentNames)).toHaveBeenCalledTimes(2)
+    })
+
+    it('takes an environment the server has although the tab loaded before it was made', async () => {
+      const user = userEvent.setup()
+      vi.mocked(fetchEnvironmentNames).mockResolvedValueOnce([DEV_ENV])
+      await openTab(HOLDER)
+
+      runAndHandBack(LAB_RUN)
+
+      await waitFor(() => expect(picker()).toHaveTextContent(/^Lab$/))
+      await user.click(picker())
+      const recent = await screen.findAllByTestId(/^env-recent-/)
+      expect(recent.map((row) => row.dataset.testid)).toEqual([`env-recent-${LAB_ID}`])
+    })
+
+    it('stays as it was, with no new error, when the server list cannot be read at the end of the run', async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+      vi.mocked(fetchEnvironmentNames).mockRejectedValueOnce(new Error('Service Unavailable'))
+
+      runAndHandBack(LAB_RUN)
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+      expect(vi.mocked(fetchEnvironmentNames)).toHaveBeenCalledTimes(2)
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expect(document.querySelectorAll('[data-toast]')).toHaveLength(0)
+    })
+
+    it('stays as it was after a run that names no environment', async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+
+      runAndHandBack({ ...LAB_RUN, environmentId: null, environmentName: null })
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+    })
+
+    it('a tab that takes the session over during the run keeps its environment, and a later pick stands', async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      moveTo({ ...ASSISTANT, mirroredRun: LAB_RUN })
+
+      // The run is still announced: it goes on after the take-over.
+      moveTo({ ...HOLDER, mirroredRun: LAB_RUN })
+
+      await waitFor(() => expect(picker()).toHaveTextContent(/^Lab$/))
+      await pick(user, DEV_ID)
+      moveTo({ ...HOLDER, mirroredRun: null })
+      await settle()
+      expect(picker()).toHaveTextContent(/^Development$/)
+    })
+
+    it("a third tab takes the run's environment when another tab takes over during the run", async () => {
+      await openTab(PERSON)
+      moveTo({ ...ASSISTANT })
+      moveTo({ ...ASSISTANT, mirroredRun: LAB_RUN })
+
+      // Ashley takes over: the run goes on, but no longer plays here.
+      moveTo({ ...PERSON })
+
+      await waitFor(() => expect(picker()).toHaveTextContent(/^Lab$/))
+      expect(vi.mocked(fetchEnvironmentNames)).toHaveBeenCalledTimes(2)
+    })
+
+    it('a run that plays while this tab holds the session leaves the picker alone', async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+
+      moveTo({ ...HOLDER, mirroredRun: LAB_RUN })
+      moveTo({ ...HOLDER, mirroredRun: null })
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+    })
+
+    it("a tab that watched another person's run keeps its own selection", async () => {
+      localStorage.setItem(STORAGE_KEYS.REMEMBER_SELECTION, 'true')
+      localStorage.setItem(STORAGE_KEYS.SELECTED_ENV, DEV_ID)
+      await openTab(PERSON)
+      expect(picker()).toHaveTextContent(/^Development$/)
+
+      moveTo({ ...PERSON, mirroredRun: LAB_RUN })
+      moveTo({ ...PERSON, mirroredRun: null })
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+    })
+
+    it('a tab that browsed away before the run ended keeps its own selection', async () => {
+      const user = userEvent.setup()
+      await openTab(HOLDER)
+      await pick(user, DEV_ID)
+      moveTo({ ...ASSISTANT, mirroredRun: LAB_RUN })
+
+      moveTo({ ...ASSISTANT, browsingAway: true, mirroredRun: LAB_RUN })
+      moveTo({ ...ASSISTANT, browsingAway: true, mirroredRun: null })
+      moveTo({ ...HOLDER })
+      await settle()
+
+      expect(picker()).toHaveTextContent(/^Development$/)
+    })
+  })
+
+  describe("the run controls after a take-over during an assistant's run", () => {
+    const ASSISTANT = { isMirroring: true, holderLabel: 'Claude Code (MCP)', holderKind: 'mcp' } as const
+    const RUN: MirroredRun = {
+      sessionId: 'run-1',
+      testId: 'test-1',
+      testName: 'Nightly Smoke',
+      environmentId: null,
+      environmentName: null,
+      status: 'running',
+    }
+
+    function moveTo(overrides: Partial<SessionOwnership>): void {
+      act(() => {
+        setOwnership(overrides)
+        useWorkflowStore.setState({ edges: [] })
+      })
+    }
+
+    // The tab opens, then the assistant's run starts playing in it.
+    async function watchTheRun(): Promise<void> {
+      setOwnership({ isMirroring: true, holderLabel: 'Ashley', holderKind: 'person' })
+      renderContainer()
+      await screen.findByTestId('environment-selector')
+      vi.mocked(workbenchApi.getCurrentSession).mockResolvedValueOnce({
+        session_id: 'run-1',
+        test_id: 'test-1',
+        websocket_topic: 'workbench:run-1',
+        status: 'running',
+        test_name: 'Nightly Smoke',
+      } as Awaited<ReturnType<typeof workbenchApi.getCurrentSession>>)
+      moveTo({ ...ASSISTANT })
+      moveTo({ ...ASSISTANT, mirroredRun: RUN })
+      await waitFor(() => expect(screen.getByTestId('workflow-status')).toHaveAttribute('data-status', 'running'))
+      expect(screen.getByTestId('environment-selector')).toHaveTextContent('Env:')
+    }
+
+    it('a third tab whose mirror of the run ended offers no run control for it', async () => {
+      await watchTheRun()
+
+      moveTo({ isMirroring: true, holderLabel: 'Ashley', holderKind: 'person' })
+
+      await waitFor(() => expect(screen.getByTestId('workflow-status')).not.toHaveAttribute('data-status', 'running'))
+      expect(screen.queryByTestId('action-stop-button')).not.toBeInTheDocument()
+      expect(screen.getByTestId('run-button')).toBeDisabled()
+      expect(screen.getByTestId('environment-selector')).not.toHaveTextContent('Env:')
+    })
+
+    it('the tab that takes the session over holds its draft with Run, not the run with Stop', async () => {
+      await watchTheRun()
+
+      moveTo({ isHolder: true, holderLabel: 'This tab', holderKind: 'person' })
+
+      await waitFor(() => expect(screen.getByTestId('workflow-status')).not.toHaveAttribute('data-status', 'running'))
+      expect(screen.queryByTestId('action-stop-button')).not.toBeInTheDocument()
+      expect(screen.getByTestId('run-button')).toBeEnabled()
     })
   })
 

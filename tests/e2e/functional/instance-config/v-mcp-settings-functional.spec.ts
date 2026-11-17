@@ -80,8 +80,9 @@
  * 13. A failed status poll shows `{reason} (showing the last known state)` and keeps the status
  *    bar and both groups as they were, even when the endpoint stopped meanwhile; the next good
  *    poll clears the line and shows the real state.
- * 14. A refused Disconnect shows the toast "Could Not Disconnect Session" with the reason and keeps
- *    the row and the session; Disconnect removes the row and the endpoint refuses the session.
+ * 14. A client that sends a title is listed by its title, not its name. A refused Disconnect shows
+ *    the toast "Could Not Disconnect Session" with the reason and keeps the row and the session;
+ *    Disconnect removes the row and the endpoint refuses the session.
  */
 
 import path from 'path'
@@ -150,6 +151,7 @@ const READ_REASON = 'MCP settings unreadable: mcp-settings E2E 5c1d'
 const POLL_REASON = 'MCP status unreadable: mcp-settings E2E 9a4f'
 const DISCONNECT_REASON = 'Session cannot be closed: mcp-settings E2E 2e7b'
 const CLIENT_NAME = 'wave-e2e-held-client'
+const CLIENT_TITLE = 'WAVE E2E Held Client'
 
 // ============================================================================
 // API and file reads
@@ -1421,7 +1423,7 @@ test.describe('V-MCP-SETTINGS-FUNCTIONAL: Settings > MCP Server', () => {
   }) => {
     await storeSettings(page, { enabled: true })
     await expectListening(SAVED_PORT)
-    const client = await connectMcpClient(page, mcpEndpointUrl(SAVED_PORT), CLIENT_NAME)
+    const client = await connectMcpClient(page, mcpEndpointUrl(SAVED_PORT), CLIENT_NAME, CLIENT_TITLE)
     try {
       const disconnectRoute = apiPathMatcher(`/mcp/sessions/${client.sessionId}`)
       const sessionIds = async (): Promise<string[]> =>
@@ -1429,7 +1431,8 @@ test.describe('V-MCP-SETTINGS-FUNCTIONAL: Settings > MCP Server', () => {
       await openMcpPage(page)
       const row = page.getByTestId(`mcp-session-row-${client.sessionId}`)
       const disconnect = row.getByRole('button', { name: 'Disconnect', exact: true })
-      await expect(row).toContainText(CLIENT_NAME)
+      await expect(row).toContainText(CLIENT_TITLE)
+      await expect(row).not.toContainText(CLIENT_NAME)
       expect(await sessionIds()).toEqual([client.sessionId])
 
       await test.step('a refused disconnect shows the reason and keeps the row and the session', async () => {

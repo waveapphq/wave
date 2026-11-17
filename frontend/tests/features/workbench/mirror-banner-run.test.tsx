@@ -3,7 +3,8 @@
  *
  * While the holder has a run in flight the banner's trailing phrase reads
  * "read-only, running live" for a person holder and an assistant holder alike.
- * The build/idle phrases and every banner pill are unchanged.
+ * Outside a run an assistant reads "changing live" during a watched change and
+ * "building live" otherwise. Every banner pill is unchanged.
  *
  * Component under test:
  * frontend/src/features/workbench/common/canvas/chrome/mirror-banner.tsx
@@ -20,6 +21,7 @@ import {
 const RUN_PHRASE = 'read-only, running live'
 const PERSON_IDLE_PHRASE = 'read-only, updates as they edit'
 const MCP_BUILD_PHRASE = 'read-only, building live'
+const MCP_CHANGE_PHRASE = 'read-only, changing live'
 
 function renderBanner(props: Partial<MirrorBannerProps> = {}) {
   const defaultProps: MirrorBannerProps = {
@@ -119,5 +121,45 @@ describe('MirrorBanner - run variant keeps its chrome', () => {
     })
 
     expect(screen.getByTestId('mirror-follow-changes-button')).toBeInTheDocument()
+  })
+})
+
+describe('MirrorBanner - watched change phrase', () => {
+  const ASSISTANT = { holderKind: 'mcp' as const, holderLabel: 'Claude Code (MCP)' }
+
+  it('reads "changing live" while the assistant streams a watched change', () => {
+    renderBanner({ ...ASSISTANT, watchKind: 'change' })
+
+    const banner = screen.getByTestId('mirror-banner')
+    expect(banner).toHaveTextContent(MCP_CHANGE_PHRASE)
+    expect(banner).not.toHaveTextContent(MCP_BUILD_PHRASE)
+  })
+
+  it('reads "building live" during a watched build', () => {
+    renderBanner({ ...ASSISTANT, watchKind: 'build' })
+
+    expect(screen.getByTestId('mirror-banner')).toHaveTextContent(MCP_BUILD_PHRASE)
+  })
+
+  it('reads "building live" for an assistant holder that streams nothing', () => {
+    renderBanner({ ...ASSISTANT, watchKind: null })
+
+    expect(screen.getByTestId('mirror-banner')).toHaveTextContent(MCP_BUILD_PHRASE)
+  })
+
+  it('reads "running live" when a run is in flight, whatever the assistant streamed before', () => {
+    renderBanner({ ...ASSISTANT, watchKind: 'change', runActive: true })
+
+    const banner = screen.getByTestId('mirror-banner')
+    expect(banner).toHaveTextContent(RUN_PHRASE)
+    expect(banner).not.toHaveTextContent(MCP_CHANGE_PHRASE)
+  })
+
+  it('keeps the person phrase for a person holder', () => {
+    renderBanner({ holderKind: 'person', watchKind: 'change' })
+
+    const banner = screen.getByTestId('mirror-banner')
+    expect(banner).toHaveTextContent(PERSON_IDLE_PHRASE)
+    expect(banner).not.toHaveTextContent(MCP_CHANGE_PHRASE)
   })
 })

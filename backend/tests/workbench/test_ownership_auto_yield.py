@@ -1,11 +1,13 @@
 """Auto-yield of a clean idle holder to an assistant claim.
 
 Covers the ownership slot's new holder-dirtiness flag, the ``kind="mcp"``
-auto-yield branch of ``claim``, the ``reason`` field on ``holder_changed``, and
-the manager's ``draft_state`` inbound frame that feeds the dirtiness gate.
+auto-yield branch of ``claim``, the ``reason`` field on ``holder_changed``, the
+hand back to the tab that gave way, and the manager's ``draft_state`` inbound
+frame that feeds the dirtiness gate.
 """
 
 import json
+from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -304,6 +306,198 @@ class TestReleaseReason:
             call({"event": "takeover_resolved", "outcome": "granted", "new_holder": requester}),
             call({"event": "holder_changed", "holder": requester}),
         ]
+
+
+@pytest.fixture
+def ws_manager() -> Iterator[WebSocketManager]:
+    """A live manager the ownership slot reads to tell which tabs are still connected."""
+    from wavecore.api.app import app
+    from wavecore.api.websocket import session_registry
+
+    manager = WebSocketManager()
+    app.state.ws_manager = manager
+    yield manager
+    session_registry.clear_sessions()
+
+
+async def _open_tab(manager: WebSocketManager, holder_id: str) -> str:
+    """A browser tab's socket, identified with the tab's holder id."""
+    conn = await manager.connect(_fresh_ws())
+    await manager.handle_message(conn, json.dumps({"type": "identify", "holderId": holder_id}))
+    return conn
+
+
+def _yield_h1_to_the_assistant() -> None:
+    ownership.claim("h1", "Holder One")
+    ownership.claim("s1", "claude-code (MCP)", "mcp")
+
+
+class TestHandBackToTheYieldedTab:
+    """An assistant's handoff gives the slot back to the person tab that gave way to it."""
+
+    async def test_the_tab_that_gave_way_holds_again(self, ws_manager: WebSocketManager) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit") as mock_emit:
+            _yield_h1_to_the_assistant()
+            mock_emit.reset_mock()
+
+            result = ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() == PERSON_HOLDER
+        assert result["holder"] == PERSON_HOLDER
+        mock_emit.assert_called_once_with(
+            {"event": "holder_changed", "holder": PERSON_HOLDER, "reason": "handoff"}
+        )
+
+    async def test_the_returning_tab_starts_clean(self, ws_manager: WebSocketManager) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            ownership.set_holder_dirty("s1", True)
+
+            ownership.release("s1", "handoff")
+
+        assert ownership._holder["dirty"] is False
+
+    async def test_the_returning_tab_holds_the_unsaved_work_it_inherits(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            ownership.apply_draft(
+                "s1", {"nodes": [{"id": "n1"}], "edges": [], "variables": {}, "dirty": True}
+            )
+
+            ownership.release("s1", "handoff")
+
+            assert ownership._holder["dirty"] is True
+            with pytest.raises(ConflictException, match=ALREADY_HELD_MESSAGE):
+                ownership.claim("s2", "other (MCP)", "mcp")
+
+        assert ownership.get_holder() == PERSON_HOLDER
+
+    async def test_the_returning_tab_keeps_the_last_frame_for_late_joiners(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            frame = ownership.apply_draft(
+                "s1", {"nodes": [{"id": "n1"}], "edges": [], "variables": {}, "dirty": False}
+            )
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_shared_draft() == frame
+
+    async def test_a_waiting_requester_still_wins(self, ws_manager: WebSocketManager) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            ownership.request_takeover("r1", "Requester One")
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() == {"id": "r1", "label": "Requester One", "kind": "person"}
+
+    async def test_a_tab_that_closed_meanwhile_leaves_the_slot_free(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        conn = await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit") as mock_emit:
+            _yield_h1_to_the_assistant()
+            ws_manager.disconnect(conn)
+            mock_emit.reset_mock()
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() is None
+        mock_emit.assert_called_once_with(
+            {"event": "holder_changed", "holder": None, "reason": "handoff"}
+        )
+
+    async def test_a_watcher_claims_the_slot_the_closed_tab_left(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        conn = await _open_tab(ws_manager, "h1")
+        await _open_tab(ws_manager, "w1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            ws_manager.disconnect(conn)
+            ownership.release("s1", "handoff")
+
+            ownership.claim("w1", "Watcher One")
+
+        assert ownership.get_holder() == {"id": "w1", "label": "Watcher One", "kind": "person"}
+
+    async def test_a_tab_whose_session_was_ended_is_not_handed_back(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        from wavecore.api.websocket import session_registry
+
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            session_registry.close_session("h1")
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() is None
+
+    async def test_with_no_live_manager_the_slot_frees(self) -> None:
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() is None
+
+    async def test_a_plain_release_never_hands_back(self, ws_manager: WebSocketManager) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+
+            ownership.release("s1")
+
+        assert ownership.get_holder() is None
+
+    async def test_an_assistant_that_claimed_a_free_slot_frees_it(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            ownership.claim("s1", "claude-code (MCP)", "mcp")
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() is None
+
+    async def test_the_slot_goes_back_once(self, ws_manager: WebSocketManager) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            ownership.release("s1", "handoff")
+            ownership.release("h1")
+            ownership.claim("s1", "claude-code (MCP)", "mcp")
+
+            ownership.release("s1", "handoff")
+
+        assert ownership.get_holder() is None
+
+    async def test_a_later_holder_of_the_slot_is_not_handed_back(
+        self, ws_manager: WebSocketManager
+    ) -> None:
+        await _open_tab(ws_manager, "h1")
+        with patch.object(ownership, "_emit"):
+            _yield_h1_to_the_assistant()
+            ownership.force_takeover("r1", "Requester One")
+            ownership.on_connection_lost("r1")
+            ownership.claim("s2", "other-client (MCP)", "mcp")
+
+            ownership.release("s2", "handoff")
+
+        assert ownership.get_holder() is None
 
 
 class TestDraftStateFrame:

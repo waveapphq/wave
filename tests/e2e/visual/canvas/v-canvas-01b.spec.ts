@@ -13,7 +13,7 @@
  * 4. Close button hidden when in draft state (nothing to close)
  * 5. Environment selector shows placeholder text when unselected
  * 6. Run/Debug buttons use split button pattern (primary + dropdown)
- * 7. Button states: Save/Undo/Redo disabled (no changes/history), Run/Debug disabled (no env selected)
+ * 7. Button states: Save/Undo/Redo disabled (no changes/history), Run/Debug enabled with no env selected (opens the env popup)
  * 8. Debug options popover contains pause checkboxes
  * 9. Right group buttons in correct order: Env → Gear → Debug → Run
  */

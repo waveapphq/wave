@@ -18,12 +18,22 @@ vi.mock('@/features/workbench/lib/focus-current', () => ({
 import { useFollowChanges } from '@/features/workbench/hooks/use-follow-changes'
 
 const requestFitView = vi.fn()
+const requestBringIntoView = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
   useWorkflowStore.getState().reset()
-  useWorkflowStore.setState({ requestFitView, mirrorLastChangeNodeId: null, mirrorChangeTick: 0 } as never)
+  useWorkflowStore.setState({
+    requestFitView,
+    requestBringIntoView,
+    mirrorLastChangeNodeId: null,
+    mirrorChangeTick: 0,
+    mirrorBuildBounds: null,
+  } as never)
 })
+
+const BUILD = { x: -80, y: 140, width: 160, height: 353 }
+const NEXT_BUILD = { x: -80, y: 140, width: 160, height: 913 }
 
 describe('useFollowChanges', () => {
   it('starts not following', () => {
@@ -115,5 +125,101 @@ describe('useFollowChanges', () => {
     rerender({ mirroring: false })
 
     expect(result.current.following).toBe(false)
+  })
+})
+
+describe('useFollowChanges - a watched build (WATCH-8)', () => {
+  function startBuild(bounds = BUILD) {
+    act(() =>
+      useWorkflowStore.setState({ mirrorBuildBounds: bounds, mirrorLastChangeNodeId: 'n1', mirrorChangeTick: 1 } as never),
+    )
+  }
+
+  it('frames the finished test once when the build starts', () => {
+    renderHook(() => useFollowChanges(true))
+
+    startBuild()
+
+    expect(requestFitView).toHaveBeenCalledTimes(1)
+    expect(requestFitView).toHaveBeenCalledWith({ padding: 0.2, duration: 0, bounds: BUILD })
+    expect(requestBringIntoView).not.toHaveBeenCalled()
+    expect(mockFocusCurrentBlock).not.toHaveBeenCalled()
+  })
+
+  it('asks to keep each later Block in view, never framing or centering again', () => {
+    renderHook(() => useFollowChanges(true))
+    startBuild()
+
+    act(() => useWorkflowStore.setState({ mirrorLastChangeNodeId: 'n2', mirrorChangeTick: 2 } as never))
+    act(() => useWorkflowStore.setState({ mirrorLastChangeNodeId: 'n3', mirrorChangeTick: 3 } as never))
+
+    expect(requestBringIntoView.mock.calls).toEqual([['n2'], ['n3']])
+    expect(requestFitView).toHaveBeenCalledTimes(1)
+    expect(mockFocusCurrentBlock).not.toHaveBeenCalled()
+  })
+
+  it('ignores a frame that changes no Block', () => {
+    renderHook(() => useFollowChanges(true))
+    startBuild()
+
+    act(() => useWorkflowStore.setState({ mirrorLastChangeNodeId: null } as never))
+
+    expect(requestBringIntoView).not.toHaveBeenCalled()
+  })
+
+  it('frames again when the next build starts', () => {
+    renderHook(() => useFollowChanges(true))
+    startBuild()
+    act(() => useWorkflowStore.setState({ mirrorBuildBounds: null } as never))
+
+    startBuild(NEXT_BUILD)
+
+    expect(requestFitView).toHaveBeenCalledTimes(2)
+    expect(requestFitView).toHaveBeenLastCalledWith({ padding: 0.2, duration: 0, bounds: NEXT_BUILD })
+  })
+
+  it('leaves the view alone when the build ends', () => {
+    renderHook(() => useFollowChanges(true))
+    startBuild()
+    requestFitView.mockClear()
+
+    act(() =>
+      useWorkflowStore.setState({ mirrorBuildBounds: null, mirrorLastChangeNodeId: 'n4', mirrorChangeTick: 4 } as never),
+    )
+
+    expect(requestFitView).not.toHaveBeenCalled()
+    expect(requestBringIntoView).not.toHaveBeenCalled()
+  })
+
+  it('lets Follow Changes win: the first Block is centered, nothing framed', () => {
+    const { result } = renderHook(() => useFollowChanges(true))
+    act(() => result.current.toggleFollow())
+    requestFitView.mockClear()
+
+    startBuild()
+    act(() => useWorkflowStore.setState({ mirrorLastChangeNodeId: 'n2', mirrorChangeTick: 2 } as never))
+
+    expect(requestFitView).not.toHaveBeenCalled()
+    expect(requestBringIntoView).not.toHaveBeenCalled()
+    expect(mockFocusCurrentBlock.mock.calls).toEqual([['n1'], ['n2']])
+  })
+
+  it('turning Follow Changes off mid-build leaves the view where it is, then keeps new Blocks in view', () => {
+    const { result } = renderHook(() => useFollowChanges(true))
+    act(() => result.current.toggleFollow())
+    startBuild()
+    requestFitView.mockClear()
+    mockFocusCurrentBlock.mockClear()
+
+    act(() => result.current.toggleFollow())
+
+    expect(result.current.following).toBe(false)
+    expect(requestFitView).not.toHaveBeenCalled()
+    expect(mockFocusCurrentBlock).not.toHaveBeenCalled()
+
+    act(() => useWorkflowStore.setState({ mirrorLastChangeNodeId: 'n2', mirrorChangeTick: 2 } as never))
+
+    expect(requestFitView).not.toHaveBeenCalled()
+    expect(requestBringIntoView).toHaveBeenCalledWith('n2')
   })
 })

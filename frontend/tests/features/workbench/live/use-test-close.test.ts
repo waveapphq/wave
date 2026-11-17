@@ -13,6 +13,7 @@ import { useTestClose } from '@/features/workbench/live/use-test-close'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import { usePageBlockStore } from '@/stores/page-block-store'
 import { useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
+import { getSessionId } from '@/lib/session-identity'
 import { createSimpleRouterWrapper } from '../../../utils/router-test-utils'
 
 // ---------------------------------------------------------------------------
@@ -289,7 +290,7 @@ describe('useTestClose', () => {
       expect(mockUpdateTest).toHaveBeenCalledWith('test-42', {
         name: 'My Test',
         workflow: { nodes: testNodes, edges: testEdges },
-      })
+      }, getSessionId())
       expect(state.markSaved).toHaveBeenCalledOnce()
       expect(state.setPulseValidationNodeIds).toHaveBeenCalledWith([])
       expect(params.clearDraft).toHaveBeenCalledOnce()
@@ -841,5 +842,18 @@ describe('useTestClose', () => {
       act(() => { result.current.setShowSwitchTestDialog(false) })
       expect(result.current.showSwitchTestDialog).toBe(false)
     })
+  })
+})
+
+describe('useTestClose - Save and Close names this tab, so a draft it continues keeps the secrets the server holds for it', () => {
+  it('sends the tab id with the save', async () => {
+    vi.clearAllMocks()
+    setupStore({ editingTestId: 'test-42', editingTestName: 'My Test' })
+    mockUpdateTest.mockResolvedValueOnce({ id: 'test-42' })
+    const { result } = renderHook(() => useTestClose(createParams()), { wrapper })
+
+    await act(async () => { await result.current.handleSaveAndClose() })
+
+    expect(mockUpdateTest).toHaveBeenCalledWith('test-42', expect.anything(), getSessionId())
   })
 })

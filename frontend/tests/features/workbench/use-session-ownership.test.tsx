@@ -18,7 +18,9 @@ const {
   mockApply,
   mockSetMirrorActiveNodeId,
   mockSignalMirrorChange,
-  mockSetDirty,
+  mockSetMirrorBuildBounds,
+  mockMarkUnsaved,
+  mockMarkSaved,
   mockSetEditingTest,
   mockStoreReset,
   mockRequestFitView,
@@ -60,7 +62,9 @@ const {
     mockApply: vi.fn(),
     mockSetMirrorActiveNodeId: vi.fn(),
     mockSignalMirrorChange: vi.fn(),
-    mockSetDirty: vi.fn(),
+    mockSetMirrorBuildBounds: vi.fn(),
+    mockMarkUnsaved: vi.fn(),
+    mockMarkSaved: vi.fn(),
     mockSetEditingTest: vi.fn(),
     mockStoreReset: vi.fn(),
     mockRequestFitView: vi.fn(),
@@ -79,9 +83,12 @@ vi.mock('@/features/workbench/stores/workflow-store', () => ({
   useWorkflowStore: Object.assign(() => {}, {
     getState: () => ({
       applyMirroredGraph: mockApply,
+      finishMirrorGlide: () => {},
       setMirrorActiveNodeId: mockSetMirrorActiveNodeId,
       signalMirrorChange: mockSignalMirrorChange,
-      setDirty: mockSetDirty,
+      setMirrorBuildBounds: mockSetMirrorBuildBounds,
+      markUnsaved: mockMarkUnsaved,
+      markSaved: mockMarkSaved,
       setEditingTest: mockSetEditingTest,
       reset: mockStoreReset,
       requestFitView: mockRequestFitView,
@@ -534,7 +541,7 @@ describe('useSessionOwnership - the holder disappears', () => {
   it('never dirties the canvas it is left holding nothing of', async () => {
     await mountMirroringThenLoseHolder()
 
-    expect(mockSetDirty).not.toHaveBeenCalled()
+    expect(mockMarkUnsaved).not.toHaveBeenCalled()
   })
 
   it('stays detached when somebody else takes the free session', async () => {
@@ -1687,6 +1694,132 @@ describe('useSessionOwnership - watch-mode active node', () => {
   })
 })
 
+describe('useSessionOwnership - watched build framing', () => {
+  const BOUNDS = { x: -80, y: 140, width: 160, height: 353 }
+
+  function buildFrame(overrides: Record<string, unknown> = {}) {
+    return {
+      event: 'draft_snapshot',
+      nodes: [{ id: 'n1', position: { x: 0, y: 140 }, data: {} }],
+      edges: [],
+      variables: [],
+      active_node_id: 'n1',
+      final_bounds: BOUNDS,
+      from_holder_id: 'mcp-sess',
+      ...overrides,
+    }
+  }
+
+  it("hands a build's finished bounds to the canvas while mirroring", async () => {
+    ownershipApi.getOwnership.mockResolvedValue(HELD_BY_MCP)
+    const { result } = mount()
+    await flush()
+    expect(result.current.isMirroring).toBe(true)
+
+    act(() => {
+      handlerRef.current(buildFrame(), {})
+    })
+
+    expect(mockSetMirrorBuildBounds).toHaveBeenLastCalledWith(BOUNDS)
+  })
+
+  it('the holder that gives way shows the first Block even when it lands before a render', async () => {
+    const { result } = mount()
+    await flush()
+    expect(result.current.isHolder).toBe(true)
+
+    act(() => {
+      handlerRef.current(
+        { event: 'holder_changed', holder: HELD_BY_MCP.holder, reason: 'auto_yield' },
+        {},
+      )
+      handlerRef.current(buildFrame(), {})
+    })
+
+    expect(mockApply).toHaveBeenCalledTimes(1)
+    expect(mockSetMirrorBuildBounds).toHaveBeenLastCalledWith(BOUNDS)
+  })
+
+  it('clears the bounds once the surface is no longer a build in progress', async () => {
+    ownershipApi.getOwnership.mockResolvedValue(HELD_BY_MCP)
+    mount()
+    await flush()
+    act(() => {
+      handlerRef.current(buildFrame(), {})
+    })
+
+    act(() => {
+      handlerRef.current(buildFrame({ active_node_id: null, final_bounds: null, test_id: 't1', dirty: false }), {})
+    })
+
+    expect(mockSetMirrorBuildBounds).toHaveBeenLastCalledWith(null)
+  })
+
+  it('reads a person holder frame, which carries no bounds, as no build', async () => {
+    ownershipApi.getOwnership.mockResolvedValue(HELD_BY_OTHER)
+    mount()
+    await flush()
+
+    act(() => {
+      handlerRef.current(
+        { event: 'draft_snapshot', nodes: [{ id: 'n1' }], edges: [], variables: [], from_holder_id: 'other' },
+        {},
+      )
+    })
+
+    expect(mockSetMirrorBuildBounds).toHaveBeenLastCalledWith(null)
+  })
+
+  it('drops the bounds when the viewer browses away', async () => {
+    ownershipApi.getOwnership.mockResolvedValue(HELD_BY_MCP)
+    const { result } = mount()
+    await flush()
+    act(() => {
+      handlerRef.current(buildFrame(), {})
+    })
+
+    act(() => {
+      result.current.browseAway()
+    })
+
+    expect(mockSetMirrorBuildBounds).toHaveBeenLastCalledWith(null)
+  })
+
+  it('keeps the canvas where it is while browsing away', async () => {
+    ownershipApi.getOwnership.mockResolvedValue(HELD_BY_MCP)
+    const { result } = mount()
+    await flush()
+    act(() => {
+      result.current.browseAway()
+    })
+    mockSetMirrorBuildBounds.mockClear()
+
+    act(() => {
+      handlerRef.current(buildFrame(), {})
+    })
+
+    expect(mockSetMirrorBuildBounds).not.toHaveBeenCalled()
+  })
+
+  it("rejoining mid-build frames the buffered build's finished test", async () => {
+    ownershipApi.getOwnership.mockResolvedValue(HELD_BY_MCP)
+    const { result } = mount()
+    await flush()
+    act(() => {
+      result.current.browseAway()
+    })
+    act(() => {
+      handlerRef.current(buildFrame(), {})
+    })
+
+    act(() => {
+      result.current.rejoinMirror()
+    })
+
+    expect(mockSetMirrorBuildBounds).toHaveBeenLastCalledWith(BOUNDS)
+  })
+})
+
 describe('useSessionOwnership - watch-mode take-over dirtying', () => {
   function emitSnapshot() {
     act(() => {
@@ -1718,7 +1851,8 @@ describe('useSessionOwnership - watch-mode take-over dirtying', () => {
     await flush()
 
     expect(result.current.isHolder).toBe(true)
-    expect(mockSetDirty).toHaveBeenCalledWith(true)
+    expect(mockMarkUnsaved).toHaveBeenCalledTimes(1)
+    expect(mockMarkSaved).not.toHaveBeenCalled()
     // Inheriting the draft drops the remote build's active-block border and
     // the Follow Changes target.
     expect(mockSetMirrorActiveNodeId).toHaveBeenCalledWith(null)
@@ -1732,7 +1866,7 @@ describe('useSessionOwnership - watch-mode take-over dirtying', () => {
     await flush()
     expect(result.current.isHolder).toBe(true)
 
-    expect(mockSetDirty).not.toHaveBeenCalled()
+    expect(mockMarkUnsaved).not.toHaveBeenCalled()
   })
 
   it('marks the canvas dirty when taking over an MCP-held streamed draft', async () => {
@@ -1749,7 +1883,7 @@ describe('useSessionOwnership - watch-mode take-over dirtying', () => {
     })
 
     expect(result.current.isHolder).toBe(true)
-    expect(mockSetDirty).toHaveBeenCalledWith(true)
+    expect(mockMarkUnsaved).toHaveBeenCalledTimes(1)
   })
 
   /** One growing reveal frame of an assistant build: `count` blocks, unsaved. */
@@ -1817,7 +1951,7 @@ describe('useSessionOwnership - watch-mode take-over dirtying', () => {
 
     // The taker holds blocks that are in no saved test: unsaved work.
     expect(result.current.isHolder).toBe(true)
-    expect(mockSetDirty).toHaveBeenCalledWith(true)
+    expect(mockMarkUnsaved).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -1858,7 +1992,7 @@ describe('useSessionOwnership - inherit after a non-streamed borrow', () => {
     await inheritAfterHandoff()
 
     expect(result.current.isHolder).toBe(true)
-    expect(mockSetDirty).not.toHaveBeenCalled()
+    expect(mockMarkUnsaved).not.toHaveBeenCalled()
     expect(result.current.inheritRefreshTick).toBe(0)
   })
 
@@ -1872,7 +2006,7 @@ describe('useSessionOwnership - inherit after a non-streamed borrow', () => {
     await inheritAfterHandoff()
 
     expect(result.current.isHolder).toBe(true)
-    expect(mockSetDirty).not.toHaveBeenCalled()
+    expect(mockMarkUnsaved).not.toHaveBeenCalled()
     expect(result.current.inheritRefreshTick).toBe(1)
   })
 
@@ -1901,7 +2035,8 @@ describe('useSessionOwnership - inherit after a non-streamed borrow', () => {
     await inheritAfterHandoff()
 
     expect(result.current.isHolder).toBe(true)
-    expect(mockSetDirty).not.toHaveBeenCalled()
+    expect(mockMarkUnsaved).not.toHaveBeenCalled()
+    expect(mockMarkSaved).toHaveBeenCalledTimes(1)
     expect(result.current.inheritRefreshTick).toBe(0)
   })
 
@@ -1923,7 +2058,7 @@ describe('useSessionOwnership - inherit after a non-streamed borrow', () => {
       )
     })
     await inheritAfterHandoff()
-    expect(mockSetDirty).toHaveBeenCalledWith(true)
+    expect(mockMarkUnsaved).toHaveBeenCalledTimes(1)
     expect(result.current.inheritRefreshTick).toBe(0)
 
     // Forced out into a second borrow that streams nothing, then handed back.

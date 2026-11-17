@@ -59,7 +59,8 @@ failure-report shape.
   wherever a tool needs more than a bare `recipe` argument
   (`start_execution`, `amend_test_from_recipe`, `get_failure_report`, ...);
   `WAVE_MCP_CLIENT_NAME` overrides the declared client name (default
-  `wave-e2e-tool-client`); a tracked run is attributed `mcp:<client name>`
+  `wave-e2e-tool-client`) and `WAVE_MCP_CLIENT_TITLE` adds a display title
+  (none by default); a tracked run is attributed `mcp:<client name>`
 
 ## Steps
 
@@ -141,10 +142,11 @@ keeps every untouched block in place and leaves no two blocks overlapping
 - **Readback:** expressible, and the YAML carries no `width`, `height` or
   `position`
 - **Insert:** no two stored blocks overlap, before or after the amend; the two
-  logs before the If/Else, the If/Else, the Remote Execution and the else-branch
-  log and Halt keep their exact positions; each block below the insert moves down
-  exactly 140 px; the inserted block takes the first body row, centered in the
-  body column
+  logs before the If/Else, the If/Else, the Remote Execution, the else-branch
+  log and Halt, and the three logs on the Remote's continuation (which runs beside
+  its body) keep their exact positions; each body block below the insert moves
+  down exactly 140 px; the inserted block takes the first body row, centered in
+  the body column
 
 ## V-MCP-RECIPE-ELEMENT-TYPES-FUNCTIONAL
 
@@ -203,3 +205,10 @@ keeps every untouched block in place and leaves no two blocks overlapping
 - A Test saved in the stored shape with OR, a group, a compare-to {x} and Template, a branch with two conditions, branch labels, a Setter Template row and a secret row reads back expressible with all of them (REQ-5.2.7.6).
 - A secret Setter row written `{expr}` or as a Template is stored as written, unsealed, with its secret mark; `get_test_recipe` reads it back in the same form with the row under `secret_rows` and `expressible: true`, and an amend with the readback leaves the Setter unchanged (REQ-5.2.7.6, REQ-3.4.1.14).
 - The guide names `or`, `group:`, `{template:`, `{literal:` and `secret_rows` (REQ-5.2.7.7).
+
+## V-MCP-RECIPE-FLOW-ORDER-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-flow-order-functional.spec.ts`; fixtures: `recipe-flow-order-step1.yaml`, `recipe-flow-order-step2.yaml`, `recipe-flow-order-step3.yaml`, a release smoke check in three steps (the spec gives the test and the two profiles it binds names of the run; the profiles are made with `create_profile`, the tests with `create_test_from_recipe`, and all are deleted after).
+- After step 1, a fresh build, and after steps 2 and 3 made with `amend_test_from_recipe`, the canvas draws every Block one row under the Block before it in its lane and on its column, with no Block between them; each lane of an If one row under the If, in a column of its own, left to right; the Block after a lane one row under its parent, with the lane one 80 px gutter left of it; no two Blocks overlapping; the wires of that flow; and every box at its stored place and width. "Fail test" sits one row right under "Alert On-Call" and "Wait for healthy" is not under the failure branch (REQ-5.2.7.4).
+- With a tab that holds the test and a watching tab, `amend_test_live_from_recipe` with step 2 and then step 3 saves exactly the layout `amend_test_from_recipe` saves for the same recipe on a twin test, and both tabs draw it in the same order (REQ-5.2.7.4, REQ-5.2.7.18).
+- In both tabs each watched change first glides the Blocks that make room: the canvas reads `data-mirror-glide="moving"` while every one of them is drawn between its old and its new place, the other Blocks hold still, and no new Block appears until the glide ends; then the new Blocks appear one at a time, in flow order, each at its final place (WATCH-9, REQ-5.2.7.18).

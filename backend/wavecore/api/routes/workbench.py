@@ -601,5 +601,7 @@ async def cancel_ownership_takeover(request: OwnershipRequesterRequest) -> JSONR
 @router.post("/workbench/ownership/takeover/force")
 async def force_ownership_takeover(request: OwnershipTakeoverRequest) -> JSONResponse:
     """Unconditionally take the slot over, interrupting the current holder."""
+    # A stream's frame on its way reaches every tab first: the taker continues what it shows.
+    await ownership.frame_sent()
     result = ownership.force_takeover(request.requester_id, request.requester_label)
     return _ownership_response({"you_are_holder": True, **result})

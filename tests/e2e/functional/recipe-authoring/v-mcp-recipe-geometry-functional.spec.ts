@@ -21,8 +21,9 @@
  *    no width, height or position.
  * 5. An amend that inserts a Block first in the body of a Remote Execution
  *    inside an If/Else branch keeps every untouched Block at its exact stored
- *    position, moves each Block below the insert down exactly one 140 px row,
- *    and leaves no two stored Blocks overlapping.
+ *    position, including the Remote's continuation, which runs beside the body;
+ *    moves each body Block below the insert down exactly one 140 px row; and
+ *    leaves no two stored Blocks overlapping.
  */
 
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
@@ -147,14 +148,12 @@ const UNTOUCHED = [
   'Remote Execution',
   'Alert on-call',
   'Halt',
-]
-const BELOW_THE_INSERT = [
-  'API health check',
-  'Verify API health',
+  // The Remote's continuation runs beside its body, so the body grows past it.
   'Query release DB',
   'Verify release',
   'Disconnect',
 ]
+const BELOW_THE_INSERT = ['API health check', 'Verify API health']
 
 /** The title span: the sibling right after the icon, the only stable anchor. */
 function titleSelector(nodeId: string): string {

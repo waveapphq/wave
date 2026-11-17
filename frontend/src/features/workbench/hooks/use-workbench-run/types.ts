@@ -128,8 +128,8 @@ export interface WorkbenchRunActions {
   registerTrackedTerminalHandler: (handler: ((executionId: string) => void) | null) => void
   /** Run-mirror: hydrate + subscribe the holder's announced run as a viewer. */
   attachToAnnouncedRun: () => Promise<void>
-  /** Run-mirror: drop the announced run's subscriptions (paint + console stay). */
-  detachFromAnnouncedRun: () => void
+  /** Run-mirror: drop the announced run's subscriptions (paint + console stay); `announceEnded` once it is no longer announced. */
+  detachFromAnnouncedRun: (announceEnded?: boolean) => void
 }
 
 export type UseWorkbenchRunReturn = WorkbenchRunState & WorkbenchRunActions

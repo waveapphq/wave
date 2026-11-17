@@ -14,9 +14,10 @@ async def main() -> None:
     raw = sys.stdin.read().strip()
     args = json.loads(raw) if raw else {}
     client_name = os.environ.get("WAVE_MCP_CLIENT_NAME", "wave-e2e-tool-client")
+    client_title = os.environ.get("WAVE_MCP_CLIENT_TITLE") or None
     async with Client(
         url,
-        client_info=types.Implementation(name=client_name, version="1.0.0"),
+        client_info=types.Implementation(name=client_name, title=client_title, version="1.0.0"),
     ) as client:
         result = await client.call_tool(tool, args)
         text = result.content[0].text if result.content else ""

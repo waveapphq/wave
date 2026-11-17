@@ -75,8 +75,14 @@ from wavecore.core.functions.declarations import (
 )
 from wavecore.core.functions.references import function_holders, nested_function_workflows
 from wavecore.core.secrets import masking_settings
+from wavecore.core.secrets.masking import MASK_PLACEHOLDER
 from wavecore.core.secrets.sealing import (
+    CREDENTIAL,
+    FUNCTION_LOCAL,
+    FUNCTION_OUTPUT,
+    SETTER_ROW,
     mask_workflow_function_secrets,
+    masked_secrets,
     read_workflow_secrets,
     restore_masked_workflow_secrets,
     seal_variables,
@@ -377,12 +383,14 @@ def _validate_for_persist(
     function_registry: Mapping[str, Any] | None = None,
     contract_loader: _ContractLoader | None = None,
     reference_index: _ReferenceIndex | None = None,
+    refuse_masked: bool = True,
 ) -> list[dict[str, Any]]:
     """Stage 2 of the unified write-path pipeline.
 
     Runs `_apply_safe_autofixes` then re-validates at save context. Returns
     the residual user-actionable errors. The caller raises
-    `SaveValidationError(errors)` if non-empty.
+    `SaveValidationError(errors)` if non-empty. ``refuse_masked`` refuses a
+    secret held only as the mask.
     """
     removed_body_wires: list[RemovedWire] = []
     _apply_safe_autofixes(
@@ -401,7 +409,73 @@ def _validate_for_persist(
         reference_index=reference_index,
         removed_body_wires=removed_body_wires,
     )
-    return list(validation.get("errors", []))
+    errors = list(validation.get("errors", []))
+    if refuse_masked and not validation.get("fatal"):
+        errors.extend(_masked_secret_errors(test))
+    return errors
+
+
+MASKED_SECRET_CODE = "MASKED_SECRET_VALUE"
+_REENTER_SECRET_FIX = "Clear the masked value and type the secret in again"
+
+
+def _masked_variable_errors(variables: Any) -> list[dict[str, Any]]:
+    """Each secret variable held only as the mask: nothing knows its value, so it is typed again."""
+    return [
+        error_entry(
+            path=f"{_PREFIX_VARIABLES}{name}.value",
+            code=MASKED_SECRET_CODE,
+            message=f"The value of secret variable '{name}' has to be entered again",
+            fix_action=_REENTER_SECRET_FIX,
+        )
+        for name, declared in (variables.items() if isinstance(variables, dict) else ())
+        if isinstance(declared, dict)
+        and declared.get("secret")
+        and declared.get("value") == MASK_PLACEHOLDER
+    ]
+
+
+# What each kind of masked secret place is called, and what holds it.
+_FUNCTION_HOLDER = "Function Block"
+_MASKED_PLACES = {
+    FUNCTION_LOCAL: ("value of secret local", _FUNCTION_HOLDER),
+    FUNCTION_OUTPUT: ("default of secret output", _FUNCTION_HOLDER),
+    CREDENTIAL: ("value of secret field", "Block"),
+    SETTER_ROW: ("value of secret variable", "Block"),
+}
+
+
+def _masked_secret_errors(test: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Each secret a save holds only as the mask: nothing knows its value, so it is typed again."""
+    from wavecore.api.services.functions.service import secret_input_names
+
+    errors = _masked_variable_errors(test.get("variables"))
+    # Validation got past its fatal checks, so the workflow holds a list of Blocks.
+    workflow = test["workflow"]
+    nodes = workflow.get("nodes", [])
+    labels = _build_node_label_map(nodes)
+    element_types = {node.get("id"): (node.get("data") or {}).get("elementType") for node in nodes}
+    for setting in masked_secrets(workflow, secret_inputs=secret_input_names):
+        block = setting.blocks[0]
+        label = labels.get(block)
+        what, holder = _MASKED_PLACES[setting.kind]
+        errors.append(
+            error_entry(
+                path=f"nodes.{block}",
+                code=MASKED_SECRET_CODE,
+                message=(
+                    f"The {what} '{setting.name}' in {holder} '{label or block}' "
+                    "has to be entered again"
+                ),
+                fix_action=_REENTER_SECRET_FIX,
+                node_id=block,
+                node_label=label,
+                element_type=(
+                    "function" if holder == _FUNCTION_HOLDER else element_types.get(block)
+                ),
+            )
+        )
+    return errors
 
 
 def _process_variables_for_save(
@@ -491,9 +565,8 @@ def _declared_types(test: Mapping[str, Any]) -> dict[str, str]:
     return types_of_declarations(variables) if isinstance(variables, Mapping) else {}
 
 
-def _save_test(test: dict[str, Any]) -> None:
-    """Save test to file storage and update in-memory cache."""
-    _ensure_storage_dir()
+def _seal_for_storage(test: dict[str, Any]) -> None:
+    """Put a test's variables and workflow in the form storage keeps: numbers stored, sealed."""
     if "variables" in test:
         test["variables"] = seal_variables(shared.stored_variable_values(test["variables"]))
     if isinstance(test.get("workflow"), dict):
@@ -504,6 +577,39 @@ def _save_test(test: dict[str, Any]) -> None:
         test["workflow"] = seal_workflow_node_secrets(
             test["workflow"], secret_inputs=secret_input_names
         )
+
+
+def stored_form(data: Mapping[str, Any], test_id: str | None = None) -> dict[str, Any]:
+    """The workflow and variables a save of this test would store, sealed; writes nothing.
+
+    Saved over ``test_id``, a masked secret keeps that test's stored value, as an update does.
+    """
+    import copy
+
+    workflow = copy.deepcopy(data.get("workflow"))
+    variables = copy.deepcopy(data.get("variables") or {})
+    if test_id is not None:
+        stored = _load_test(test_id) or {}
+        workflow = restore_masked_workflow_secrets(workflow, stored.get("workflow"))
+        variables = shared.restore_masked_secrets(variables, stored.get("variables", {}))
+    test = {"workflow": workflow, "variables": _process_variables_for_save(variables)}
+    _seal_for_storage(test)
+    return test
+
+
+def served_form(data: Mapping[str, Any], test_id: str | None = None) -> dict[str, Any]:
+    """The workflow and variables a read of this test would serve once saved; writes nothing.
+
+    Saved over ``test_id``, a masked secret keeps that test's stored value, as an update does.
+    """
+    test = stored_form(data, test_id)
+    return {"workflow": _read_workflow(test["workflow"]), "variables": _read_variables(test)}
+
+
+def _save_test(test: dict[str, Any]) -> None:
+    """Save test to file storage and update in-memory cache."""
+    _ensure_storage_dir()
+    _seal_for_storage(test)
     test_dir = _get_test_dir(test["id"])
     test_dir.mkdir(parents=True, exist_ok=True)
     test_file = test_dir / _TEST_FILENAME
@@ -602,6 +708,15 @@ def _reveal_or_mask_secret_variables(variables: dict[str, Any]) -> dict[str, Any
     if masking_settings.is_test_variables_revealed():
         return unseal_variables(variables)
     return shared.mask_secret_variables(variables, flag_masked=True)
+
+
+def _read_variables(test: Mapping[str, Any]) -> dict[str, Any]:
+    """A stored test's variables as a read serves them."""
+    variables = {
+        name: dict(var_info) if isinstance(var_info, dict) else var_info
+        for name, var_info in test.get("variables", {}).items()
+    }
+    return _reveal_or_mask_secret_variables(variables)
 
 
 def _merge_metadata_from_data(data: dict[str, Any], metadata: dict[str, Any]) -> None:
@@ -799,11 +914,25 @@ def list_tests(
     }
 
 
-def create_test(data: dict[str, Any]) -> dict[str, Any]:
+def _kept_draft_secrets(test_id: str | None, holder_id: str | None) -> dict[str, Any]:
+    """The real secrets of the streamed draft a person continues, when this save is its save."""
+    from wavecore.api.services.workbench import ownership
+
+    return ownership.kept_draft_secrets(test_id, holder_id) or {}
+
+
+def _draft_saved(test_id: str | None, holder_id: str | None) -> None:
+    from wavecore.api.services.workbench import ownership
+
+    ownership.drop_draft_secrets(test_id, holder_id)
+
+
+def create_test(data: dict[str, Any], holder_id: str | None = None) -> dict[str, Any]:
     """Create a new test.
 
     Args:
         data: Test data including name, description, workflow, variables, etc.
+        holder_id: The workbench tab that saves the draft it holds, if any
 
     Returns:
         Created test with metadata
@@ -823,8 +952,13 @@ def create_test(data: dict[str, Any]) -> dict[str, Any]:
     _merge_metadata_from_data(data, metadata)
 
     # Process variables: drop response-only fields, validate values
-    raw_variables = data.get("variables", {})
-    workflow = data.get("workflow", {"nodes": [], "edges": []})
+    kept = _kept_draft_secrets(None, holder_id)
+    raw_variables = shared.restore_masked_secrets(
+        data.get("variables", {}), kept.get("variables", {})
+    )
+    workflow = restore_masked_workflow_secrets(
+        data.get("workflow", {"nodes": [], "edges": []}), kept.get("workflow")
+    )
     variables = _process_variables_for_save(raw_variables)
 
     test = {
@@ -847,6 +981,7 @@ def create_test(data: dict[str, Any]) -> dict[str, Any]:
         raise SaveValidationError(residual)
 
     _save_test(stored_test)
+    _draft_saved(None, holder_id)
     test["variables"] = shared.mask_secret_variables(stored_test["variables"], flag_masked=True)
 
     # Save initial version history
@@ -873,10 +1008,12 @@ def validate_test_data_for_create(
     function_registry: Mapping[str, Any] | None = None,
     contract_loader: _ContractLoader | None = None,
     reference_index: _ReferenceIndex | None = None,
+    masked_secrets_settled: bool = False,
 ) -> list[dict[str, Any]]:
     """Dry-run the create pipeline: name-conflict scan + persist validation.
 
     Runs on a deep copy so the caller's dict is never mutated; persists nothing.
+    ``masked_secrets_settled`` is for a writer that settles each masked secret itself.
     """
     import copy
 
@@ -896,6 +1033,7 @@ def validate_test_data_for_create(
             function_registry=function_registry,
             contract_loader=contract_loader,
             reference_index=reference_index,
+            refuse_masked=not masked_secrets_settled,
         )
     )
     return errors
@@ -922,7 +1060,9 @@ def validate_test_data_for_update(test_id: str, data: dict[str, Any]) -> list[di
     if "description" in payload:
         merged["description"] = payload["description"]
     if "workflow" in payload:
-        merged["workflow"] = payload["workflow"]
+        merged["workflow"] = restore_masked_workflow_secrets(
+            payload["workflow"], merged.get("workflow")
+        )
 
     existing_metadata = merged.get("metadata", {})
     if "metadata" in payload:
@@ -1004,11 +1144,7 @@ def get_test(test_id: str) -> dict[str, Any] | None:
         return None
 
     result = test.copy()
-    variables = {
-        name: dict(var_info) if isinstance(var_info, dict) else var_info
-        for name, var_info in test.get("variables", {}).items()
-    }
-    result["variables"] = _reveal_or_mask_secret_variables(variables)
+    result["variables"] = _read_variables(test)
     # The Variable Manager unmask surface also reveals plugin credential fields.
     if "workflow" in result:
         result["workflow"] = _read_workflow(result["workflow"])
@@ -1042,7 +1178,7 @@ def _refuse_taken_rename(test: Mapping[str, Any], data: Mapping[str, Any]) -> No
 
 
 def update_test(
-    test_id: str, data: dict[str, Any], etag: str | None = None
+    test_id: str, data: dict[str, Any], etag: str | None = None, holder_id: str | None = None
 ) -> dict[str, Any] | None:
     """Update test.
 
@@ -1050,6 +1186,7 @@ def update_test(
         test_id: Test UUID
         data: Update data
         etag: Optional ETag for concurrency control
+        holder_id: The workbench tab that saves the draft it holds, if any
 
     Returns:
         Updated test or None if not found
@@ -1081,9 +1218,11 @@ def update_test(
         test["name"] = data["name"]
     if "description" in data:
         test["description"] = data["description"]
+    kept = _kept_draft_secrets(test_id, holder_id)
     if "workflow" in data:
         # A read masks Function secrets, so their placeholder keeps the stored value.
-        test["workflow"] = restore_masked_workflow_secrets(data["workflow"], test.get("workflow"))
+        workflow = restore_masked_workflow_secrets(data["workflow"], kept.get("workflow"))
+        test["workflow"] = restore_masked_workflow_secrets(workflow, test.get("workflow"))
 
     # Handle metadata updates (merge to preserve existing fields)
     existing_metadata = test.get("metadata", {})
@@ -1095,7 +1234,8 @@ def update_test(
     # Process variables through save pipeline if provided. Restore masked secrets
     # against the stored (sealed) values so a placeholder never overwrites a secret.
     if "variables" in data:
-        restored = shared.restore_masked_secrets(data["variables"], test.get("variables", {}))
+        variables = shared.restore_masked_secrets(data["variables"], kept.get("variables", {}))
+        restored = shared.restore_masked_secrets(variables, test.get("variables", {}))
         test["variables"] = _process_variables_for_save(restored)
 
     test["version"] = new_version
@@ -1109,6 +1249,7 @@ def update_test(
 
     # Save updated test
     _save_test(test)
+    _draft_saved(test_id, holder_id)
 
     # Add version history
     versions = _load_versions(test_id)
@@ -1457,6 +1598,18 @@ def get_test_variables_raw(test_id: str) -> dict[str, Any] | None:
     }
 
 
+def stored_fingerprint(test_id: str) -> str | None:
+    """A digest of the test as stored, which every save that changes it changes; None when gone.
+
+    Not every save bumps the version or the update time; each one rewrites the stored file.
+    """
+    try:
+        stored = (_get_test_dir(test_id) / _TEST_FILENAME).read_bytes()
+    except FileNotFoundError:
+        return None
+    return hashlib.sha256(stored).hexdigest()
+
+
 def _validate_merge_type_consistency(
     variables: dict[str, Any], existing_vars: dict[str, Any]
 ) -> None:
@@ -1522,6 +1675,7 @@ def update_test_variables(
 
     Raises:
         ValidationException: If type mismatch or invalid expression syntax
+        SaveValidationError: If a secret holds the mask and no stored value stands behind it
     """
     test = _load_test(test_id)
     if test is None:
@@ -1532,6 +1686,9 @@ def update_test_variables(
     # A placeholder secret value must resolve to the stored (sealed) value, never seal
     # the mask over the real secret.
     variables = shared.restore_masked_secrets(variables, existing_vars)
+    masked = _masked_variable_errors(variables)
+    if masked:
+        raise SaveValidationError(masked)
 
     if merge:
         _validate_merge_type_consistency(variables, existing_vars)

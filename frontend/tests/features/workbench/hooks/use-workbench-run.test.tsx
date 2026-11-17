@@ -1651,6 +1651,69 @@ describe('useWorkbenchRun - V-CANVAS-14 / REQ-3.2.1.1', () => {
       })
       expect(mockUnsubscribe).toHaveBeenCalledTimes(2)
     })
+
+    describe('detach', () => {
+      const LIVE_SESSION = {
+        ...RUN_SESSION,
+        current_block: { block_id: 'node-2', block_name: 'Log' },
+        progress: { current: 1, total: 3, percentage: 33 },
+      }
+
+      async function attachTo(session: Record<string, unknown>) {
+        const rendered = await mountSettled()
+        mockApiGetCurrentSession.mockResolvedValueOnce(session)
+        await act(async () => {
+          await rendered.result.current.attachToAnnouncedRun()
+        })
+        mockUnsubscribe.mockClear()
+        return rendered
+      }
+
+      it('leaves a run that is no longer announced while it still plays here, keeping its paint', async () => {
+        const { result } = await attachTo(LIVE_SESSION)
+        expect(result.current.status).toBe('running')
+        act(() => {
+          useWorkflowStore.getState().setPausedNodeId('node-2')
+        })
+
+        act(() => {
+          result.current.detachFromAnnouncedRun(true)
+        })
+
+        expect(mockUnsubscribe).toHaveBeenCalledTimes(2)
+        expect(result.current.status).toBe('idle')
+        expect(result.current.isRunning).toBe(false)
+        expect(result.current.sessionId).toBeNull()
+        expect(result.current.websocketTopic).toBeNull()
+        expect(result.current.currentBlock).toBeNull()
+        expect(result.current.progress).toBeNull()
+        expect(useWorkflowStore.getState().pausedNodeId).toBeNull()
+        expect(mockClearExecution).not.toHaveBeenCalled()
+      })
+
+      it('keeps the live state of a run that is still announced', async () => {
+        const { result } = await attachTo(LIVE_SESSION)
+
+        act(() => {
+          result.current.detachFromAnnouncedRun(false)
+        })
+
+        expect(mockUnsubscribe).toHaveBeenCalledTimes(2)
+        expect(result.current.status).toBe('running')
+        expect(result.current.sessionId).toBe('run-sess-1')
+      })
+
+      it('keeps the result of a run that ended before its announce did', async () => {
+        const { result } = await attachTo({ ...RUN_SESSION, status: 'passed' })
+
+        act(() => {
+          result.current.detachFromAnnouncedRun(true)
+        })
+
+        expect(result.current.status).toBe('passed')
+        expect(result.current.sessionId).toBe('run-sess-1')
+      })
+    })
   })
 
   describe('Cleanup on unmount', () => {

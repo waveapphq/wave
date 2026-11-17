@@ -109,19 +109,28 @@ export async function batchUpdateTests(
   return response.data
 }
 
+/** A save the workbench tab makes of the draft it holds names that tab. */
+function savePath(path: string, holderId?: string): string {
+  return holderId ? `${path}?holder_id=${encodeURIComponent(holderId)}` : path
+}
+
 /**
  * Create a new test
  */
-export async function createTest(payload: CreateTestPayload): Promise<TestApiResponse> {
-  const response = await apiClient.post<TestApiResponse>('/tests', payload)
+export async function createTest(payload: CreateTestPayload, holderId?: string): Promise<TestApiResponse> {
+  const response = await apiClient.post<TestApiResponse>(savePath('/tests', holderId), payload)
   return response.data
 }
 
 /**
  * Update an existing test
  */
-export async function updateTest(testId: string, payload: UpdateTestPayload): Promise<TestApiResponse> {
-  const response = await apiClient.put<TestApiResponse>(`/tests/${testId}`, payload)
+export async function updateTest(
+  testId: string,
+  payload: UpdateTestPayload,
+  holderId?: string,
+): Promise<TestApiResponse> {
+  const response = await apiClient.put<TestApiResponse>(savePath(`/tests/${testId}`, holderId), payload)
   return response.data
 }
 

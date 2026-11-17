@@ -24,6 +24,12 @@ def emit(topic: str, event: dict[str, Any]) -> None:
     task.add_done_callback(_emit_tasks.discard)
 
 
+async def settle() -> None:
+    """Wait until every broadcast this loop has scheduled so far has gone out."""
+    loop = asyncio.get_running_loop()
+    await asyncio.gather(*[task for task in _emit_tasks if task.get_loop() is loop])
+
+
 async def broadcast(topic: str, event: dict[str, Any]) -> None:
     """Send one event envelope to a topic's subscribers; a failed send is logged, not raised."""
     try:

@@ -16,6 +16,7 @@ import type {
 } from '@/features/workbench/common/canvas/dialogs/validation-error-dialog'
 import { buildVariablesPayload, handleSaveError, resyncSealedNodeSecrets, sanitizeEdgesForSave, sanitizeNodesForSave } from './save-utils'
 import { alreadyReported } from '@/features/workbench/lib/already-reported'
+import { getSessionId } from '@/lib/session-identity'
 
 export interface TestSaveResult {
   // Dialog state
@@ -102,7 +103,7 @@ export function useTestSave(params: UseTestSaveParams): TestSaveResult {
             name: editingTestName ?? 'Untitled',
             workflow,
             variables: variablesForBackend,
-          })
+          }, getSessionId())
           // Reflect the just-sealed credential values before marking the saved
           // baseline, so credential fields mask write-only without a reload.
           await resyncSealedNodeSecrets(editingTestId, useWorkflowStore.getState().nodes, setNodeTree)
@@ -151,7 +152,7 @@ export function useTestSave(params: UseTestSaveParams): TestSaveResult {
             tags: payload.tags,
             workflow,
             variables: variablesForBackend,
-          })
+          }, getSessionId())
         } else {
           const createdTest = await createTest({
             name: payload.name,
@@ -159,7 +160,7 @@ export function useTestSave(params: UseTestSaveParams): TestSaveResult {
             tags: payload.tags,
             workflow,
             variables: variablesForBackend,
-          })
+          }, getSessionId())
           createdTestId = createdTest.id
         }
 

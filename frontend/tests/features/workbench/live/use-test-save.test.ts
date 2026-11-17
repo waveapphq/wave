@@ -11,6 +11,7 @@ import { renderHook, act } from '@testing-library/react'
 import { useTestSave } from '@/features/workbench/live/use-test-save'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import { useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
+import { getSessionId } from '@/lib/session-identity'
 import { createSimpleRouterWrapper } from '../../../utils/router-test-utils'
 
 // ---------------------------------------------------------------------------
@@ -198,7 +199,7 @@ describe('useTestSave', () => {
           host: { value: 'localhost', type: 'string' },
           count: { value: 5, type: 'integer', isExpression: true },
         }),
-      }))
+      }), getSessionId())
       expect(state.markSaved).toHaveBeenCalledOnce()
       expect(state.setPulseValidationNodeIds).toHaveBeenCalledWith([])
       expect(params.clearDraft).toHaveBeenCalledOnce()
@@ -343,7 +344,7 @@ describe('useTestSave', () => {
         name: 'New Test',
         description: 'desc',
         tags: ['tag1'],
-      }))
+      }), getSessionId())
       expect(storeFns.setEditingTest).toHaveBeenCalledWith('new-1', 'New Test')
       expect(storeFns.markSaved).toHaveBeenCalledOnce()
       expect(result.current.showSaveDialog).toBe(false)
@@ -366,7 +367,7 @@ describe('useTestSave', () => {
 
       expect(mockUpdateTest).toHaveBeenCalledWith('test-42', expect.objectContaining({
         name: 'Updated',
-      }))
+      }), getSessionId())
       // When payload has testId, setEditingTest should NOT be called (only for new tests)
       expect(storeFns.setEditingTest).not.toHaveBeenCalled()
     })
@@ -564,5 +565,45 @@ describe('useTestSave - a Save while drilled into a Function keeps the canvas tr
     const [tree] = setNodeTree.mock.calls[0] as [Array<{ id: string; data: { localDefinition?: { workflow: { nodes: unknown[] } } } }>]
     expect(tree.map((node) => node.id)).toEqual(['root-block', 'sec_fn'])
     expect(tree[1].data.localDefinition?.workflow.nodes).toEqual([innerBlock(SEALED)])
+  })
+})
+
+describe('useTestSave - every save names this tab, so a draft it continues keeps the secrets the server holds for it', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('the Save of the open test', async () => {
+    setupStore({ editingTestId: 'test-42', editingTestName: 'My Test' })
+    mockUpdateTest.mockResolvedValueOnce({ id: 'test-42' })
+    const { result } = renderHook(() => useTestSave(defaultParams()), { wrapper })
+
+    await act(async () => { await result.current.handleSaveClick() })
+
+    expect(mockUpdateTest).toHaveBeenCalledWith('test-42', expect.anything(), getSessionId())
+  })
+
+  it('the save dialog of a new test', async () => {
+    setupStore()
+    mockCreateTest.mockResolvedValueOnce({ id: 'new-1', name: 'New Test' })
+    const { result } = renderHook(() => useTestSave(defaultParams()), { wrapper })
+
+    await act(async () => {
+      await result.current.handleSave({ name: 'New Test', description: '', tags: [], workflowData: { nodes: [], edges: [] } })
+    })
+
+    expect(mockCreateTest).toHaveBeenCalledWith(expect.anything(), getSessionId())
+  })
+
+  it('the save dialog of a saved test', async () => {
+    setupStore()
+    mockUpdateTest.mockResolvedValueOnce({ id: 'test-42' })
+    const { result } = renderHook(() => useTestSave(defaultParams()), { wrapper })
+
+    await act(async () => {
+      await result.current.handleSave({ name: 'Saved', description: '', tags: [], testId: 'test-42', workflowData: { nodes: [], edges: [] } })
+    })
+
+    expect(mockUpdateTest).toHaveBeenCalledWith('test-42', expect.anything(), getSessionId())
   })
 })

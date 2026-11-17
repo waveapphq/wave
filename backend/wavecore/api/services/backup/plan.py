@@ -386,6 +386,8 @@ def _check_test(
         function_registry=library.registry,
         contract_loader=library.contract,
         reference_index=library.reference_index,
+        # The restore keeps the stored value of a masked secret, or stores it as null.
+        masked_secrets_settled=True,
     )
     if findings:
         return library.reasons(findings, document)

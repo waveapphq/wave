@@ -110,8 +110,8 @@ Every change must follow this process:
 - **Frontend functions read lower** - The frontend's function coverage shows less than 100%, and its gate is 96%, because `v8 ignore` blocks hide their lines, branches and statements from the report but not the functions defined inside them. Aim for 100% there too.
 - **If 100% seems hard, the code design may be wrong** - Question the architecture, not the requirement.
 
-### Coverage Exclusions Registry (do not modify)
-- **Registry**: `tests/exclusions/frontend-coverage.md` - no modifications without a maintainer's approval
+### Coverage Exclusions Registry
+- **Registry**: `tests/exclusions/frontend-coverage.md` - no new or changed entry without a maintainer's approval. Removing an entry no code uses any more is cleanup and needs none
 - **Format**: `/* v8 ignore next - COV-XXX-NNN */` - verify the ID exists in the registry before accepting
 - **Unregistered `/* v8 ignore */` comments are policy violations**
 - **Backend**: `tests/exclusions/backend-coverage.md` holds the backend's exclusions, under the same approval rule. Format: `# pragma: no cover - BCOV-XXX-NNN` - the ID must exist in the backend list. An unregistered `# pragma: no cover` in `backend/wavecore/` is a policy violation

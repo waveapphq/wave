@@ -3503,6 +3503,78 @@ class TestNumbersAreStoredInWireForm:
         assert self._read(client, created["id"])["variables"] == {}
 
 
+class TestAVariablesPatchNeverStoresTheMask:
+    """A secret variable's mask is never its value: a variables patch keeps the stored value
+    behind it, and refuses a mask nothing stands behind as the test save does."""
+
+    @pytest.fixture
+    def client(self) -> TestClient:
+        from wavecore.api.app import app
+
+        return TestClient(app)
+
+    def _created(self, client: TestClient) -> str:
+        response = client.post(
+            "/tests",
+            json={
+                "name": "Masked Patch",
+                "variables": {"token": {"type": "string", "secret": True, "value": "real"}},
+            },
+        )
+        assert response.status_code == 201, response.json()
+        return str(response.json()["data"]["id"])
+
+    def test_a_mask_with_nothing_stored_behind_it_is_refused(self, client: TestClient) -> None:
+        from wavecore.api.services.tests import service as test_service
+
+        test_id = self._created(client)
+        response = client.patch(
+            f"/tests/{test_id}/variables",
+            json={
+                "variables": {
+                    "token": {"type": "string", "secret": True, "value": "********"},
+                    "fresh": {"type": "string", "secret": True, "value": "********"},
+                }
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json() == {
+            "success": False,
+            "error": {
+                "message": "Test has 1 validation error(s)",
+                "code": "VALIDATION_ERROR",
+                "details": [
+                    {
+                        "path": "variables.fresh.value",
+                        "node_id": None,
+                        "node_label": None,
+                        "element_type": None,
+                        "code": "MASKED_SECRET_VALUE",
+                        "message": "The value of secret variable 'fresh' has to be entered again",
+                        "severity": "error",
+                        "fix_action": "Clear the masked value and type the secret in again",
+                    }
+                ],
+            },
+        }
+        assert set(test_service.get_test_variables_raw(test_id) or {}) == {"token"}
+
+    def test_a_mask_of_a_stored_secret_keeps_its_value(self, client: TestClient) -> None:
+        from wavecore.api.services.tests import service as test_service
+        from wavecore.core.secrets.sealing import unseal_all
+
+        test_id = self._created(client)
+        response = client.patch(
+            f"/tests/{test_id}/variables",
+            json={"variables": {"token": {"type": "string", "secret": True, "value": "********"}}},
+        )
+
+        assert response.status_code == 200, response.json()
+        stored = test_service.get_test_variables_raw(test_id) or {}
+        assert unseal_all(stored["token"]["value"]) == "real"
+
+
 def _no_value_row(row_id: str, variable: str, operator: str, **compare_to: Any) -> dict[str, Any]:
     row = {"id": row_id, "type": "literal", "variable": variable, "value_type": "string"}
     return {**row, "operator": operator, **compare_to}

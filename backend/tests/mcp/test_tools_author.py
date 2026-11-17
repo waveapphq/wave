@@ -13,6 +13,8 @@ from typing import Any
 import pytest
 import yaml
 
+from tests.core.layout.flow_order import flow_order_findings
+from tests.core.layout.storyboard import STEPS, seed_profiles, step_recipe
 from tests.core.recipes.block_creation_values import (
     HTTP_CREATION_VALUES,
     OPENSEARCH_CREATION_VALUES,
@@ -539,18 +541,46 @@ class TestGetRecipeGuide:
 
         assert paragraph == EXPRESSIBLE_VERDICT_PARAGRAPH
 
-    def test_the_amending_section_says_how_an_amend_keeps_each_block_in_place(self) -> None:
-        # REQ-5.2.7.4: Blocks are recognized by what they are, and the ones below make room.
+    def test_the_amending_section_says_where_blocks_land_after_a_change(self) -> None:
+        # REQ-5.2.7.4: Blocks are recognized by what they are, and the test reads in flow order.
         paragraph = guide_paragraphs("## Amending an existing test (round-trip)", "`key: <name>`")
 
         assert paragraph.endswith(
             "Every step and construct may carry `key: <name>`, a name of your own for it: an "
-            "amendment keeps a Block's place on the canvas when its step keeps the same `key`. "
+            "amendment recognizes the step's Block by that `key`, wherever the step goes. "
             "A step with no `key` is recognized by what it is - its block, name and settings, "
             "in the same section of the same construct - so adding, removing or moving other "
-            "steps never costs it its place. A block you add or move is placed in the flow, and "
-            "when it, or a block that grew, needs the room, the blocks below it move down just "
-            "enough to make room, so no two blocks overlap."
+            "steps never costs it its place. A section is recognized by what it is too - a "
+            "switch case by its value, a parallel branch by its name or its blocks - so adding "
+            "or removing one in the middle leaves the others' blocks recognized. After the "
+            "change the test reads in flow order, as a fresh build does: a block you add or "
+            "move goes under the block before it, in that block's column, and a new branch "
+            "gets its own column. When there is no room, the blocks below or beside it move, "
+            "keeping their order, and the others stay, a place a person dragged a block to "
+            "included. When you remove a block, the blocks below it move up to close the gap, "
+            "unless a person left it. No two blocks overlap."
+        )
+
+    def test_the_amending_section_offers_the_fast_and_the_watched_change(self) -> None:
+        # The person chooses between the fast and the watched change.
+        heading = "## Amending an existing test (round-trip)"
+
+        assert guide_paragraphs(heading, "Change a test in one of two modes") == (
+            "Change a test in one of two modes, as when you create one, and let the person "
+            "choose: - `amend_test_from_recipe` - fast. Replaces the test in one step; a "
+            "workbench tab that has it open re-reads it. - `amend_test_live_from_recipe` - "
+            "watched change. Holds the workbench session and plays the change on the live "
+            "canvas: first the blocks that stay move to their places and removed blocks go, "
+            "then each added or changed block takes its turn, then the test is saved once and "
+            "the session goes back to the person. Offer this when the person wants to watch "
+            "the change happen."
+        )
+        assert guide_paragraphs(heading, "`SESSION_HELD`") == (
+            "Both modes take the same recipe, save the same test and answer the same way; a "
+            "block the amendment recognizes keeps its id. A person with unsaved work in the "
+            "workbench refuses either one (`SESSION_HELD`), and nothing is written. If someone "
+            "takes the session over during a watched change, the answer carries `released` and "
+            "nothing is saved: the half-done change stays in their tab as unsaved work."
         )
 
     def test_the_guide_no_longer_says_any_catalog_block_runs_as_a_block_step(self) -> None:
@@ -783,6 +813,19 @@ class TestGetRecipeGuide:
         guide = " ".join(author().get_recipe_guide()["guide"].split())
         assert "can't be made plain again" not in guide
         assert "a call's marked outputs" not in guide
+
+    def test_the_guide_says_the_mask_is_not_a_secret_value(self) -> None:
+        paragraph = guide_paragraphs("### Secret write modes", "MASKED_SECRET_VALUE")
+
+        assert paragraph.startswith(
+            "The mask `********` that a read shows for a secret is not a value."
+        )
+        assert "where the test stores none, the save refuses it" in paragraph
+
+    def test_the_guide_says_the_mask_keeps_a_block_secret_too(self) -> None:
+        paragraph = guide_paragraphs("### Secret write modes", "MASKED_SECRET_VALUE")
+
+        assert "a block's secret setting or a secret `set:` row, it keeps the value" in paragraph
 
     def test_the_guide_documents_the_output_kind_forms(self) -> None:
         # REQ-3.1.2.8, REQ-3.1.3.15: variables and outputs take expr: and template:.
@@ -1920,7 +1963,7 @@ class TestAmendTestFromRecipe:
         finding = find_finding(result["findings"], "NAME_CONFLICT")
         assert finding["fix"] == NAME_CONFLICT_FIX
 
-    def test_amend_reports_nothing_when_update_returns_none(self, monkeypatch: Any) -> None:
+    def test_amend_reports_the_test_gone_when_update_finds_none(self, monkeypatch: Any) -> None:
         from wavecore.api.services.tests import service as test_service
 
         author().create_test_from_recipe(simple_recipe("Amend Update None"))
@@ -1929,7 +1972,15 @@ class TestAmendTestFromRecipe:
             "Amend Update None", simple_recipe("Amend Update None")
         )
         assert result["amended"] is False
-        assert result["findings"] == []
+        assert result["findings"] == [
+            {
+                "step": "test",
+                "code": "TARGET_NOT_FOUND",
+                "severity": "error",
+                "problem": "The test was deleted before the change was saved",
+                "fix": "If the test is still wanted, create it again from the recipe",
+            }
+        ]
 
     def test_amend_keeps_a_hand_resized_width_and_drops_a_stored_height(self) -> None:
         # A Block's height is never set by hand, so a height in a saved test is not carried.
@@ -2027,7 +2078,8 @@ class TestAmendTestFromRecipe:
         (node,) = [n for n in stored["workflow"]["nodes"] if n["data"]["recipeKey"] == "flow[0]"]
         assert node["width"] == 348
         assert "height" not in node
-        assert node["position"] == {"x": 100, "y": 100}
+        # It grows about its center, so its column stays straight.
+        assert node["position"] == {"x": 6, "y": 100}
 
     def test_a_readback_of_a_setter_with_a_secret_row_amends_and_owes_the_null_row(self) -> None:
         # REQ-5.2.7.6, REQ-5.2.7.12: the readback holds the secret row as null for a person.
@@ -2117,12 +2169,26 @@ def loop_recipe(body: list[dict[str, Any]], name: str) -> str:
 
 class TestAmendRecognizesEachBlock:
     """REQ-5.2.7.4: an amend recognizes an untouched Block by what it is, never by its place
-    in the list; it keeps its exact position unless an added, moved or grown Block needs the
-    room, and then the Blocks below move down just enough, so no two Blocks ever overlap."""
+    in the list; the changed test reads in flow order, and a Block the change does not need to
+    move keeps its exact position."""
 
     def test_a_fresh_create_of_the_nested_flow_overlaps_nothing(self) -> None:
         test_id = created_test(release_recipe(RELEASE_BODY, name="Release Fresh"))
         assert overlapping_pairs(stored_workflow(test_id)) == []
+
+    def test_a_fresh_create_puts_the_remote_continuation_one_row_below_it_beside_its_body(
+        self,
+    ) -> None:
+        # REQ-5.2.7.4: a single-lane construct's continuation runs beside its lane.
+        test_id = created_test(release_recipe(RELEASE_BODY, name="Release Beside"))
+        workflow = stored_workflow(test_id)
+        at = positions_by_label(workflow)
+        widths = {node["data"]["label"]: node["width"] for node in workflow["nodes"]}
+
+        assert at["Query release DB"]["y"] == at["Remote Execution"]["y"] + 140
+        assert at["Query release DB"]["y"] == at["API health check"]["y"]
+        body_right = at["Verify API health"]["x"] + widths["Verify API health"]
+        assert at["Query release DB"]["x"] - body_right >= 80
 
     def test_a_block_inserted_first_in_a_nested_body_moves_only_the_blocks_below_it(
         self,
@@ -2143,17 +2209,15 @@ class TestAmendRecognizesEachBlock:
             "Remote Execution",
             "Alert on-call",
             "Halt",
-        ):
-            assert after[label] == before[label], label
-        for label in (
-            "API health check",
-            "Verify API health",
+            # The Remote's continuation runs beside its body, so the body grows past it.
             "Query release DB",
             "Verify release",
             "Disconnect",
         ):
+            assert after[label] == before[label], label
+        for label in ("API health check", "Verify API health"):
             assert after[label] == rows_down(before[label]), label
-        assert after["Ping app server"] == {"x": -424, "y": 700}
+        assert after["Ping app server"] == {"x": -584, "y": 700}
 
     def test_a_block_inserted_at_the_start_of_a_body_pushes_the_body_down(self) -> None:
         test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Insert Start"))
@@ -2167,7 +2231,8 @@ class TestAmendRecognizesEachBlock:
         assert overlapping_pairs(after_workflow) == []
         assert after[LOOP_LABEL] == before[LOOP_LABEL]
         assert after["Inserted"] == before["Alpha"]
-        for label in ("Alpha", BRAVO_LABEL, "Charlie", AFTER_LOOP):
+        assert after[AFTER_LOOP] == before[AFTER_LOOP]
+        for label in ("Alpha", BRAVO_LABEL, "Charlie"):
             assert after[label] == rows_down(before[label]), label
 
     def test_a_block_inserted_in_the_middle_of_a_body_keeps_the_blocks_above_it(self) -> None:
@@ -2183,10 +2248,11 @@ class TestAmendRecognizesEachBlock:
         assert after[LOOP_LABEL] == before[LOOP_LABEL]
         assert after["Alpha"] == before["Alpha"]
         assert after["Inserted"] == rows_down(before["Alpha"])
-        for label in (BRAVO_LABEL, "Charlie", AFTER_LOOP):
+        assert after[AFTER_LOOP] == before[AFTER_LOOP]
+        for label in (BRAVO_LABEL, "Charlie"):
             assert after[label] == rows_down(before[label]), label
 
-    def test_a_block_appended_to_a_body_moves_only_the_step_after_the_loop(self) -> None:
+    def test_a_block_appended_to_a_body_moves_no_other_block(self) -> None:
         test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Insert End"))
         before = positions_by_label(stored_workflow(test_id))
 
@@ -2196,12 +2262,11 @@ class TestAmendRecognizesEachBlock:
 
         after = positions_by_label(after_workflow)
         assert overlapping_pairs(after_workflow) == []
-        for label in (LOOP_LABEL, "Alpha", BRAVO_LABEL, "Charlie"):
+        for label in (LOOP_LABEL, "Alpha", BRAVO_LABEL, "Charlie", AFTER_LOOP):
             assert after[label] == before[label], label
         assert after["Inserted"] == rows_down(before["Charlie"])
-        assert after[AFTER_LOOP] == rows_down(before[AFTER_LOOP])
 
-    def test_a_deleted_block_leaves_every_other_block_where_it_was(self) -> None:
+    def test_a_deleted_block_lets_the_blocks_below_it_close_the_gap(self) -> None:
         test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Delete"))
         before = positions_by_label(stored_workflow(test_id))
 
@@ -2210,10 +2275,11 @@ class TestAmendRecognizesEachBlock:
         )
 
         assert after == {
-            label: before[label] for label in (LOOP_LABEL, "Alpha", "Charlie", AFTER_LOOP)
+            **{label: before[label] for label in (LOOP_LABEL, "Alpha", AFTER_LOOP)},
+            "Charlie": rows_down(before["Charlie"], -1),
         }
 
-    def test_a_moved_block_goes_below_the_blocks_it_passed_and_they_stay(self) -> None:
+    def test_a_moved_block_goes_below_the_last_block_and_the_gap_it_left_closes(self) -> None:
         test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Move"))
         before = positions_by_label(stored_workflow(test_id))
 
@@ -2222,11 +2288,12 @@ class TestAmendRecognizesEachBlock:
         )
 
         after = positions_by_label(after_workflow)
-        assert overlapping_pairs(after_workflow) == []
-        for label in (LOOP_LABEL, BRAVO_LABEL, "Charlie"):
+        assert flow_order_findings(after_workflow) == []
+        for label in (LOOP_LABEL, AFTER_LOOP):
             assert after[label] == before[label], label
-        assert after["Alpha"] == rows_down(before["Charlie"])
-        assert after[AFTER_LOOP] == rows_down(before[AFTER_LOOP])
+        for label in (BRAVO_LABEL, "Charlie"):
+            assert after[label] == rows_down(before[label], -1), label
+        assert after["Alpha"] == before["Charlie"]
 
     def test_blocks_sharing_a_name_keep_their_own_hand_set_size(self) -> None:
         first, second = log_step("Notify", "first"), log_step("Notify", "second")
@@ -2263,7 +2330,9 @@ class TestAmendRecognizesEachBlock:
         assert after["Alpha"] == rows_down(before["Alpha"])
         assert after[BRAVO_LABEL] == rows_down(before[BRAVO_LABEL])
 
-    def test_a_renamed_block_that_grew_moves_the_block_beside_it_down(self) -> None:
+    def test_a_renamed_block_that_grew_keeps_its_center_and_the_block_beside_it_moves_aside(
+        self,
+    ) -> None:
         def branches(then_label: str) -> str:
             step = {
                 "if": {
@@ -2282,11 +2351,11 @@ class TestAmendRecognizesEachBlock:
         after_workflow = amended_workflow(test_id, branches(renamed))
 
         after = positions_by_label(after_workflow)
-        assert overlapping_pairs(after_workflow) == []
+        assert flow_order_findings(after_workflow) == []
         assert after["If/Else"] == before["If/Else"]
-        assert after[renamed] == before["Alpha"]
-        assert after["Bravo"] == rows_down(before["Bravo"])
-        assert after["After"] == rows_down(before["After"])
+        assert after[renamed] == {"x": before["Alpha"]["x"] - 100, "y": before["Alpha"]["y"]}
+        assert after["Bravo"] == {"x": before["Bravo"]["x"] + 60, "y": before["Bravo"]["y"]}
+        assert after["After"] == before["After"]
 
     def test_a_key_keeps_its_place_for_one_step_only(self) -> None:
         keyed = {**ALPHA, "key": "alpha"}
@@ -2305,16 +2374,194 @@ class TestAmendRecognizesEachBlock:
         assert after[BRAVO_LABEL] == before[BRAVO_LABEL]
         assert after["Charlie"] == {"x": -80, "y": 420}
 
-    def test_a_keyed_step_keeps_its_place_when_renamed_changed_and_moved(self) -> None:
+    def test_a_keyed_step_renamed_changed_and_moved_goes_under_its_new_predecessor(self) -> None:
         test_id = created_test(make_recipe([{**ALPHA, "key": "alpha"}, BRAVO], name="Keyed Move"))
         store_geometry(test_id, labeled("Alpha"), position={"x": 500, "y": 140})
+        before = ids_by_label(stored_workflow(test_id))
 
         renamed = {**log_step("Alpha renamed", "new"), "key": "alpha"}
-        after = positions_by_label(
-            amended_workflow(test_id, make_recipe([BRAVO, renamed], name="Keyed Move"))
+        workflow = amended_workflow(test_id, make_recipe([BRAVO, renamed], name="Keyed Move"))
+
+        after = positions_by_label(workflow)
+        assert after[BRAVO_LABEL] == {"x": -164, "y": 140}
+        assert after["Alpha renamed"] == {"x": -94, "y": 280}
+        assert ids_by_label(workflow)["Alpha renamed"] == before["Alpha"]
+
+
+def branches_recipe(then: list[Any], other: list[Any] | None, name: str) -> str:
+    construct: dict[str, Any] = {"when": "go", "then": then}
+    if other is not None:
+        construct["else"] = other
+    variables = {"go": {"type": "boolean", "value": True}}
+    return make_recipe([{"if": construct}, log_step("After")], name=name, variables=variables)
+
+
+def cases_recipe(cases: list[tuple[int, list[Any]]], name: str) -> str:
+    """A Switch with a case per (value, steps), each chosen by its value."""
+    switch = {
+        "cases": [
+            {"label": f"Case {value}", "when": f"route == {value}", "steps": steps}
+            for value, steps in cases
+        ]
+    }
+    variables = {"route": {"type": "integer", "value": 1}}
+    return make_recipe([{"switch": switch}, log_step("After")], name=name, variables=variables)
+
+
+class TestAmendKeepsTheFlowOrder:
+    """After a change the test reads in flow order the way a fresh build does: each Block under
+    the Block before it, each branch in its own column, nothing overlapping."""
+
+    def test_the_storyboard_reads_in_order_after_each_change(self) -> None:
+        seed_profiles()
+        test_id = created_test(step_recipe(1))
+        assert positions_by_label(stored_workflow(test_id)) == STEPS[1]
+
+        for step in (2, 3):
+            workflow = amended_workflow(test_id, step_recipe(step))
+
+            assert positions_by_label(workflow) == STEPS[step], step
+            assert flow_order_findings(workflow) == [], step
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            [INSERTED, ALPHA, BRAVO, CHARLIE],
+            [ALPHA, BRAVO, INSERTED, CHARLIE],
+            [ALPHA, BRAVO, CHARLIE, INSERTED],
+        ],
+        ids=["start", "middle", "end"],
+    )
+    def test_an_insert_in_a_lane_reads_in_order(self, body: list[Any]) -> None:
+        test_id = created_test(loop_recipe([ALPHA, BRAVO, CHARLIE], "Loop Order"))
+
+        workflow = amended_workflow(test_id, loop_recipe(body, "Loop Order"))
+
+        assert flow_order_findings(workflow) == []
+
+    def test_a_new_branch_gets_its_own_column_and_the_other_moves_aside(self) -> None:
+        test_id = created_test(branches_recipe([ALPHA, BRAVO], None, "New Branch"))
+
+        workflow = amended_workflow(
+            test_id, branches_recipe([ALPHA, BRAVO], [CHARLIE], "New Branch")
         )
 
-        assert after["Alpha renamed"] == {"x": 500, "y": 140}
+        assert positions_by_label(workflow) == {
+            "If/Else": {"x": -80, "y": 140},
+            "Alpha": {"x": -240, "y": 280},
+            BRAVO_LABEL: {"x": -324, "y": 420},
+            "Charlie": {"x": 124, "y": 280},
+            "After": {"x": -80, "y": 560},
+        }
+        assert flow_order_findings(workflow) == []
+
+    def test_a_case_added_in_the_middle_keeps_each_cases_blocks_with_their_ids_and_widths(
+        self,
+    ) -> None:
+        test_id = created_test(cases_recipe([(1, [ALPHA]), (3, [CHARLIE])], "Cases"))
+        store_geometry(test_id, labeled("Charlie"), width=300)
+        before = ids_by_label(stored_workflow(test_id))
+
+        workflow = amended_workflow(
+            test_id, cases_recipe([(1, [ALPHA]), (2, [INSERTED]), (3, [CHARLIE])], "Cases")
+        )
+
+        ids = ids_by_label(workflow)
+        widths = {node["data"]["label"]: node["width"] for node in workflow["nodes"]}
+        assert (ids["Alpha"], ids["Charlie"]) == (before["Alpha"], before["Charlie"])
+        assert ids["Inserted"] not in before.values()
+        assert (widths["Charlie"], widths["Inserted"]) == (300, 160)
+        assert flow_order_findings(workflow) == []
+
+
+def ids_by_label(workflow: dict[str, Any]) -> dict[str, str]:
+    return {node["data"]["label"]: node["id"] for node in workflow["nodes"]}
+
+
+class TestAmendKeepsEachBlocksId:
+    """A Block the amendment recognizes keeps its id in the saved test, and a new one gets an
+    id no Block of the test had, so nothing else that names a Block is confused."""
+
+    def test_a_recognized_block_keeps_its_stored_id(self) -> None:
+        test_id = created_test(make_recipe([ALPHA, CHARLIE], name="Ids Kept"))
+        before = ids_by_label(stored_workflow(test_id))
+
+        after = ids_by_label(
+            amended_workflow(test_id, make_recipe([INSERTED, ALPHA, CHARLIE], name="Ids Kept"))
+        )
+
+        assert after["Alpha"] == before["Alpha"]
+        assert after["Charlie"] == before["Charlie"]
+        assert after["Inserted"] not in before.values()
+
+    def test_a_renamed_block_keeps_its_stored_id_when_a_block_before_it_goes(self) -> None:
+        test_id = created_test(make_recipe([log_step("Bravo"), ALPHA, CHARLIE], name="Ids Renamed"))
+        before = ids_by_label(stored_workflow(test_id))
+
+        renamed = log_step("Alpha renamed", "alpha")
+        after = ids_by_label(
+            amended_workflow(test_id, make_recipe([renamed, CHARLIE], name="Ids Renamed"))
+        )
+
+        assert after == {"Alpha renamed": before["Alpha"], "Charlie": before["Charlie"]}
+
+    def test_a_changed_block_keeps_its_stored_id_when_a_block_before_it_goes(self) -> None:
+        test_id = created_test(make_recipe([log_step("Bravo"), ALPHA, CHARLIE], name="Ids Changed"))
+        before = ids_by_label(stored_workflow(test_id))
+
+        changed = log_step("Alpha", "new message")
+        after = ids_by_label(
+            amended_workflow(test_id, make_recipe([changed, CHARLIE], name="Ids Changed"))
+        )
+
+        assert after == {"Alpha": before["Alpha"], "Charlie": before["Charlie"]}
+
+    def test_the_wires_join_the_blocks_under_the_ids_they_hold(self) -> None:
+        test_id = created_test(make_recipe([ALPHA, CHARLIE], name="Ids Wired"))
+
+        workflow = amended_workflow(
+            test_id, make_recipe([INSERTED, ALPHA, CHARLIE], name="Ids Wired")
+        )
+
+        label = {node["id"]: node["data"]["label"] for node in workflow["nodes"]}
+        label["start-node"] = "start"
+        assert [(label[edge["source"]], label[edge["target"]]) for edge in workflow["edges"]] == [
+            ("start", "Inserted"),
+            ("Inserted", "Alpha"),
+            ("Alpha", "Charlie"),
+        ]
+        assert len({edge["id"] for edge in workflow["edges"]}) == 3
+
+    def test_the_readback_of_an_amended_test_holds_the_amended_flow(self) -> None:
+        flow = [INSERTED, ALPHA, {"for": {"count": 2, "body": [{"break": {}}]}}, CHARLIE]
+        fresh_id = created_test(make_recipe(flow, name="Ids Fresh"))
+        test_id = created_test(make_recipe([ALPHA, CHARLIE], name="Ids Readback"))
+        amended_workflow(test_id, make_recipe(flow, name="Ids Readback"))
+
+        def flow_of(test_ref: str) -> Any:
+            return yaml.safe_load(author().get_test_recipe(test_ref)["recipe"])["flow"]
+
+        assert flow_of(test_id) == flow_of(fresh_id)
+
+    def test_a_save_refusal_names_the_step_of_a_block_that_kept_its_id(self) -> None:
+        created_test(make_recipe([ALPHA, http_step(10)], name="Ids Refusal"))
+
+        result = author().amend_test_from_recipe(
+            "Ids Refusal",
+            make_recipe(
+                [INSERTED, ALPHA, http_step({"expr": "missing_var * 10"})], name="Ids Refusal"
+            ),
+        )
+
+        assert result["amended"] is False
+        assert find_finding(result["findings"], "UNDECLARED_VARIABLE")["step"] == "flow[2]"
+
+
+def http_step(timeout: Any) -> dict[str, Any]:
+    return {
+        "block": "http-client",
+        "settings": {"url": "http://shop.local", "method": "GET", "timeout": timeout},
+    }
 
 
 class TestAmendRefusesInexpressibleTarget:

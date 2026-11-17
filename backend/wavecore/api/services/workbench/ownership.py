@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import time
+from collections.abc import Mapping
 from typing import Any
 
 from wavecore.api.exceptions import (
@@ -37,12 +38,21 @@ _run_state: dict[str, Any] | None = None
 _holder_generation: int = 0
 _run_announcer_generation: int | None = None
 _away_deadline: float | None = None
+# The person tab that gave way to an assistant claim, and that claim's holder generation.
+_yielded: dict[str, Any] | None = None
+# The stored form of the secrets an assistant's streamed draft shows masked, and its test.
+_kept_secrets: dict[str, Any] | None = None
+# The slot freed since: the kept secrets wait for the next holder to show it continues the draft.
+_kept_unclaimed: bool = False
+# Set once the frame an assistant's stream is sending has reached every tab.
+_frame_sent: asyncio.Event | None = None
 
 
 def clear() -> None:
     """Reset all ownership state."""
     global _holder, _pending_takeover, _shared_draft, _watchers, _suspended
-    global _run_state, _holder_generation, _run_announcer_generation, _away_deadline
+    global _run_state, _holder_generation, _run_announcer_generation, _away_deadline, _yielded
+    global _kept_secrets, _kept_unclaimed, _frame_sent
     _holder = None
     _pending_takeover = None
     _shared_draft = None
@@ -52,6 +62,10 @@ def clear() -> None:
     _holder_generation = 0
     _run_announcer_generation = None
     _away_deadline = None
+    _yielded = None
+    _kept_secrets = None
+    _kept_unclaimed = False
+    _frame_sent = None
 
 
 def _now() -> float:
@@ -179,12 +193,14 @@ def _free_slot(reason: str | None = None) -> None:
     """Drop the holder to nobody and void its now-stale draft.
 
     The cached draft only mirrors a live holder; once the slot is free the graph
-    is stale and must not seed a fresh subscriber via the draft replay.
+    is stale and must not seed a fresh subscriber via the draft replay. Its kept
+    secrets stay for the tab that claims next and continues it.
     """
-    global _holder, _shared_draft, _away_deadline
+    global _holder, _shared_draft, _away_deadline, _kept_unclaimed
     _holder = None
     _shared_draft = None
     _away_deadline = None
+    _kept_unclaimed = _kept_secrets is not None
     event: dict[str, Any] = {"event": "holder_changed", "holder": None}
     if reason is not None:
         event["reason"] = reason
@@ -213,7 +229,7 @@ def _can_auto_yield(kind: str) -> bool:
 
 def claim(holder_id: str, holder_label: str, kind: str = "person") -> dict[str, Any]:
     """Become the holder if the slot is free; idempotent for the same id."""
-    global _away_deadline
+    global _away_deadline, _yielded
     _settle_away()
     if _holder is not None:
         if _holder["id"] == holder_id:
@@ -222,7 +238,9 @@ def claim(holder_id: str, holder_label: str, kind: str = "person") -> dict[str, 
             return get_ownership()
         if not _can_auto_yield(kind):
             raise ConflictException(_ERR_ALREADY_HELD)
+        gave_way = {"id": _holder["id"], "label": _holder["label"]}
         _set_holder(holder_id, holder_label, kind)
+        _yielded = {**gave_way, "generation": _holder_generation}
         _emit({"event": "holder_changed", "holder": get_holder(), "reason": "auto_yield"})
         _refresh_watchers()
         return get_ownership()
@@ -247,11 +265,50 @@ def _grant_to_pending(requester: dict[str, Any]) -> None:
     _refresh_watchers()
 
 
+def _tab_connected(holder_id: str) -> bool:
+    """True while a socket identified as this tab is open and its session was not ended."""
+    from wavecore.api.app import app
+    from wavecore.api.websocket import session_registry
+
+    ws_manager = getattr(app.state, "ws_manager", None)
+    return (
+        ws_manager is not None
+        and bool(ws_manager.has_live_connection(holder_id))
+        and not session_registry.is_session_closed(holder_id)
+    )
+
+
+def _tab_that_gave_way() -> dict[str, Any] | None:
+    """The still-connected person tab the current holder's claim auto-yielded, if any."""
+    yielded = _yielded
+    if yielded is None or _holder is None or yielded["generation"] != _holder["generation"]:
+        return None
+    return yielded if _tab_connected(yielded["id"]) else None
+
+
+def _hand_back(tab: dict[str, Any]) -> None:
+    """Give the slot back to the tab that gave way; it keeps the cached draft it now holds."""
+    _set_holder(tab["id"], tab["label"], "person")
+    # Unsaved work it inherits refuses the next assistant claim, as its own would.
+    set_holder_dirty(tab["id"], _shared_draft is not None and bool(_shared_draft["dirty"]))
+    _emit({"event": "holder_changed", "holder": get_holder(), "reason": "handoff"})
+    _refresh_watchers()
+
+
 def release(holder_id: str, reason: str = "released") -> dict[str, Any]:
-    """Relinquish the slot; a pending take-over is granted on release."""
+    """Relinquish the slot; a pending take-over is granted on release.
+
+    An assistant's handoff with nobody waiting goes back to the tab that gave way to it.
+    """
+    global _yielded
     _require_holder(holder_id)
     logger.debug("Ownership released by %s (%s)", holder_id, reason)
-    _hand_off_or_free("handoff" if reason == "handoff" else None)
+    gave_way = _tab_that_gave_way() if reason == "handoff" else None
+    _yielded = None
+    if gave_way is not None and _pending_takeover is None:
+        _hand_back(gave_way)
+    else:
+        _hand_off_or_free("handoff" if reason == "handoff" else None)
     return get_ownership()
 
 
@@ -317,8 +374,8 @@ def force_takeover(requester_id: str, requester_label: str) -> dict[str, Any]:
 
 def apply_draft(holder_id: str, snapshot: dict[str, Any]) -> dict[str, Any]:
     """Cache the holder's draft snapshot; the manager re-broadcasts the payload."""
-    global _shared_draft
-    _require_holder(holder_id)
+    global _shared_draft, _kept_secrets, _kept_unclaimed
+    holder = _require_holder(holder_id)
     payload = {
         "event": "draft_snapshot",
         "nodes": snapshot["nodes"],
@@ -330,9 +387,50 @@ def apply_draft(holder_id: str, snapshot: dict[str, Any]) -> dict[str, Any]:
         "dirty": bool(snapshot.get("dirty", True)),
         "from_holder_id": holder_id,
         "active_node_id": snapshot.get("active_node_id"),
+        # Where a build in progress will end up, so a watcher frames the finished test.
+        "final_bounds": snapshot.get("final_bounds"),
+        # "build" or "change" while an assistant streams one, so every viewer can name it.
+        "watch_kind": snapshot.get("watch_kind"),
     }
     _shared_draft = payload
+    # A clean surface or another test in the tab is no longer the streamed draft.
+    if _kept_secrets is not None and (
+        payload["test_id"] != _kept_secrets["test_id"] or not payload["dirty"]
+    ):
+        _kept_secrets = None
+    elif holder["kind"] == "person":
+        _kept_unclaimed = False
     return payload
+
+
+def keep_draft_secrets(holder_id: str, kept: Mapping[str, Any]) -> None:
+    """Keep the real secrets of the draft the holder streams, for whoever continues and saves it.
+
+    ``kept`` names the draft's test (``test_id``, None for a new one) and holds the stored form
+    of its ``variables`` and ``workflow``. A frame never carries them.
+    """
+    global _kept_secrets, _kept_unclaimed
+    _require_holder(holder_id)
+    _kept_secrets = dict(kept)
+    _kept_unclaimed = False
+
+
+def kept_draft_secrets(test_id: str | None, holder_id: str | None) -> dict[str, Any] | None:
+    """The kept secrets a save of ``test_id`` by tab ``holder_id`` fills its masked values from:
+    those of the streamed draft that tab holds and continues, else None."""
+    kept = _kept_secrets
+    if kept is None or kept["test_id"] != test_id or _kept_unclaimed:
+        return None
+    if _holder is None or _holder["kind"] != "person" or _holder["id"] != holder_id:
+        return None
+    return kept
+
+
+def drop_draft_secrets(test_id: str | None, holder_id: str | None) -> None:
+    """Tab ``holder_id`` saved the draft of ``test_id`` it continues: its kept secrets go."""
+    global _kept_secrets
+    if kept_draft_secrets(test_id, holder_id) is not None:
+        _kept_secrets = None
 
 
 async def broadcast_draft(payload: dict[str, Any]) -> None:
@@ -343,6 +441,28 @@ async def broadcast_draft(payload: dict[str, Any]) -> None:
     frame itself instead of relying on the manager to re-broadcast.
     """
     await events.broadcast(OWNERSHIP_TOPIC, payload)
+
+
+async def send_stream_frame(holder_id: str, frame: dict[str, Any], kept: Mapping[str, Any]) -> None:
+    """Keep a streamed frame's secrets, apply it and send it to every tab, as one step that a
+    forced take-over waits for, so the taker continues the frame its secrets belong to."""
+    global _frame_sent
+    keep_draft_secrets(holder_id, kept)
+    payload = apply_draft(holder_id, frame)
+    sent = asyncio.Event()
+    _frame_sent = sent
+    try:
+        await broadcast_draft(payload)
+    finally:
+        sent.set()
+        if _frame_sent is sent:
+            _frame_sent = None
+
+
+async def frame_sent() -> None:
+    """Wait until no frame of an assistant's stream is on its way to the tabs."""
+    while (sent := _frame_sent) is not None:
+        await sent.wait()
 
 
 def set_watchers(count: int) -> None:

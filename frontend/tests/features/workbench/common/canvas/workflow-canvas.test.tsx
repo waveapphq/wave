@@ -122,6 +122,7 @@ const mockWorkflowStore = {
   fitViewRequested: false,
   fitViewOptions: null as { padding?: number } | null,
   acknowledgeFitView: vi.fn(),
+  mirrorGlide: null as { moves: Map<string, unknown>; startedAt: number | null; frame: number } | null,
   clearSelection: vi.fn(),
   selectedNodeIds: [] as string[],
   selectedEdgeIds: [] as string[],
@@ -1000,6 +1001,20 @@ describe('WorkflowCanvas - Canvas States', () => {
 
     const onboardingNode = nodes?.find((n) => n.id === 'onboarding-placeholder')
     expect(onboardingNode).toBeDefined()
+  })
+
+  it('names the glide of a watched change while its Blocks wait for the framing, then while they move', async () => {
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    mockWorkflowStore.mirrorGlide = { moves: new Map(), startedAt: null, frame: 1 }
+    const { rerender } = render(<WorkflowCanvas />)
+
+    expect(screen.getByTestId('workflow-canvas')).toHaveAttribute('data-mirror-glide', 'framing')
+    mockWorkflowStore.mirrorGlide = { moves: new Map(), startedAt: 16, frame: 2 }
+    rerender(<WorkflowCanvas />)
+    expect(screen.getByTestId('workflow-canvas')).toHaveAttribute('data-mirror-glide', 'moving')
+    mockWorkflowStore.mirrorGlide = null
+    rerender(<WorkflowCanvas />)
+    expect(screen.getByTestId('workflow-canvas')).not.toHaveAttribute('data-mirror-glide')
   })
 })
 

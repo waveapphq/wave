@@ -508,7 +508,7 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
 
   // Run-mirror detach: drop the announced run's subscriptions; painted states
   // and console entries stay for late reading.
-  const detachFromAnnouncedRun = useCallback(() => {
+  const detachFromAnnouncedRun = useCallback((announceEnded = false) => {
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe()
       subscriptionRef.current = null
@@ -517,7 +517,17 @@ export function useWorkbenchRun(): UseWorkbenchRunReturn {
       variableSubscriptionRef.current.unsubscribe()
       variableSubscriptionRef.current = null
     }
-  }, [])
+    // A run whose announce ended before it did no longer plays here: this tab holds no control of it.
+    if (!announceEnded || !isRunningStatus(statusRef.current)) return
+    setStatus('idle')
+    setSessionId(null)
+    setTestId(null)
+    setWebsocketTopic(null)
+    setCurrentBlock(null)
+    setProgress(null)
+    setSessionTestName(null)
+    useWorkflowStore.getState().setPausedNodeId(null)
+  }, [setStatus, statusRef])
 
   // Registration function exposed to useVariableUpdates
   const registerVariableHandler = useCallback(

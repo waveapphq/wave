@@ -29,6 +29,7 @@ import {
   clickContinue,
   clickStepInto,
 } from '../debug-step/helpers'
+import { BACKEND_URL } from '../../helpers/config'
 import { digIn } from '../../helpers/workbench'
 import { functionSegments, expectNodeCentered, panCanvas } from './helpers'
 
@@ -46,6 +47,13 @@ async function clickFocusCurrent(page: Page): Promise<void> {
 }
 
 test.describe('V-WATCH-FOCUS-CURRENT (functional): Focus Current navigates across Function levels then centers', () => {
+  // The run ends paused; left announced, it keeps an assistant from taking the workbench in a later spec.
+  test.afterEach(async ({ request }) => {
+    const session = await (await request.get(`${BACKEND_URL}/workbench/session`)).json().catch(() => null)
+    const sessionId = session?.data?.session_id
+    if (sessionId) await request.post(`${BACKEND_URL}/workbench/${sessionId}/stop`)
+  })
+
   test('drills in, re-centers on the same level, and pops out - always centering the current block', async ({
     page,
   }) => {

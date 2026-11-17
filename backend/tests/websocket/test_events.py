@@ -1,7 +1,8 @@
 """Fire-and-forget topic broadcasts (wavecore.api.websocket.events)."""
 
+import asyncio
 import logging
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -116,3 +117,34 @@ class TestBroadcast:
         assert [
             record.getMessage() for record in caplog.records if record.name == events.__name__
         ] == [f"Failed to broadcast {logged_topic} event: socket gone"]
+
+
+class TestSettle:
+    """A caller waits until what it scheduled has gone out before it sends more."""
+
+    async def test_waits_until_every_scheduled_broadcast_has_gone_out(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sent: list[str] = []
+
+        async def send(topic: str, event: dict[str, str]) -> None:
+            await asyncio.sleep(0)
+            sent.append(event["event"])
+
+        monkeypatch.setattr(events, "broadcast", send)
+        events.emit(TOPIC, {"event": "first"})
+        events.emit(TOPIC, {"event": "second"})
+
+        await events.settle()
+
+        assert sent == ["first", "second"]
+        assert events._emit_tasks == set()
+
+    async def test_leaves_a_broadcast_scheduled_on_another_loop_alone(self) -> None:
+        foreign = MagicMock()
+        foreign.get_loop.return_value = object()
+        events._emit_tasks.add(foreign)
+
+        await events.settle()
+
+        assert events._emit_tasks == {foreign}

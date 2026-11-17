@@ -1,0 +1,81 @@
+test:
+  name: Release smoke check
+  description: Release smoke check of Orders API on the App Server.
+  tags: [release, smoke]
+variables:
+  service_state: {type: string}
+  release_version: {type: string, value: 2.14.0}
+  api_status: {type: integer}
+  api_health: {type: string}
+flow:
+- block: ssh-session-open
+  label: Connect to App Server
+  profiles:
+  - profile: App Server
+    alias: app
+    fields: [host, port, username, password]
+  settings:
+    host: {expr: app.host}
+    port: {expr: app.port}
+    username: {expr: app.username}
+    password: {expr: app.password}
+    host_key_verification: strict
+  capture: {session_id: ssh_session}
+- remote:
+    label: On App Server
+    settings:
+      session_id: {expr: ssh_session}
+    body:
+    - block: ssh-session-exec
+      label: Check Orders API
+      settings:
+        session_id: {expr: ssh_session}
+        command: pgrep -x orders-api > /dev/null && printf running || printf stopped
+      capture: {stdout: service_state}
+    - if:
+        label: Orders API down?
+        if_label: Down
+        when: {variable: service_state, operator: not_equals, value: running, value_type: string}
+        then:
+        - block: http-client
+          label: Alert On-Call
+          settings:
+            url: https://oncall.prod.internal/v1/alerts
+            method: POST
+            headers: {Content-Type: application/json}
+            body_mode: text
+            body: '{"service":"orders-api","severity":"critical","summary":"Orders API is not running on the App Server"}'
+            response_mode: body
+            verify_ssl: true
+            ca_cert: /etc/ssl/certs/prod-internal-ca.pem
+        - halt: {scope: test, status: failed, message: Orders API is not running on the App Server}
+          label: Fail test
+    - block: ssh-session-exec
+      label: Restart Orders API
+      settings:
+        session_id: {expr: ssh_session}
+        command: service orders-api restart
+    - wait_until:
+        label: Wait for healthy
+        that:
+        - {variable: api_status, operator: equals, value: 200, value_type: integer}
+        - {variable: api_health, operator: contains, value: '"status":"ok"', value_type: string}
+        - {variable: api_health, operator: contains, value: '"version":"{{ release_version }}"', value_type: string}
+        timeout: 30000
+        interval: 1000
+        message: Orders API did not answer healthy within 30 s of the restart
+        fail_current_scope: true
+        retry:
+        - block: http-client
+          label: Check /health
+          settings:
+            url: https://orders-api.prod.internal/health
+            method: GET
+            response_mode: body
+            verify_ssl: true
+            ca_cert: /etc/ssl/certs/prod-internal-ca.pem
+          capture: {status_code: api_status, body: api_health}
+- block: ssh-session-close
+  label: Disconnect
+  settings:
+    session_id: {expr: ssh_session}

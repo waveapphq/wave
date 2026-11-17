@@ -174,15 +174,149 @@ export interface McpToolResult {
   payload: Record<string, any>
 }
 
+/** The `clientInfo` a client sends in its handshake: a short name and an optional display title. */
+export interface McpClientInfo {
+  name: string
+  title?: string
+}
+
+const TOOL_CALL_TIMEOUT_MS = 90_000
+
+function clientEnv(client?: McpClientInfo): NodeJS.ProcessEnv {
+  const identity = client
+    ? { WAVE_MCP_CLIENT_NAME: client.name, WAVE_MCP_CLIENT_TITLE: client.title ?? '' }
+    : {}
+  return { ...process.env, ...identity }
+}
+
 /** Call one MCP tool on the endpoint at `port` through the one-shot SDK client; returns its envelope. */
-export function callTool(port: number, tool: string, args: Record<string, unknown>): McpToolResult {
+export function callTool(
+  port: number,
+  tool: string,
+  args: Record<string, unknown>,
+  client?: McpClientInfo,
+): McpToolResult {
   const stdout = execFileSync('poetry', ['run', 'python', TOOL_CLIENT_PATH, mcpEndpointUrl(port), tool], {
     cwd: BACKEND_DIR,
     input: JSON.stringify(args),
-    timeout: 90_000,
+    timeout: TOOL_CALL_TIMEOUT_MS,
     encoding: 'utf-8',
+    env: clientEnv(client),
   })
   return JSON.parse(stdout.trim().split('\n').pop() ?? '') as McpToolResult
+}
+
+/** `callTool` without blocking the spec, for a tool that answers only when its work ends (a watched build or change). */
+export function callToolAsync(
+  port: number,
+  tool: string,
+  args: Record<string, unknown>,
+  client?: McpClientInfo,
+): Promise<McpToolResult> {
+  const child = spawn('poetry', ['run', 'python', TOOL_CLIENT_PATH, mcpEndpointUrl(port), tool], {
+    cwd: BACKEND_DIR,
+    env: clientEnv(client),
+  })
+  let stdout = ''
+  let stderr = ''
+  child.stdout.on('data', (chunk) => {
+    stdout += String(chunk)
+  })
+  child.stderr.on('data', (chunk) => {
+    stderr += String(chunk)
+  })
+  child.stdin.end(JSON.stringify(args))
+  return new Promise<McpToolResult>((resolve, reject) => {
+    const timer = setTimeout(() => child.kill('SIGKILL'), TOOL_CALL_TIMEOUT_MS)
+    child.once('error', (error) => {
+      clearTimeout(timer)
+      reject(error)
+    })
+    child.once('close', (code) => {
+      clearTimeout(timer)
+      try {
+        resolve(JSON.parse(stdout.trim().split('\n').pop() ?? '') as McpToolResult)
+      } catch {
+        reject(new Error(`MCP client for ${tool} exited ${code}: stdout=${stdout} stderr=${stderr}`))
+      }
+    })
+  })
+}
+
+// The one-shot SDK client, kept on the call until it answers or a line arrives on its input; that line
+// cancels the call and ends the session, as an assistant that drops mid-call does.
+const CANCELABLE_CALL_PROGRAM = [
+  'import asyncio, json, sys',
+  'from mcp import types',
+  'from mcp.client import Client',
+  '',
+  'async def main():',
+  '    loop = asyncio.get_running_loop()',
+  '    reader = asyncio.StreamReader()',
+  '    await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), sys.stdin)',
+  '    args = json.loads(await reader.readline())',
+  '    info = types.Implementation(name="wave-e2e-tool-client", version="1.0.0")',
+  '    async with Client(sys.argv[1], client_info=info) as client:',
+  '        call = asyncio.ensure_future(client.call_tool(sys.argv[2], args))',
+  '        stop = asyncio.ensure_future(reader.readline())',
+  '        await asyncio.wait({call, stop}, return_when=asyncio.FIRST_COMPLETED)',
+  '        stop.cancel()',
+  '        if not call.done():',
+  '            call.cancel()',
+  '            await asyncio.gather(call, return_exceptions=True)',
+  '            print(json.dumps({"canceled": True}), flush=True)',
+  '            return',
+  '        result = call.result()',
+  '    text = result.content[0].text if result.content else ""',
+  '    try:',
+  '        payload = json.loads(text)',
+  '    except ValueError:',
+  '        payload = {"text": text}',
+  '    print(json.dumps({"isError": bool(result.is_error), "payload": payload}), flush=True)',
+  '',
+  'asyncio.run(main())',
+].join('\n')
+
+export interface CancelableToolCall {
+  /** The tool's envelope, or null once `cancel` ended the call before it answered. */
+  result: Promise<McpToolResult | null>
+  /** Cancel the call and end the client's session, the way an assistant that drops goes. */
+  cancel: () => void
+}
+
+/** Start one MCP tool call on the endpoint at `port` that the spec can cancel before it answers. */
+export function startCancelableCall(port: number, tool: string, args: Record<string, unknown>): CancelableToolCall {
+  const child = spawn('poetry', ['run', 'python', '-c', CANCELABLE_CALL_PROGRAM, mcpEndpointUrl(port), tool], {
+    cwd: BACKEND_DIR,
+  })
+  let stdout = ''
+  let stderr = ''
+  child.stdout.on('data', (chunk) => {
+    stdout += String(chunk)
+  })
+  child.stderr.on('data', (chunk) => {
+    stderr += String(chunk)
+  })
+  // A client that already exited has no input left to end.
+  child.stdin.on('error', () => undefined)
+  child.stdin.write(`${JSON.stringify(args)}\n`)
+  const result = new Promise<McpToolResult | null>((resolve, reject) => {
+    const timer = setTimeout(() => child.kill('SIGKILL'), TOOL_CALL_TIMEOUT_MS)
+    child.once('error', (error) => {
+      clearTimeout(timer)
+      reject(error)
+    })
+    child.once('close', (code) => {
+      clearTimeout(timer)
+      try {
+        const last = JSON.parse(stdout.trim().split('\n').pop() ?? '') as McpToolResult | { canceled: true }
+        resolve('canceled' in last ? null : last)
+      } catch {
+        reject(new Error(`MCP client for ${tool} exited ${code}: stdout=${stdout} stderr=${stderr}`))
+      }
+    })
+  })
+  return { result, cancel: () => child.stdin.end('cancel\n') }
 }
 
 // The SDK client for answers of several content items, printing every text item: a listing sends one per row.
@@ -277,7 +411,8 @@ const HELD_CLIENT_PROGRAM = [
   'from mcp.client import Client',
   '',
   'async def main():',
-  '    info = types.Implementation(name=sys.argv[2], version="1.0.0")',
+  '    title = sys.argv[3] if len(sys.argv) > 3 else None',
+  '    info = types.Implementation(name=sys.argv[2], title=title, version="1.0.0")',
   '    async with Client(sys.argv[1], client_info=info) as client:',
   '        await client.list_tools()',
   '        print("connected", flush=True)',
@@ -293,15 +428,19 @@ export interface McpClientSession {
   close(): Promise<void>
 }
 
-/** Connect one MCP client named `clientName` to `url` and keep its session open until `close()`. */
+/** Connect one MCP client named `clientName` (titled `title` when given) to `url`, open until `close()`. */
 export async function connectMcpClient(
   page: Page,
   url: string,
   clientName: string,
+  title?: string,
 ): Promise<McpClientSession> {
-  const child = spawn('poetry', ['run', 'python', '-c', HELD_CLIENT_PROGRAM, url, clientName], {
+  const titleArg = title ? [title] : []
+  const child = spawn('poetry', ['run', 'python', '-c', HELD_CLIENT_PROGRAM, url, clientName, ...titleArg], {
     cwd: BACKEND_DIR,
   })
+  // GET /mcp/status names a session by the client's title when it sends one, else by its name.
+  const shownName = title ?? clientName
   let output = ''
   let running = true
   const exited = new Promise<void>((resolve) => {
@@ -353,10 +492,10 @@ export async function connectMcpClient(
         async () => {
           const status = await (await page.request.get(`${BACKEND_URL}/mcp/status`)).json()
           const sessions = (status?.sessions ?? []) as { session_id: string; client: string }[]
-          sessionId = sessions.find((session) => session.client === clientName)?.session_id ?? ''
+          sessionId = sessions.find((session) => session.client === shownName)?.session_id ?? ''
           return sessionId
         },
-        { timeout: 15_000, message: `expected a session of ${clientName} in GET /mcp/status` },
+        { timeout: 15_000, message: `expected a session of ${shownName} in GET /mcp/status` },
       )
       .not.toBe('')
   } catch (error) {

@@ -1,0 +1,80 @@
+{
+  "name": "Watch Canvas Settings",
+  "version": "1.0.0",
+  "description": "A Log Alpha and a Log Bravo with its own recipe key, stored as a recipe compiles them, each with an open description and its secrets always masked, as a person sets them on the canvas.",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 140
+        },
+        "data": {
+          "label": "Alpha",
+          "recipeKey": "flow[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "description": "Alpha keeps its open description and masks every secret",
+          "descriptionExpanded": true,
+          "config": {
+            "values": {
+              "message": "alpha",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": [],
+            "secret_masking": "mask",
+            "unmasked_secret_fields": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        }
+      },
+      {
+        "id": "node-2",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 320
+        },
+        "data": {
+          "label": "Bravo",
+          "recipeKey": "bravo",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "description": "Bravo changes its message and keeps what the canvas set",
+          "descriptionExpanded": true,
+          "config": {
+            "values": {
+              "message": "bravo",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": [],
+            "secret_masking": "mask",
+            "unmasked_secret_fields": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-alpha",
+        "source": "start-node",
+        "target": "node-1"
+      },
+      {
+        "id": "e-alpha-bravo",
+        "source": "node-1",
+        "target": "node-2"
+      }
+    ]
+  }
+}

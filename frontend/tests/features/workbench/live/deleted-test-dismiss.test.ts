@@ -24,7 +24,7 @@ vi.mock('@/features/workbench/api/workbench', () => ({
 }))
 
 function makeDeps() {
-  return { resetWorkbenchRun: vi.fn(), toastError: vi.fn(), clearDraft: vi.fn() }
+  return { resetWorkbenchRun: vi.fn(), toastError: vi.fn(), clearDraft: vi.fn(), holdsSession: true }
 }
 
 describe('dismissDeletedTest', () => {
@@ -69,6 +69,18 @@ describe('dismissDeletedTest', () => {
     expect(deps.resetWorkbenchRun).toHaveBeenCalledOnce()
     expect(deps.clearDraft).toHaveBeenCalledOnce()
     expect(clearSession).toHaveBeenCalledOnce()
+  })
+
+  it('in a tab that does not hold the session, never drops the run or clears the session on the server', () => {
+    const deps = { ...makeDeps(), holdsSession: false }
+
+    dismissDeletedTest(deps)
+
+    expect(deps.resetWorkbenchRun).not.toHaveBeenCalled()
+    expect(clearSession).not.toHaveBeenCalled()
+    expect(useDeletedTestStore.getState().info).toBeNull()
+    expect(useWorkflowStore.getState().editingTestId).toBeNull()
+    expect(useWorkflowStore.getState().fitViewRequested).toBe(true)
   })
 
   it('reports a failed session clear on the toast without throwing', async () => {

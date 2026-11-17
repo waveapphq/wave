@@ -26,13 +26,13 @@ function nonStaticImportsOf(specifier) {
 }
 
 const UNSAFE_VOID =
-  '`void` may only mark a navigate, fitView or setCenter call, an import(), or a chain that ends in .catch() or a two-argument .then().';
+  '`void` may only mark a navigate call, a viewport move (fitView, fitBounds, setCenter, setViewport), an import(), or a chain that ends in .catch() or a two-argument .then().';
 
 // Navigation, viewport moves and preload imports have no failure to report; the chains handle theirs.
 const SAFE_VOID_ARGUMENTS = [
   '[argument.type="ImportExpression"]',
-  '[argument.callee.name=/^(navigate|setCenter|fitView|\\w+FitView)$/]',
-  '[argument.callee.property.name=/^(setCenter|fitView)$/]',
+  '[argument.callee.name=/^(navigate|setCenter|setViewport|fitView|fitBounds|\\w+FitView)$/]',
+  '[argument.callee.property.name=/^(setCenter|setViewport|fitView|fitBounds)$/]',
   '[argument.callee.property.name="catch"]',
   '[argument.callee.property.name="then"][argument.arguments.1]',
 ];

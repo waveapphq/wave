@@ -8,29 +8,19 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   useTestLifecycle,
   toNamespaceEntries,
-  reportTestRefreshFailure,
 } from '@/features/workbench/live/use-test-lifecycle'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import { usePageBlockStore } from '@/stores/page-block-store'
 import { SAVE_RESYNC_OWNER } from '@/features/workbench/live/save-utils'
 import { fetchSystemVariables } from '@/features/settings/api/global-variables/crud'
+import { fetchTest } from '@/features/tests/api/crud'
 import { convertSystemVariables } from '@/features/workbench/live/variable-helpers'
+import { useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
 import { createSimpleRouterWrapper } from '../../../utils/router-test-utils'
-
-// ---------------------------------------------------------------------------
-// Mock: toast (a failed refresh is reported where the user is looking)
-// ---------------------------------------------------------------------------
-vi.mock('@/components/ui/toast', async (importOriginal) => {
-  const error = vi.fn()
-  return {
-    ...(await importOriginal<typeof import('@/components/ui/toast')>()),
-    useToast: () => ({ error }),
-  }
-})
 
 // ---------------------------------------------------------------------------
 // Mock: workflow store
@@ -81,6 +71,10 @@ vi.mock('@/features/workbench/live/variable-helpers', () => ({
 // ---------------------------------------------------------------------------
 vi.mock('@/features/settings/api/global-variables/crud', () => ({
   fetchSystemVariables: vi.fn().mockResolvedValue({}),
+}))
+
+vi.mock('@/features/tests/api/crud', () => ({
+  fetchTest: vi.fn(),
 }))
 
 // ---------------------------------------------------------------------------
@@ -903,6 +897,151 @@ describe('useTestLifecycle', () => {
       canvas.unmount()
     })
   })
+
+  describe('the open test suites, refreshed on a return to the Workbench', () => {
+    const CHECKOUT = {
+      id: 'test-7',
+      name: 'Checkout Flow',
+      suite_ids: ['suite-1'],
+      suite_variables: [{ name: 'base_url', type: 'string' }],
+      regression_variables: [{ name: 'region', type: 'string' }],
+    }
+    const OPEN_BLOCK = { id: 'n1', data: { label: 'Log' } }
+    const setEditingTestSuiteIds = vi.fn()
+    let openTestId: string | null = 'test-7'
+
+    beforeEach(() => {
+      openTestId = 'test-7'
+      vi.mocked(fetchTest).mockReset()
+      useDeletedTestStore.getState().clear()
+    })
+
+    function notFound() {
+      return Object.assign(new Error('Test not found'), { status: 404 })
+    }
+
+    function mount(roles: { isMirroring?: boolean; browsingAway?: boolean } = {}) {
+      setupStore({ editingTestId: 'test-7', nodes: [OPEN_BLOCK] })
+      ;(useWorkflowStore as unknown as { getState: () => unknown }).getState = () => ({
+        ...mockGetState(),
+        editingTestId: openTestId,
+        editingTestName: 'Checkout Flow',
+        setEditingTestSuiteIds,
+      })
+      const params = { ...defaultParams(), ...roles }
+      const wrapper = createSimpleRouterWrapper(['/workbench'])
+      return renderHook(() => ({ lifecycle: useTestLifecycle(params), navigate: useNavigate() }), { wrapper })
+    }
+
+    async function returnToWorkbench(view: ReturnType<typeof mount>) {
+      await act(async () => {
+        await view.result.current.navigate('/workbench?from=suite')
+      })
+    }
+
+    it('blocks the Workbench with the retry card when the read fails, and the retry applies the suites', async () => {
+      vi.mocked(fetchTest)
+        .mockRejectedValueOnce(new Error('Service Unavailable'))
+        .mockResolvedValueOnce(CHECKOUT as never)
+      const view = mount()
+
+      await returnToWorkbench(view)
+
+      const block = usePageBlockStore.getState().block
+      expect(block?.title).toBe('Could not load suite variables')
+      expect(block?.detail.message).toBe('Service Unavailable')
+      expect(setEditingTestSuiteIds).not.toHaveBeenCalled()
+
+      await act(async () => {
+        await usePageBlockStore.getState().block!.retry()
+      })
+
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expect(setEditingTestSuiteIds).toHaveBeenCalledWith(['suite-1'])
+      expect(storeFns.setNamespaceVariables).toHaveBeenCalledWith('suite', [{ name: 'base_url', type: 'string' }])
+      expect(storeFns.setNamespaceVariables).toHaveBeenCalledWith('regression', [{ name: 'region', type: 'string' }])
+    })
+
+    it('shows the deleted-test dialog, not the retry card, when the open test is gone', async () => {
+      vi.mocked(fetchTest).mockRejectedValueOnce(notFound())
+      const view = mount()
+
+      await returnToWorkbench(view)
+
+      expect(useDeletedTestStore.getState().info).toEqual({ testId: 'test-7', testName: 'Checkout Flow' })
+      expect(usePageBlockStore.getState().block).toBeNull()
+    })
+
+    it('in a watching tab, drops the suites of a watched test that is gone and raises no dialog', async () => {
+      vi.mocked(fetchTest).mockRejectedValueOnce(notFound())
+      const view = mount({ isMirroring: true })
+
+      await returnToWorkbench(view)
+
+      expect(useDeletedTestStore.getState().info).toBeNull()
+      expect(usePageBlockStore.getState().block).toBeNull()
+      expect(setEditingTestSuiteIds).toHaveBeenCalledWith([])
+      expect(storeFns.setNamespaceVariables).toHaveBeenCalledWith('suite', [])
+      expect(storeFns.setNamespaceVariables).toHaveBeenCalledWith('regression', [])
+    })
+
+    it('a watcher browsing on its own gets the dialog for the test it opened', async () => {
+      vi.mocked(fetchTest).mockRejectedValueOnce(notFound())
+      const view = mount({ isMirroring: true, browsingAway: true })
+
+      await returnToWorkbench(view)
+
+      expect(useDeletedTestStore.getState().info).toEqual({ testId: 'test-7', testName: 'Checkout Flow' })
+      expect(setEditingTestSuiteIds).not.toHaveBeenCalled()
+    })
+
+    it('drops the answer when another test is open by the time it comes back', async () => {
+      let answer: (details: unknown) => void = () => {}
+      vi.mocked(fetchTest).mockReturnValueOnce(new Promise((resolve) => { answer = resolve }) as never)
+      const view = mount()
+      await returnToWorkbench(view)
+
+      openTestId = 'test-8'
+      await act(async () => {
+        answer(CHECKOUT)
+        await Promise.resolve()
+      })
+
+      expect(setEditingTestSuiteIds).not.toHaveBeenCalled()
+      expect(storeFns.setNamespaceVariables).not.toHaveBeenCalledWith('suite', expect.anything())
+    })
+
+    it('raises nothing for a test that is no longer open when it turns out to be gone', async () => {
+      let fail: (reason: unknown) => void = () => {}
+      vi.mocked(fetchTest).mockReturnValueOnce(new Promise((_, reject) => { fail = reject }) as never)
+      const view = mount()
+      await returnToWorkbench(view)
+
+      openTestId = 'test-8'
+      await act(async () => {
+        fail(notFound())
+        await Promise.resolve()
+      })
+
+      expect(useDeletedTestStore.getState().info).toBeNull()
+      expect(usePageBlockStore.getState().block).toBeNull()
+    })
+
+    it('raises nothing when the read answers after the Workbench is gone', async () => {
+      let fail: (reason: unknown) => void = () => {}
+      vi.mocked(fetchTest).mockReturnValueOnce(new Promise((_, reject) => { fail = reject }) as never)
+      const view = mount()
+      await returnToWorkbench(view)
+
+      view.unmount()
+      await act(async () => {
+        fail(notFound())
+        await Promise.resolve()
+      })
+
+      expect(useDeletedTestStore.getState().info).toBeNull()
+    })
+  })
 })
 
 describe('toNamespaceEntries', () => {
@@ -922,38 +1061,5 @@ describe('toNamespaceEntries', () => {
 
   it('returns an empty array for empty input', () => {
     expect(toNamespaceEntries([])).toEqual([])
-  })
-})
-
-describe('reportTestRefreshFailure', () => {
-  function makeSink() {
-    return { deleted: vi.fn(), stale: vi.fn() }
-  }
-
-  it('reports the open test as deleted on a 404', () => {
-    const sink = makeSink()
-
-    reportTestRefreshFailure({ status: 404 }, sink)
-
-    expect(sink.deleted).toHaveBeenCalledTimes(1)
-    expect(sink.stale).not.toHaveBeenCalled()
-  })
-
-  it('reports every other failure as a refresh that did not happen', () => {
-    const sink = makeSink()
-
-    reportTestRefreshFailure(new Error('Internal Server Error'), sink)
-
-    expect(sink.stale).toHaveBeenCalledWith('Internal Server Error')
-    expect(sink.deleted).not.toHaveBeenCalled()
-  })
-
-  it('reports a failure with no status and no message', () => {
-    const sink = makeSink()
-
-    reportTestRefreshFailure(null, sink)
-
-    expect(sink.stale).toHaveBeenCalledWith('Request failed')
-    expect(sink.deleted).not.toHaveBeenCalled()
   })
 })

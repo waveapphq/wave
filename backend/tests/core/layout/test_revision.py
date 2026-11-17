@@ -4,6 +4,7 @@ A Block is recognized by what it is - kind, name and settings - within the same
 section of the same construct, never by its place in the list (REQ-5.2.7.4).
 """
 
+import copy
 from typing import Any
 
 
@@ -20,9 +21,9 @@ def match(
 def carry(
     previous: dict[str, Any], revised: dict[str, Any], anchors: dict[str, str] | None = None
 ) -> None:
-    from wavecore.core.layout.revision import carry_geometry
+    from wavecore.core.layout.revision import carry_canvas_state
 
-    carry_geometry(previous, revised, anchors)
+    carry_canvas_state(previous, revised, anchors)
 
 
 def block(
@@ -86,6 +87,51 @@ def if_else(
         edges += [edge(a, b) for a, b in zip(ids, ids[1:], strict=False)]
         edges.append(edge(ids[-1], after["id"], None, f"ingress_{index}" if index else None))
     return {"nodes": nodes, "edges": edges}
+
+
+def lanes_then(
+    construct: dict[str, Any], lanes: list[tuple[str, dict[str, Any]]]
+) -> dict[str, Any]:
+    """Start -> construct -> one Block per (handle, Block) lane, and its continuation After."""
+    after = block(f"{construct['id'].split('-')[0]}-after", "After")
+    edges = [edge("start-node", construct["id"]), edge(construct["id"], after["id"], "then")]
+    edges += [edge(construct["id"], lane["id"], handle) for handle, lane in lanes]
+    return {"nodes": [construct, *(lane for _, lane in lanes), after], "edges": edges}
+
+
+def switch(cases: list[tuple[str, str]], prefix: str) -> dict[str, Any]:
+    """A Switch with a case per (value, node id); each case's one Block is named by its id."""
+    branches = [
+        {
+            "id": f"branch_{index}",
+            "type": "case",
+            "label": f"Case {value}",
+            "conditions": [
+                {"id": f"c{index}", "type": "expression", "expression": f"r == {value}"}
+            ],
+            "break": True,
+        }
+        for index, (value, _) in enumerate(cases)
+    ]
+    construct = block(f"{prefix}-switch", "Switch", "switch-case", "control", branches=branches)
+    lanes = [
+        (f"branch_{index}", block(node_id, node_id[-1].upper()))
+        for index, (_, node_id) in enumerate(cases)
+    ]
+    return lanes_then(construct, lanes)
+
+
+def parallel(branches: list[tuple[str, str, str]], prefix: str) -> dict[str, Any]:
+    """A Parallel with a branch per (name, node id, label) holding that one Block."""
+    records = [
+        {"id": f"branch_{index + 1}", "name": name} for index, (name, _, _) in enumerate(branches)
+    ]
+    construct = block(f"{prefix}-parallel", "Parallel", "parallel", "control", branches=records)
+    lanes = [
+        (f"branch_{index + 1}", block(node_id, label))
+        for index, (_, node_id, label) in enumerate(branches)
+    ]
+    return lanes_then(construct, lanes)
 
 
 class TestMatchingInOneFlow:
@@ -197,6 +243,58 @@ class TestMatchingInSections:
         revised = if_else([block("n-x", "X")], [block("n-b", "B")], "n")
         assert match(previous, revised) == {"n-if": "o-if", "n-b": "o-b", "n-after": "o-after"}
 
+    def test_a_case_added_in_the_middle_leaves_every_other_case_recognized(self) -> None:
+        previous = switch([("1", "o-a"), ("3", "o-b")], "o")
+        revised = switch([("1", "n-a"), ("2", "n-x"), ("3", "n-b")], "n")
+        assert match(previous, revised) == {
+            "n-switch": "o-switch",
+            "n-a": "o-a",
+            "n-b": "o-b",
+            "n-after": "o-after",
+        }
+
+    def test_a_case_removed_in_the_middle_leaves_every_other_case_recognized(self) -> None:
+        previous = switch([("1", "o-a"), ("2", "o-x"), ("3", "o-b")], "o")
+        revised = switch([("1", "n-a"), ("3", "n-b")], "n")
+        assert match(previous, revised) == {
+            "n-switch": "o-switch",
+            "n-a": "o-a",
+            "n-b": "o-b",
+            "n-after": "o-after",
+        }
+
+    def test_a_parallel_branch_added_in_the_middle_is_told_apart_by_its_blocks(self) -> None:
+        previous = parallel([("", "o-a", "A"), ("", "o-b", "B")], "o")
+        revised = parallel([("", "n-a", "A"), ("", "n-x", "X"), ("", "n-b", "B")], "n")
+        assert match(previous, revised) == {
+            "n-parallel": "o-parallel",
+            "n-a": "o-a",
+            "n-b": "o-b",
+            "n-after": "o-after",
+        }
+
+    def test_a_named_parallel_branch_is_recognized_by_its_name(self) -> None:
+        previous = parallel([("api", "o-a", "Check"), ("db", "o-b", "Check")], "o")
+        revised = parallel(
+            [("api", "n-a", "Check"), ("cache", "n-x", "Check"), ("db", "n-b", "Check")], "n"
+        )
+        assert match(previous, revised) == {
+            "n-parallel": "o-parallel",
+            "n-a": "o-a",
+            "n-b": "o-b",
+            "n-after": "o-after",
+        }
+
+    def test_a_case_whose_value_changed_is_still_the_case_in_its_place(self) -> None:
+        previous = switch([("1", "o-a"), ("3", "o-b")], "o")
+        revised = switch([("1", "n-a"), ("4", "n-b")], "n")
+        assert match(previous, revised) == {
+            "n-switch": "o-switch",
+            "n-a": "o-a",
+            "n-b": "o-b",
+            "n-after": "o-after",
+        }
+
     def test_the_blocks_of_an_unmatched_construct_are_new(self) -> None:
         previous = if_else([block("o-a", "A")], [], "o")
         loop = block("n-for", "Repeat", "for", "control", mode="count", count=2)
@@ -250,7 +348,8 @@ class TestCarryGeometry:
         assert "height" not in by_id["n1"]
         assert by_id["n2"]["position"] == {"x": 500, "y": 400}
         assert "width" not in by_id["n2"]
-        assert by_id["n3"]["position"] == {"x": -80, "y": 420}
+        # A new Block goes under the Block before it, in the column a person gave that one.
+        assert by_id["n3"]["position"] == {"x": 500, "y": 540}
 
     def test_a_generated_width_is_not_carried(self) -> None:
         previous = straight(block("o1", "A"))
@@ -278,7 +377,9 @@ class TestCarryGeometry:
             {"x": -80, "y": 420},
         ]
 
-    def test_a_block_that_grew_wider_moves_the_block_beside_it_down(self) -> None:
+    def test_a_block_that_grew_wider_keeps_its_center_and_the_block_beside_it_moves_aside(
+        self,
+    ) -> None:
         previous = if_else([block("o-a", "A")], [block("o-b", "B")], "o")
         stored = {
             "o-if": {"x": -80, "y": 140},
@@ -295,7 +396,123 @@ class TestCarryGeometry:
         by_id = {node["id"]: node["position"] for node in revised["nodes"]}
         assert by_id == {
             "n-if": {"x": -80, "y": 140},
-            "n-a": {"x": -240, "y": 280},
-            "n-b": {"x": 80, "y": 420},
-            "n-after": {"x": -80, "y": 560},
+            "n-a": {"x": -340, "y": 280},
+            "n-b": {"x": 140, "y": 280},
+            "n-after": {"x": -80, "y": 420},
         }
+
+    def test_a_hand_set_width_stays_with_its_case_when_a_case_comes_before_it(self) -> None:
+        previous = switch([("1", "o-a"), ("3", "o-b")], "o")
+        previous["nodes"][2]["width"] = 300
+        revised = switch([("1", "n-a"), ("2", "n-x"), ("3", "n-b")], "n")
+        carry(previous, revised)
+        widths = {node["id"]: node.get("width") for node in revised["nodes"]}
+        assert (widths["n-b"], widths["n-x"]) == (300, None)
+
+    def test_it_hands_back_which_stored_block_each_revised_block_is(self) -> None:
+        from wavecore.core.layout.revision import carry_canvas_state
+
+        previous = straight(block("o1", "A"), block("o2", "B"), block("o3", "C"))
+        revised = straight(block("n1", "X"), block("n2", "A"), block("n3", "C"))
+
+        assert carry_canvas_state(previous, revised) == {"n2": "o1", "n3": "o3"}
+
+
+MASKING = {"secret_masking": "mask", "unmasked_secret_fields": ["auth_token"]}
+
+
+def set_on_the_canvas(node: dict[str, Any]) -> dict[str, Any]:
+    """The Block as a person left it: its secrets always masked but one, its description open."""
+    node["data"]["config"].update(copy.deepcopy(MASKING))
+    node["data"]["descriptionExpanded"] = True
+    return node
+
+
+def note(node_id: str, **size: float) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "type": "noteNode",
+        "data": {
+            "label": "Note",
+            "elementType": "note",
+            "nodeType": "control",
+            "config": {"values": {"text": "Read me"}},
+        },
+        **size,
+    }
+
+
+class TestCarryCanvasSettings:
+    """What a person sets on the canvas and a recipe cannot say stays with the Block it was
+    set on, as its place and hand-set width do."""
+
+    def test_a_recognized_block_keeps_how_it_masks_its_secrets(self) -> None:
+        previous = straight(set_on_the_canvas(block("o1", "A")))
+        revised = straight(block("n1", "A"))
+
+        carry(previous, revised)
+
+        config = revised["nodes"][0]["data"]["config"]
+        assert {key: config.get(key) for key in MASKING} == MASKING
+
+    def test_a_recognized_block_keeps_its_open_description(self) -> None:
+        previous = straight(set_on_the_canvas(block("o1", "A")))
+        revised = straight(block("n1", "A"))
+
+        carry(previous, revised)
+
+        assert revised["nodes"][0]["data"].get("descriptionExpanded") is True
+
+    def test_a_recognized_block_whose_settings_changed_still_keeps_them(self) -> None:
+        previous = straight(set_on_the_canvas(block("o1", "Fetch", message="x")))
+        revised = straight(block("n1", "Fetch", message="y"))
+
+        carry(previous, revised)
+
+        data = revised["nodes"][0]["data"]
+        assert data["config"]["values"] == {"message": "y"}
+        assert {key: data["config"].get(key) for key in MASKING} == MASKING
+        assert data.get("descriptionExpanded") is True
+
+    def test_a_new_block_starts_on_the_defaults(self) -> None:
+        previous = straight(set_on_the_canvas(block("o1", "A")))
+        revised = straight(block("n1", "X"), block("n2", "A"))
+
+        carry(previous, revised)
+
+        new, kept = revised["nodes"]
+        assert "descriptionExpanded" not in new["data"]
+        assert set(new["data"]["config"]) == {"values"}
+        assert {key: kept["data"]["config"].get(key) for key in MASKING} == MASKING
+
+    def test_a_block_its_key_pairs_with_one_of_another_kind_starts_on_the_defaults(self) -> None:
+        previous = straight(set_on_the_canvas(block("o1", "A")))
+        revised = straight(block("n1", "A", "delay", "control", duration=1))
+
+        carry(previous, revised, {"n1": "o1"})
+
+        data = revised["nodes"][0]["data"]
+        assert "descriptionExpanded" not in data
+        assert set(data["config"]) == {"values"}
+
+    def test_a_block_placed_below_an_open_description_clears_the_whole_card(self) -> None:
+        previous = straight(set_on_the_canvas(block("o1", "A")))
+        previous["nodes"][0]["position"] = {"x": -80, "y": 140}
+        revised = straight(block("n1", "A"), block("n2", "B"))
+        for node in (previous["nodes"][0], revised["nodes"][0]):
+            node["data"]["description"] = "x" * 64
+
+        carry(previous, revised)
+
+        assert revised["nodes"][1]["position"] == {"x": -80, "y": 420}
+
+    def test_a_note_keeps_the_height_a_person_gave_it(self) -> None:
+        previous = straight(block("o1", "A"))
+        previous["nodes"].append(note("o-note", width=345, height=200))
+        revised = straight(block("n1", "A"))
+        revised["nodes"].append(note("n-note"))
+
+        carry(previous, revised)
+
+        kept = revised["nodes"][1]
+        assert (kept.get("width"), kept.get("height")) == (345, 200)

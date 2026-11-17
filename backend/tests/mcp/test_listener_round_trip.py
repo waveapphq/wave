@@ -18,6 +18,7 @@ from tests.mcp.conftest import create_test_entity, free_port
 pytestmark = pytest.mark.timeout(120)
 
 CLIENT_NAME = "pytest-client"
+CLIENT_TITLE = "Pytest Client"
 CLIENT_VERSION = "1.2.3"
 
 EXPECTED_TOOLS = {
@@ -78,7 +79,9 @@ async def running_endpoint(
     await mcp_server.stop()
 
 
-def _client_session(url: str, headers: dict[str, str] | None = None) -> Any:
+def _client_session(
+    url: str, headers: dict[str, str] | None = None, title: str | None = None
+) -> Any:
     """Async context manager yielding an initialized ClientSession + session-id getter."""
     from contextlib import asynccontextmanager
 
@@ -105,7 +108,9 @@ def _client_session(url: str, headers: dict[str, str] | None = None) -> Any:
                 async with ClientSession(
                     read_stream,
                     write_stream,
-                    client_info=types.Implementation(name=CLIENT_NAME, version=CLIENT_VERSION),
+                    client_info=types.Implementation(
+                        name=CLIENT_NAME, title=title, version=CLIENT_VERSION
+                    ),
                 ) as session:
                     await session.initialize()
                     yield session, lambda: captured.get("session_id")
@@ -181,6 +186,51 @@ class TestProtocolRoundTrip:
         assert len(executions) == 1
         assert executions[0]["triggered_by"] == f"mcp:{CLIENT_NAME}"
         assert mcp_state.get_activity()[0]["tool"] == "start_execution"
+
+
+class TestClientDisplayName:
+    async def test_a_name_only_client_is_shown_by_its_name(
+        self, running_endpoint: str, mock_workbench_start: Any
+    ) -> None:
+        from wavecore.api.services.workbench import ownership
+
+        test = create_test_entity("Name Only Client")
+
+        async with _client_session(running_endpoint) as (session, get_session_id):
+            await session.call_tool(
+                "start_execution",
+                {"entity_type": "test", "ref": test["id"], "environment": "Test Environment"},
+            )
+            holder = ownership.get_holder()
+
+        assert holder == {"id": get_session_id(), "label": "pytest-client (MCP)", "kind": "mcp"}
+
+    async def test_a_client_title_is_the_name_a_person_reads(
+        self, running_endpoint: str, mock_workbench_start: Any
+    ) -> None:
+        from wavecore.api.services.executions import _storage as exec_storage
+        from wavecore.api.services.workbench import ownership
+        from wavecore.mcp import state as mcp_state
+
+        test = create_test_entity("Titled Client")
+
+        async with _client_session(running_endpoint, title=CLIENT_TITLE) as (
+            session,
+            get_session_id,
+        ):
+            result = await session.call_tool(
+                "start_execution",
+                {"entity_type": "test", "ref": test["id"], "environment": "Test Environment"},
+            )
+            sessions = mcp_state.list_sessions()
+            holder = ownership.get_holder()
+
+        assert result.is_error is False
+        assert [row["client"] for row in sessions] == ["Pytest Client"]
+        assert mcp_state.get_activity()[0]["client"] == "Pytest Client"
+        assert holder == {"id": get_session_id(), "label": "Pytest Client (MCP)", "kind": "mcp"}
+        executions = list(exec_storage._execution_storage.values())
+        assert [execution["triggered_by"] for execution in executions] == ["mcp:pytest-client"]
 
 
 class TestRequestPlumbing:

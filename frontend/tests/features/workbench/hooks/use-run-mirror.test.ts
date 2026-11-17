@@ -178,6 +178,26 @@ describe('useRunMirror - deactivation', () => {
     expect(detach).toHaveBeenCalledTimes(1)
   })
 
+  it('tells the detach that the run is no longer announced', () => {
+    const { rerender } = renderHook((props: Deps) => useRunMirror(props), {
+      initialProps: deps({ run: RUN }),
+    })
+
+    rerender(deps({ run: null, isMirroring: false }))
+
+    expect(detach).toHaveBeenCalledWith(true)
+  })
+
+  it('tells the detach that a run this tab stops watching is still announced', () => {
+    const { rerender } = renderHook((props: Deps) => useRunMirror(props), {
+      initialProps: deps({ run: RUN }),
+    })
+
+    rerender(deps({ run: RUN, isMirroring: false }))
+
+    expect(detach).toHaveBeenCalledWith(false)
+  })
+
   it('keeps the streamed console readable after the run ends', () => {
     const { rerender } = renderHook((props: Deps) => useRunMirror(props), {
       initialProps: deps({ run: RUN }),

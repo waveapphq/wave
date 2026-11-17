@@ -24,10 +24,15 @@ export const useDeletedTestStore = create<DeletedTestState>((set) => ({
   clear: () => set({ info: null }),
 }))
 
+/** True when the read failed because the test is gone from the server. */
+export function isTestNotFound(err: unknown): boolean {
+  return (err as { status?: number } | null)?.status === 404
+}
+
 /** Routes a not-found failure to the dialog. True when it took the failure, so
  *  the caller returns instead of reporting it as an unknown error. */
 export function reportTestNotFound(err: unknown, info: DeletedTestInfo): boolean {
-  if ((err as { status?: number } | null)?.status !== 404) return false
+  if (!isTestNotFound(err)) return false
   useDeletedTestStore.getState().raise(info)
   return true
 }

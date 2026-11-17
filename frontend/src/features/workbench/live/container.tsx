@@ -23,7 +23,11 @@ import { MirrorBanner } from '@/features/workbench/common/canvas/chrome/mirror-b
 import { TakeOverWaitingDialog } from '@/features/workbench/common/canvas/chrome/take-over-waiting-dialog'
 import { TakeOverApprovalDialog } from '@/features/workbench/common/canvas/chrome/take-over-approval-dialog'
 import { TakeOverResultDialog } from '@/features/workbench/common/canvas/chrome/take-over-result-dialog'
-import { useSessionOwnership } from '@/features/workbench/hooks/use-session-ownership'
+import {
+  useSessionOwnership,
+  type SessionOwnership,
+} from '@/features/workbench/hooks/use-session-ownership'
+import type { MirroredRun } from '@/features/workbench/api/ownership'
 import { StopConfirmationDialog } from '@/components/shared/dialogs/stop-confirmation-dialog'
 import { useWorkbenchRun } from '@/features/workbench/hooks/use-workbench-run/hook'
 import { useSessionArtifacts } from '@/features/workbench/hooks/use-session-artifacts'
@@ -175,6 +179,44 @@ function useInheritRefresh(
   }, [inheritRefreshTick, loadTest])
 }
 
+// An assistant's run that stops playing here, by ending or by a take-over, leaves its environment
+// picked when the server still has it.
+function useKeepAssistantRunEnvironment({
+  mirroredRun,
+  holderKind,
+  browsingAway,
+  readEnvironments,
+  select,
+}: {
+  mirroredRun: MirroredRun | null
+  holderKind: SessionOwnership['holderKind']
+  browsingAway: boolean
+  readEnvironments: () => Promise<readonly { id: string }[]>
+  select: (envId: string) => void
+}): void {
+  const playingRef = useRef<MirroredRun | null>(null)
+  // Picked on the render after the read, so the pick sees the list the read brought.
+  const [confirmedEnvId, setConfirmedEnvId] = useState<string | null>(null)
+  useEffect(() => {
+    const played = playingRef.current
+    playingRef.current = mirroredRun !== null && holderKind === 'mcp' ? mirroredRun : null
+    if (played === null || mirroredRun !== null || browsingAway) return
+    const envId = played.environmentId
+    if (envId === null) return
+    readEnvironments()
+      .then((latest) => {
+        if (latest.some((env) => env.id === envId)) setConfirmedEnvId(envId)
+      })
+      // A failed read keeps the picker as it was.
+      .catch(() => undefined)
+  }, [mirroredRun, holderKind, browsingAway, readEnvironments])
+  useEffect(() => {
+    if (confirmedEnvId === null) return
+    setConfirmedEnvId(null)
+    select(confirmedEnvId)
+  }, [confirmedEnvId, select])
+}
+
 // Monotonic epoch keyed on drill changes; used to remount WorkflowCanvas so React Flow's d3-drag rebinds.
 function useDrillEpoch(): number {
   const drillPathSerialized = useWorkflowStore((state) =>
@@ -194,7 +236,11 @@ export function WorkbenchContainer(): ReactNode {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { error: toastError } = useToast()
-  const { environments, loaded: environmentsLoaded } = useEnvironments()
+  const {
+    environments,
+    loaded: environmentsLoaded,
+    readLatest: readLatestEnvironments,
+  } = useEnvironments()
   const {
     selectedEnvironment,
     setSelectedEnvironment,
@@ -278,9 +324,18 @@ export function WorkbenchContainer(): ReactNode {
     browsingAway,
     localSessionId: sessionId,
     attach: () => {
+      // An assistant's run plays where the viewer sees it: the canvas's own Fit View (RUNM-11).
+      if (ownership.holderKind === 'mcp') useWorkflowStore.getState().requestFitView()
       attachToAnnouncedRun().catch(alreadyReported)
     },
     detach: detachFromAnnouncedRun,
+  })
+  useKeepAssistantRunEnvironment({
+    mirroredRun,
+    holderKind: ownership.holderKind,
+    browsingAway,
+    readEnvironments: readLatestEnvironments,
+    select: setSelectedEnvironment,
   })
 
   // The canvas follows execution during a debug pause: drill into the paused Function, pop out on resume.
@@ -398,6 +453,7 @@ export function WorkbenchContainer(): ReactNode {
     setValidationMode: validationHook.setValidationMode,
     setShowValidationErrorDialog: validationHook.setShowValidationErrorDialog,
     isMirroring,
+    browsingAway,
     workbenchStatus,
     isSessionRecoveryComplete,
     recoveredTestId,
@@ -553,11 +609,9 @@ export function WorkbenchContainer(): ReactNode {
 
   // Dismiss behavior lives in ./deleted-test-dismiss; this is wiring only.
   const lifecycleClearDraft = lifecycle.clearDraft
-  /* v8 ignore start - COV-V8-003: callback body only reachable via a deletion-in-background race the tests do not simulate */
   const handleDismissDeletedTest = useCallback(() => {
-    dismissDeletedTest({ resetWorkbenchRun, toastError, clearDraft: lifecycleClearDraft })
-  }, [resetWorkbenchRun, toastError, lifecycleClearDraft])
-  /* v8 ignore stop */
+    dismissDeletedTest({ resetWorkbenchRun, toastError, clearDraft: lifecycleClearDraft, holdsSession: isHolder })
+  }, [resetWorkbenchRun, toastError, lifecycleClearDraft, isHolder])
 
   // Detect incoming test switch synchronously during render (not in effect)
   // so the overlay appears on the SAME frame as the URL change, before the
@@ -653,6 +707,7 @@ export function WorkbenchContainer(): ReactNode {
               holderLabel={ownership.holderLabel ?? ''}
               holderKind={ownership.holderKind}
               runActive={ownership.mirroredRun !== null}
+              watchKind={ownership.watchKind}
               browsing={browsingAway}
               onWatchSession={handleWatchSession}
               onTakeOver={ownership.takeOver}

@@ -16,6 +16,8 @@ export interface DismissDeletedTestDeps {
   toastError: ReportSessionFailure
   /** Drops the browser-storage draft so the empty canvas leaves nothing behind. */
   clearDraft: () => void
+  /** Only the tab that holds the session drops the run and clears it on the server. */
+  holdsSession: boolean
 }
 
 export function dismissDeletedTest(deps: DismissDeletedTestDeps): void {
@@ -27,6 +29,8 @@ export function dismissDeletedTest(deps: DismissDeletedTestDeps): void {
   // a new one the canvas stays behind the loading overlay for the rest of the mount.
   store.requestFitView({ padding: 0.2, duration: 0 })
   deps.clearDraft()
+  // The run and the server session belong to the holder; any other tab only mirrors.
+  if (!deps.holdsSession) return
   deps.resetWorkbenchRun()
   // The backend session still points at the deleted test; without this the
   // dialog comes back on the next /workbench navigation.

@@ -51,7 +51,7 @@ The three test suites run in Podman containers. Run these commands once, from th
 | `./scripts/build-e2e-image.sh` | The image `wave-e2e`, which is `wave-ci` with Chromium for Playwright. It needs `wave-ci`. |
 | `./scripts/e2e-stack.sh build` | The images of the services that the E2E specs run against, such as SSH hosts, databases, Kubernetes API servers and an OpenSearch node. Building them accepts the vendor license terms in `tests/e2e/services/README.md`. |
 
-Build `wave-ci` again when the backend packages change. When the frontend or E2E packages change, run `npm ci` in `frontend/` and `tests/e2e/`. Build `wave-e2e` again after each build of `wave-ci`, and when the version of Playwright changes. Run `./scripts/e2e-stack.sh build` again when a file in `tests/e2e/services/` changes.
+Build `wave-ci` again when the backend packages change. When the frontend or E2E packages change, run `npm ci` in `frontend/` and `tests/e2e/`. Build `wave-e2e` again after each build of `wave-ci`, and when the version of Playwright changes. Run `./scripts/e2e-stack.sh build` again when a file in `tests/e2e/services/` or `tests/e2e/simulators/https/` changes, before the next E2E run, targeted or full.
 
 `scripts/e2e-stack.sh` reaches Podman through the API socket of your user, at `$XDG_RUNTIME_DIR/podman/podman.sock`. Start that socket before you run an E2E spec.
 
