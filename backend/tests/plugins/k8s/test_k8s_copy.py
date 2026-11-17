@@ -712,8 +712,10 @@ class TestValidation:
             await K8sCopyPlugin().validate(params)
 
     async def test_impersonation_groups_without_a_user_are_refused(self) -> None:
+        params = _valid_params(impersonate_groups="qa, ops")
+
         with pytest.raises(ValueError, match=exact(GROUPS_WITHOUT_USER_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(impersonate_groups="qa, ops"))
+            await K8sCopyPlugin().validate(params)
 
     async def test_impersonation_groups_with_a_user_pass(self) -> None:
         await K8sCopyPlugin().validate(
@@ -724,29 +726,33 @@ class TestValidation:
         message = (
             "Parameter 'direction' must be one of: from_pod, to_pod; Actual value was 'sideways'."
         )
+        params = _valid_params(direction="sideways")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sCopyPlugin().validate(_valid_params(direction="sideways"))
+            await K8sCopyPlugin().validate(params)
 
     async def test_the_direction_enum_is_case_sensitive(self) -> None:
         message = (
             "Parameter 'direction' must be one of: from_pod, to_pod; Actual value was 'From_Pod'."
         )
+        params = _valid_params(direction="From_Pod")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sCopyPlugin().validate(_valid_params(direction="From_Pod"))
+            await K8sCopyPlugin().validate(params)
 
     async def test_kubectl_argument_order_is_not_a_direction(self) -> None:
         message = "Parameter 'direction' must be one of: from_pod, to_pod; Actual value was 'in'."
+        params = _valid_params(direction="in")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sCopyPlugin().validate(_valid_params(direction="in"))
+            await K8sCopyPlugin().validate(params)
 
     async def test_invalid_on_error_is_rejected(self) -> None:
         message = "Parameter 'on_error' must be one of: fail, record; Actual value was 'ignore'."
+        params = _valid_params(on_error="ignore")
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sCopyPlugin().validate(_valid_params(on_error="ignore"))
+            await K8sCopyPlugin().validate(params)
 
     async def test_missing_pod_is_rejected(self) -> None:
         params = _valid_params()
@@ -756,8 +762,10 @@ class TestValidation:
             await K8sCopyPlugin().validate(params)
 
     async def test_empty_pod_counts_as_missing(self) -> None:
+        params = _valid_params(pod="")
+
         with pytest.raises(ValueError, match=r"^Missing required parameter: pod$"):
-            await K8sCopyPlugin().validate(_valid_params(pod=""))
+            await K8sCopyPlugin().validate(params)
 
     async def test_missing_container_is_rejected(self) -> None:
         params = _valid_params()
@@ -767,8 +775,10 @@ class TestValidation:
             await K8sCopyPlugin().validate(params)
 
     async def test_empty_container_counts_as_missing(self) -> None:
+        params = _valid_params(container="")
+
         with pytest.raises(ValueError, match=r"^Missing required parameter: container$"):
-            await K8sCopyPlugin().validate(_valid_params(container=""))
+            await K8sCopyPlugin().validate(params)
 
     async def test_missing_source_path_is_rejected(self) -> None:
         params = _valid_params()
@@ -785,32 +795,46 @@ class TestValidation:
             await K8sCopyPlugin().validate(params)
 
     async def test_an_empty_source_path_is_rejected(self) -> None:
+        params = _valid_params(source_path="")
+
         with pytest.raises(ValueError, match=exact(EMPTY_SOURCE_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(source_path=""))
+            await K8sCopyPlugin().validate(params)
 
     async def test_a_whitespace_only_source_path_is_rejected(self) -> None:
+        params = _valid_params(source_path="   ")
+
         with pytest.raises(ValueError, match=exact(EMPTY_SOURCE_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(source_path="   "))
+            await K8sCopyPlugin().validate(params)
 
     async def test_an_empty_target_path_is_rejected(self) -> None:
+        params = _valid_params(target_path="")
+
         with pytest.raises(ValueError, match=exact(EMPTY_TARGET_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(target_path=""))
+            await K8sCopyPlugin().validate(params)
 
     async def test_a_whitespace_only_target_path_is_rejected(self) -> None:
+        params = _valid_params(target_path="\t ")
+
         with pytest.raises(ValueError, match=exact(EMPTY_TARGET_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(target_path="\t "))
+            await K8sCopyPlugin().validate(params)
 
     async def test_the_source_path_is_checked_before_the_target_path(self) -> None:
+        params = _valid_params(source_path="", target_path="")
+
         with pytest.raises(ValueError, match=exact(EMPTY_SOURCE_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(source_path="", target_path=""))
+            await K8sCopyPlugin().validate(params)
 
     async def test_zero_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=0)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sCopyPlugin().validate(_valid_params(timeout=0))
+            await K8sCopyPlugin().validate(params)
 
     async def test_negative_timeout_is_rejected(self) -> None:
+        params = _valid_params(timeout=-5)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sCopyPlugin().validate(_valid_params(timeout=-5))
+            await K8sCopyPlugin().validate(params)
 
     async def test_positive_timeout_passes(self) -> None:
         await K8sCopyPlugin().validate(_valid_params(timeout=45))
@@ -829,23 +853,31 @@ class TestLimitValidation:
 
     @pytest.mark.parametrize("value", ["many", "5", 1.5, True, [1]])
     async def test_a_max_size_that_is_not_a_whole_number_is_refused(self, value: Any) -> None:
+        params = _valid_params(direction="from_pod", max_size_mib=value)
+
         with pytest.raises(ValueError, match=exact(MAX_SIZE_NOT_INTEGER)):
-            await K8sCopyPlugin().validate(_valid_params(direction="from_pod", max_size_mib=value))
+            await K8sCopyPlugin().validate(params)
 
     @pytest.mark.parametrize("value", [-1, -256])
     async def test_a_max_size_below_zero_is_refused(self, value: int) -> None:
+        params = _valid_params(direction="from_pod", max_size_mib=value)
+
         with pytest.raises(ValueError, match=exact(MAX_SIZE_BELOW_ZERO)):
-            await K8sCopyPlugin().validate(_valid_params(direction="from_pod", max_size_mib=value))
+            await K8sCopyPlugin().validate(params)
 
     @pytest.mark.parametrize("value", ["many", "5", 2.5, False, {"n": 1}])
     async def test_a_max_files_that_is_not_a_whole_number_is_refused(self, value: Any) -> None:
+        params = _valid_params(direction="from_pod", max_files=value)
+
         with pytest.raises(ValueError, match=exact(MAX_FILES_NOT_INTEGER)):
-            await K8sCopyPlugin().validate(_valid_params(direction="from_pod", max_files=value))
+            await K8sCopyPlugin().validate(params)
 
     @pytest.mark.parametrize("value", [-1, -10_000])
     async def test_a_max_files_below_zero_is_refused(self, value: int) -> None:
+        params = _valid_params(direction="from_pod", max_files=value)
+
         with pytest.raises(ValueError, match=exact(MAX_FILES_BELOW_ZERO)):
-            await K8sCopyPlugin().validate(_valid_params(direction="from_pod", max_files=value))
+            await K8sCopyPlugin().validate(params)
 
     async def test_an_absent_direction_counts_as_from_pod(self) -> None:
         params = _valid_params(max_files=-1)
@@ -885,8 +917,10 @@ class TestLimitValidation:
 
     @_BOTH_MODES
     async def test_a_bad_limit_fails_the_block_whatever_on_error_says(self, mode: str) -> None:
+        params = _valid_params(max_size_mib=-1, on_error=mode)
+
         with pytest.raises(ValueError, match=exact(MAX_SIZE_BELOW_ZERO)):
-            await K8sCopyPlugin().validate(_valid_params(max_size_mib=-1, on_error=mode))
+            await K8sCopyPlugin().validate(params)
 
 
 class TestPullLeg:
@@ -1119,9 +1153,10 @@ class TestArchiveGuard:
         source = tmp_path / "a.txt"
         source.write_bytes(b"hello\n")
         channel = FakeExecChannel([ExecOutputTooLarge(CEILING_MESSAGE)])
+        params = _push_params(str(source))
 
         with pytest.raises(ValueError, match=exact(_push_message(CEILING_MESSAGE))):
-            await _execute(channel, _push_params(str(source)))
+            await _execute(channel, params)
 
     async def test_a_push_over_the_ceiling_records_the_output_too_large_reason(
         self, tmp_path: Any
@@ -1157,9 +1192,10 @@ class TestArchiveGuard:
 
     async def test_one_file_more_than_max_files_fails_the_block(self, tmp_path: Any) -> None:
         params = _pull_params(str(tmp_path / "out"), source_path=POD_DIR, max_files=2)
+        stream = _pull_stream(_tar(THREE_FILES))
 
         with pytest.raises(ValueError, match=exact(_pull_message(_over_files_detail(2)))):
-            await _execute(_pull_stream(_tar(THREE_FILES)), params)
+            await _execute(stream, params)
 
     async def test_a_max_files_refusal_records_its_reason(self, tmp_path: Any) -> None:
         params = _pull_params(
@@ -1177,9 +1213,10 @@ class TestArchiveGuard:
         self, tmp_path: Any
     ) -> None:
         params = _pull_params(str(tmp_path / "out"), source_path=POD_DIR, max_files=2)
+        stream = _pull_stream(_tar(THREE_FILES))
 
         with pytest.raises(ValueError):
-            await _execute(_pull_stream(_tar(THREE_FILES)), params)
+            await _execute(stream, params)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -1266,9 +1303,10 @@ class TestArchiveGuard:
     ) -> None:
         (tmp_path / "earlier.txt").write_bytes(b"earlier")
         params = _pull_params("artifact://reports/out", source_path=POD_DIR, max_files=2)
+        stream = _pull_stream(_tar(THREE_FILES))
 
         with pytest.raises(ValueError, match=exact(_pull_message(_over_files_detail(2)))):
-            await _execute(_pull_stream(_tar(THREE_FILES)), params, artifacts_dir=str(tmp_path))
+            await _execute(stream, params, artifacts_dir=str(tmp_path))
 
         assert sorted(entry.name for entry in tmp_path.iterdir()) == ["earlier.txt"]
 
@@ -1888,9 +1926,10 @@ class TestErrorReasonGate:
 
     async def test_fail_mode_raises_out_of_the_block(self, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecRejected('pods "web-1" not found', "NotFound"))
+        params = _pull_params(str(tmp_path / "out.txt"))
 
         with pytest.raises(ValueError, match=exact(_pull_message('pods "web-1" not found'))):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt")))
+            await _execute(stream, params)
 
     async def test_fail_is_the_default_on_error_mode(self, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecRejected("denied", "Forbidden"))
@@ -1916,18 +1955,20 @@ class TestFailureHandling:
     async def test_a_missing_pod_on_the_pull_reads_as_a_copy_out(self, tmp_path: Any) -> None:
         detail = 'pods "web-1" not found'
         stream = FakeExecStdout(open_error=ExecRejected(detail, "NotFound"))
+        params = _pull_params(str(tmp_path / "out.txt"))
 
         with pytest.raises(ValueError, match=exact(_pull_message(detail))):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt")))
+            await _execute(stream, params)
 
     async def test_a_missing_pod_on_the_push_reads_as_a_copy_in(self, tmp_path: Any) -> None:
         source = tmp_path / "a.txt"
         source.write_bytes(b"hello\n")
         detail = 'pods "web-1" not found'
         channel = FakeExecChannel([ExecRejected(detail, "NotFound")])
+        params = _push_params(str(source))
 
         with pytest.raises(ValueError, match=exact(_push_message(detail))):
-            await _execute(channel, _push_params(str(source)))
+            await _execute(channel, params)
 
     async def test_a_failure_on_the_final_push_exec_still_reads_as_a_copy_in(
         self, tmp_path: Any
@@ -1936,18 +1977,20 @@ class TestFailureHandling:
         source.write_bytes(b"hello\n")
         detail = "container not found"
         channel = FakeExecChannel([("", "", 0), ("", "", 0), ExecRejected(detail, "BadRequest")])
+        params = _push_params(str(source))
 
         with pytest.raises(ValueError, match=exact(_push_message(detail))):
-            await _execute(channel, _push_params(str(source)))
+            await _execute(channel, params)
 
     async def test_the_pull_message_names_the_container_the_row_selected(
         self, tmp_path: Any
     ) -> None:
         detail = 'pods "web-1" not found'
         stream = FakeExecStdout(open_error=ExecRejected(detail, "NotFound"))
+        params = _pull_params(str(tmp_path / "out.txt"), container="sidecar")
 
         with pytest.raises(ValueError, match=exact(_pull_message(detail, container="sidecar"))):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt"), container="sidecar"))
+            await _execute(stream, params)
 
     async def test_the_push_message_names_the_container_the_row_selected(
         self, tmp_path: Any
@@ -1956,9 +1999,10 @@ class TestFailureHandling:
         source.write_bytes(b"hello\n")
         detail = "denied"
         channel = FakeExecChannel([ExecRejected(detail, "Forbidden")])
+        params = _push_params(str(source), container="sidecar")
 
         with pytest.raises(ValueError, match=exact(_push_message(detail, container="sidecar"))):
-            await _execute(channel, _push_params(str(source), container="sidecar"))
+            await _execute(channel, params)
 
     async def test_a_recorded_refusal_logs_the_copy_shaped_warn_line(self, tmp_path: Any) -> None:
         detail = 'pods "web-1" not found'
@@ -1988,9 +2032,10 @@ class TestFailureHandling:
     async def test_a_non_zero_tar_exit_on_the_pull_is_a_copy_failure(self, tmp_path: Any) -> None:
         stderr = "tar: /srv/work/src.txt: No such file or directory"
         stream = _pull_stream(b"", stderr=stderr, exit_code=1)
+        params = _pull_params(str(tmp_path / "out.txt"))
 
         with pytest.raises(ValueError, match=exact(_pull_message(stderr))):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt")))
+            await _execute(stream, params)
 
     async def test_a_non_zero_tar_exit_records_the_non_zero_exit_reason(
         self, tmp_path: Any
@@ -2010,9 +2055,10 @@ class TestFailureHandling:
         source.write_bytes(b"hello\n")
         stderr = "tar: can't create directory: Permission denied"
         channel = FakeExecChannel([("", "", 0), ("", "", 0), ("", stderr, 2)])
+        params = _push_params(str(source))
 
         with pytest.raises(ValueError, match=exact(_push_message(stderr))):
-            await _execute(channel, _push_params(str(source)))
+            await _execute(channel, params)
 
     async def test_a_happy_copy_logs_info_and_asks_for_nothing(self, tmp_path: Any) -> None:
         stream = _pull_stream(_tar([("srv/work/src.txt", b"hello\n")]))
@@ -2029,9 +2075,10 @@ class TestFailureHandling:
     async def test_fail_mode_logs_no_warn_line(self, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecRejected("denied", "Forbidden"))
         logger = MagicMock()
+        params = _pull_params(str(tmp_path / "out.txt"))
 
         with pytest.raises(ValueError):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt")), logger)
+            await _execute(stream, params, logger)
 
         assert logger.warn.call_count == 0
 
@@ -2061,9 +2108,10 @@ class TestAlwaysHardFail:
     async def test_a_transport_failure_on_the_pull_raises(self, mode: str, tmp_path: Any) -> None:
         detail = "[Errno 111] Connection refused"
         stream = FakeExecStdout(open_error=ExecTransportError(detail))
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_pull_message(detail))):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt"), on_error=mode))
+            await _execute(stream, params)
 
     @_BOTH_MODES
     async def test_a_transport_failure_on_the_push_raises(self, mode: str, tmp_path: Any) -> None:
@@ -2071,26 +2119,29 @@ class TestAlwaysHardFail:
         source.write_bytes(b"hello\n")
         detail = "TLS handshake failed: self-signed certificate"
         channel = FakeExecChannel([ExecTransportError(detail)])
+        params = _push_params(str(source), on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_push_message(detail))):
-            await _execute(channel, _push_params(str(source), on_error=mode))
+            await _execute(channel, params)
 
     @_BOTH_MODES
     async def test_a_transport_failure_records_nothing(self, mode: str, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecTransportError("socket closed"))
         logger = MagicMock()
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=mode)
 
         with pytest.raises(ValueError):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt"), on_error=mode), logger)
+            await _execute(stream, params, logger)
 
         assert logger.warn.call_count == 0
 
     @_BOTH_MODES
     async def test_a_timeout_raises_its_own_message(self, mode: str, tmp_path: Any) -> None:
         stream = FakeExecStdout(open_error=ExecTimeout("deadline exceeded"))
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=mode)
 
         with pytest.raises(ValueError, match=r"^File copy timed out after \d+ seconds$"):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt"), on_error=mode))
+            await _execute(stream, params)
 
     @_BOTH_MODES
     async def test_the_timeout_message_names_the_configured_timeout(
@@ -2107,18 +2158,20 @@ class TestAlwaysHardFail:
         self, mode: str, tmp_path: Any
     ) -> None:
         stream = FakeExecStdout(open_error=ExecTimeout("deadline exceeded"))
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=mode)
 
         with pytest.raises(ValueError, match=r"^File copy timed out after 60 seconds$"):
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt"), on_error=mode))
+            await _execute(stream, params)
 
     @_BOTH_MODES
     async def test_a_timeout_is_never_nested_in_the_transport_message(
         self, mode: str, tmp_path: Any
     ) -> None:
         stream = FakeExecStdout(open_error=ExecTimeout("deadline exceeded"))
+        params = _pull_params(str(tmp_path / "out.txt"), on_error=mode)
 
         with pytest.raises(ValueError) as caught:
-            await _execute(stream, _pull_params(str(tmp_path / "out.txt"), on_error=mode))
+            await _execute(stream, params)
 
         assert "Could not copy" not in str(caught.value)
 
@@ -2127,21 +2180,28 @@ class TestAlwaysHardFail:
         message = (
             "Parameter 'direction' must be one of: from_pod, to_pod; Actual value was 'sideways'."
         )
+        params = _valid_params(direction="sideways", on_error=mode)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await K8sCopyPlugin().validate(_valid_params(direction="sideways", on_error=mode))
+            await K8sCopyPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_an_empty_source_path_raises(self, mode: str) -> None:
+        params = _valid_params(source_path="", on_error=mode)
+
         with pytest.raises(ValueError, match=exact(EMPTY_SOURCE_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(source_path="", on_error=mode))
+            await K8sCopyPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_an_empty_target_path_raises(self, mode: str) -> None:
+        params = _valid_params(target_path="", on_error=mode)
+
         with pytest.raises(ValueError, match=exact(EMPTY_TARGET_MESSAGE)):
-            await K8sCopyPlugin().validate(_valid_params(target_path="", on_error=mode))
+            await K8sCopyPlugin().validate(params)
 
     @_BOTH_MODES
     async def test_a_non_positive_timeout_raises(self, mode: str) -> None:
+        params = _valid_params(timeout=0, on_error=mode)
+
         with pytest.raises(ValueError, match=r"^Parameter 'timeout' must be positive$"):
-            await K8sCopyPlugin().validate(_valid_params(timeout=0, on_error=mode))
+            await K8sCopyPlugin().validate(params)

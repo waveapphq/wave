@@ -136,7 +136,7 @@ describe('maskBareExpressionsForLint (syntax check sees {{ }} as a string)', () 
   it('masks a bare expression to a same-length quoted string so the JSON validates', () => {
     const text = '{"123": "12323", "dsad": {{ abs(-1) }}}'
     const masked = maskBareExpressionsForLint(text)
-    expect(masked.length).toBe(text.length)
+    expect(masked).toHaveLength(text.length)
     expect(isValidJson(text)).toBe(false)
     expect(isValidJson(masked)).toBe(true)
   })

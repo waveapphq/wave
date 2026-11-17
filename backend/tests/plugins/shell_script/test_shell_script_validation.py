@@ -78,8 +78,9 @@ class TestShellRow:
 
     @pytest.mark.parametrize("value", ["", "   ", "\t"])
     async def test_blank_shell(self, value: str) -> None:
+        params = params_for(shell=value)
         with pytest.raises(ValueError, match=exact("Parameter 'shell' cannot be empty")):
-            await ShellScriptPlugin().validate(params_for(shell=value))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize("value", ["/bin/sh", "/bin/bash -o pipefail", "/usr/bin/env ksh"])
     async def test_a_shell_validates(self, value: str) -> None:
@@ -100,15 +101,17 @@ class TestScriptVariableNames:
     async def test_invalid_names(self, name: str) -> None:
         message = f"Invalid script variable name: '{name}'"
 
+        params = params_for(script_variables=[name])
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(script_variables=[name]))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize(("item", "shown"), [(3, "3"), (None, "None"), (True, "True")])
     async def test_a_non_string_item_is_named_by_its_text(self, item: Any, shown: str) -> None:
         message = f"Invalid script variable name: '{shown}'"
 
+        params = params_for(script_variables=[item])
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(script_variables=[item]))
+            await ShellScriptPlugin().validate(params)
 
     async def test_the_wave_prefix_rule_is_not_applied_to_exports(self) -> None:
         await ShellScriptPlugin().validate(params_for(script_variables=["WAVE_X"]))
@@ -121,8 +124,9 @@ class TestScriptVariableClashes:
     async def test_reserved_output_names(self, name: str) -> None:
         message = f"Script variable '{name}' has the name of a block output"
 
+        params = params_for(script_variables=[name])
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(script_variables=[name]))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize("name", ["STDOUT", "Stdout", "exitcode", "exit_code_2"])
     async def test_the_clash_check_is_an_exact_match(self, name: str) -> None:
@@ -134,8 +138,9 @@ class TestScriptVariableDuplicates:
 
     @pytest.mark.parametrize("names", [["A", "A"], ["A", "B", "A"], ["B", "A", "A"]])
     async def test_a_repeated_name(self, names: list[str]) -> None:
+        params = params_for(script_variables=names)
         with pytest.raises(ValueError, match=exact("Script variable 'A' is listed more than once")):
-            await ShellScriptPlugin().validate(params_for(script_variables=names))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize("names", [["A", "a"], ["COUNT", "count"]])
     async def test_names_that_differ_in_case_are_two_names(self, names: list[str]) -> None:
@@ -144,10 +149,9 @@ class TestScriptVariableDuplicates:
     async def test_only_the_exactly_repeated_name_is_reported(self) -> None:
         message = "Script variable 'COUNT' is listed more than once"
 
+        params = params_for(script_variables=["COUNT", "count", "COUNT"])
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(
-                params_for(script_variables=["COUNT", "count", "COUNT"])
-            )
+            await ShellScriptPlugin().validate(params)
 
 
 def saved(**overrides: Any) -> list[tuple[str, str, str | None, str]]:
@@ -165,8 +169,9 @@ def saved(**overrides: Any) -> list[tuple[str, str, str | None, str]]:
 
 async def ran(**overrides: Any) -> str:
     """The run's refusal for a Source-mode Block with the overrides applied."""
+    params = params_for(**overrides)
     with pytest.raises(ValueError) as excinfo:
-        await ShellScriptPlugin().validate(params_for(**overrides))
+        await ShellScriptPlugin().validate(params)
     return str(excinfo.value)
 
 
@@ -294,8 +299,9 @@ class TestScriptTypeEnum:
             "Parameter 'script_type' must be one of: source, file; " f"Actual value was '{value}'."
         )
 
+        params = params_for(script_type=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(script_type=value))
+            await ShellScriptPlugin().validate(params)
 
     async def test_a_long_value_is_shown_by_length_only(self) -> None:
         message = (
@@ -303,8 +309,9 @@ class TestScriptTypeEnum:
             "Actual value was a 51-character value."
         )
 
+        params = params_for(script_type="s" * 51)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(script_type="s" * 51))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize("value", ["source", "file"])
     async def test_accepted_values(self, value: str) -> None:
@@ -322,13 +329,15 @@ class TestParameterShapes:
     async def test_input_vars_must_be_a_map(self, value: Any, type_name: str) -> None:
         message = f"Parameter 'input_vars' must be a map (dictionary), got {type_name}"
 
+        params = params_for(input_vars=value)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(input_vars=value))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize("value", ["x", {}, 3])
     async def test_arguments_must_be_a_list(self, value: Any) -> None:
+        params = params_for(arguments=value)
         with pytest.raises(ValueError, match=exact("Parameter 'arguments' must be a list")):
-            await ShellScriptPlugin().validate(params_for(arguments=value))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize(
         ("rows", "index"),
@@ -341,13 +350,15 @@ class TestParameterShapes:
     async def test_an_arguments_row_must_be_a_map(self, rows: list[Any], index: int) -> None:
         message = f"Parameter 'arguments' row {index} must be a map"
 
+        params = params_for(arguments=rows)
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(arguments=rows))
+            await ShellScriptPlugin().validate(params)
 
     @pytest.mark.parametrize("value", ["A", {}, 3])
     async def test_script_variables_must_be_a_list(self, value: Any) -> None:
+        params = params_for(script_variables=value)
         with pytest.raises(ValueError, match=exact("Parameter 'script_variables' must be a list")):
-            await ShellScriptPlugin().validate(params_for(script_variables=value))
+            await ShellScriptPlugin().validate(params)
 
     async def test_well_shaped_settings_validate(self) -> None:
         await ShellScriptPlugin().validate(
@@ -419,21 +430,25 @@ class TestValidationOrder:
             await ShellScriptPlugin().validate({"shell": ""})
 
     async def test_the_shell_row_runs_before_the_timeout(self) -> None:
+        params = params_for(shell="", timeout=0)
         with pytest.raises(ValueError, match=exact("Parameter 'shell' cannot be empty")):
-            await ShellScriptPlugin().validate(params_for(shell="", timeout=0))
+            await ShellScriptPlugin().validate(params)
 
     async def test_the_name_check_runs_before_the_clash_check(self) -> None:
+        params = params_for(script_variables=["1x", "stdout"])
         with pytest.raises(ValueError, match=exact("Invalid script variable name: '1x'")):
-            await ShellScriptPlugin().validate(params_for(script_variables=["1x", "stdout"]))
+            await ShellScriptPlugin().validate(params)
 
     async def test_the_clash_check_runs_before_the_repeat_check(self) -> None:
         message = "Script variable 'stdout' has the name of a block output"
 
+        params = params_for(script_variables=["stdout", "stdout"])
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(script_variables=["stdout", "stdout"]))
+            await ShellScriptPlugin().validate(params)
 
     async def test_a_bad_shape_runs_before_the_enum(self) -> None:
         message = "Parameter 'input_vars' must be a map (dictionary), got list"
 
+        params = params_for(input_vars=[], script_type="x")
         with pytest.raises(ValueError, match=exact(message)):
-            await ShellScriptPlugin().validate(params_for(input_vars=[], script_type="x"))
+            await ShellScriptPlugin().validate(params)

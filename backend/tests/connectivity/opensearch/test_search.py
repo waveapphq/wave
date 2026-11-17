@@ -429,8 +429,10 @@ class TestRefusedSearch:
         )
         enqueue_json(cluster, envelope, status=400)
 
+        search_client = client(cluster)
+        search_block = block()
         with pytest.raises(OpenSearchFailure) as caught:
-            run_search(client(cluster), block(), QUERY)
+            run_search(search_client, search_block, QUERY)
 
         assert caught.value.message == (
             "search_phase_execution_exception: all shards failed. First root cause: "
@@ -443,8 +445,10 @@ class TestRefusedSearch:
         reason = "no permissions for [indices:data/read/search] and User [name=wave-limited]"
         enqueue_json(cluster, error_answer("security_exception", reason, 403), status=403)
 
+        search_client = client(cluster)
+        search_block = block()
         with pytest.raises(OpenSearchFailure) as caught:
-            run_search(client(cluster), block(), QUERY)
+            run_search(search_client, search_block, QUERY)
 
         assert caught.value.message == f"security_exception: {reason}"
         assert caught.value.reason == "AuthFailed"
@@ -453,8 +457,10 @@ class TestRefusedSearch:
         enqueue_json(cluster, search_answer(page_hits(PAGE), 10001))
         enqueue_json(cluster, error_answer("illegal_argument_exception", "bad sort", 400), 400)
 
+        search_client = client(cluster)
+        search_block = block(max_results=0)
         with pytest.raises(OpenSearchFailure) as caught:
-            run_search(client(cluster), block(max_results=0), QUERY)
+            run_search(search_client, search_block, QUERY)
 
         assert caught.value.message == "illegal_argument_exception: bad sort"
         assert caught.value.reason == "RequestFailed"

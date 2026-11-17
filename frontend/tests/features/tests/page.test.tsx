@@ -177,9 +177,14 @@ function renderTestsPage(props: Partial<TestsPageProps> = {}) {
 
 describe('TestsPage', () => {
   describe('Page Structure', () => {
-    it('renders page container with correct testid', () => {
+    it.each([
+      ['renders page container with correct testid', 'tests-page'],
+      ['renders filters section', 'filters-section'],
+      ['renders tests table', 'tests-table'],
+      ['renders pagination controls', 'pagination'],
+    ])('%s', (_name, testId) => {
       renderTestsPage()
-      expect(screen.getByTestId('tests-page')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders page title "Tests" as h1', () => {
@@ -197,21 +202,6 @@ describe('TestsPage', () => {
       const newButton = screen.getByRole('button', { name: /New Test/i })
       expect(newButton).toBeVisible()
       expect(newButton).toBeEnabled()
-    })
-
-    it('renders filters section', () => {
-      renderTestsPage()
-      expect(screen.getByTestId('filters-section')).toBeInTheDocument()
-    })
-
-    it('renders tests table', () => {
-      renderTestsPage()
-      expect(screen.getByTestId('tests-table')).toBeInTheDocument()
-    })
-
-    it('renders pagination controls', () => {
-      renderTestsPage()
-      expect(screen.getByTestId('pagination')).toBeInTheDocument()
     })
   })
 
@@ -259,19 +249,13 @@ describe('TestsPage', () => {
       expect(searchInput).toBeVisible()
     })
 
-    it('renders status filter dropdown', () => {
+    it.each([
+      ['renders status filter dropdown', 'filter-status'],
+      ['renders suite filter dropdown', 'filter-suite'],
+      ['renders tags filter', 'filter-tags'],
+    ])('%s', (_name, testId) => {
       renderTestsPage()
-      expect(screen.getByTestId('filter-status')).toBeVisible()
-    })
-
-    it('renders suite filter dropdown', () => {
-      renderTestsPage()
-      expect(screen.getByTestId('filter-suite')).toBeVisible()
-    })
-
-    it('renders tags filter', () => {
-      renderTestsPage()
-      expect(screen.getByTestId('filter-tags')).toBeVisible()
+      expect(screen.getByTestId(testId)).toBeVisible()
     })
 
     it('renders Columns button', () => {

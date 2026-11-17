@@ -310,7 +310,8 @@ class TestFramingHeaders:
         result = test_service._validate_test_data(_test_data([node]), context="save")
 
         flagged = [e for e in result["errors"] if e["message"] == BLOCKED_CL]
-        assert flagged and flagged[0]["code"] == "MAP_KEY_BLOCKED"
+        assert flagged
+        assert flagged[0]["code"] == "MAP_KEY_BLOCKED"
 
     def test_host_and_connection_rows_are_allowed(self) -> None:
         """Only Content-Length is blocked."""
@@ -344,7 +345,8 @@ class TestGeneratedContentTypeRowDuplicates:
         result = test_service._validate_test_data(_test_data([node]), context="save")
 
         flagged = [e for e in result["errors"] if e["message"] == _dup("Content-Type")]
-        assert flagged and flagged[0]["code"] == "MAP_KEY_DUPLICATE"
+        assert flagged
+        assert flagged[0]["code"] == "MAP_KEY_DUPLICATE"
 
     def test_form_mode_with_auto_headers_off_allows_the_row(self) -> None:
         node = _http_node(
@@ -442,7 +444,8 @@ class TestGeneratedAuthRowDuplicates:
         result = test_service._validate_test_data(_test_data([node]), context="save")
 
         flagged = [e for e in result["errors"] if e["message"] == _dup("Authorization")]
-        assert flagged and flagged[0]["code"] == "MAP_KEY_DUPLICATE"
+        assert flagged
+        assert flagged[0]["code"] == "MAP_KEY_DUPLICATE"
 
     def test_bearer_mode_collision_is_case_insensitive_and_renders_as_typed(self) -> None:
         node = _http_node(
@@ -769,7 +772,8 @@ class TestTlsSaveValidation:
         result = test_service._validate_test_data(_test_data([node]), context="save")
 
         flagged = [e for e in result["errors"] if e["message"] == TLS_MIN_MAX]
-        assert flagged and flagged[0]["code"] == "TLS_VERSION_ORDER"
+        assert flagged
+        assert flagged[0]["code"] == "TLS_VERSION_ORDER"
 
     @pytest.mark.parametrize(
         ("minimum", "maximum"),
@@ -1119,7 +1123,8 @@ class TestRemoteUnsupportedCapabilities:
         result = test_service._validate_test_data(test, context="save")
 
         flagged = [e for e in result["errors"] if e["message"] == REMOTE_FORM]
-        assert flagged and flagged[0]["code"] == "REMOTE_UNSUPPORTED"
+        assert flagged
+        assert flagged[0]["code"] == "REMOTE_UNSUPPORTED"
 
     def test_multipart_body_mode_inside_remote_errors(self) -> None:
         test = _remote_wrapped(

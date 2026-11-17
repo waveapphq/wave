@@ -977,12 +977,13 @@ class TestWaitUntilRetryWireThatStrandsABlockInAFunctionBody:
             _function_definition({"nodes": [], "edges": []}, name="versioned_stranded")
         )
 
+        draft_definition = _function_definition(_stranding_body(), "versioned_stranded")
         with pytest.raises(function_service.SaveValidationError) as refused:
             function_service.add_function_version(
                 source["id"],
                 source_version="1.0.0",
                 target_version="1.0.1",
-                draft_definition=_function_definition(_stranding_body(), "versioned_stranded"),
+                draft_definition=draft_definition,
                 changelog="Wait for the service",
                 description="",
                 tags=[],
@@ -1022,12 +1023,13 @@ class TestWaitUntilRetryWireThatStrandsABlockInAFunctionBody:
         )
         workflow = _workflow(*_holding(_local_block("fn-1", _stranding_body())))
 
+        draft_definition = _function_definition(workflow, "versioned_nested")
         with pytest.raises(function_service.SaveValidationError) as refused:
             function_service.add_function_version(
                 source["id"],
                 source_version="1.0.0",
                 target_version="1.0.1",
-                draft_definition=_function_definition(workflow, "versioned_nested"),
+                draft_definition=draft_definition,
                 changelog="Wait for the service",
                 description="",
                 tags=[],
@@ -1050,10 +1052,9 @@ class TestWaitUntilRetryWireThatStrandsABlockInAFunctionBody:
             label="Outer",
         )
 
+        payload = _function_definition(_workflow(*_holding(outer)), name="deep_stranded")
         with pytest.raises(function_service.SaveValidationError) as refused:
-            function_service.create_function(
-                _function_definition(_workflow(*_holding(outer)), name="deep_stranded")
-            )
+            function_service.create_function(payload)
 
         unreached = [e for e in refused.value.errors if e["code"] == "NODE_UNREACHABLE"]
         assert [(e["node_id"], e["message"]) for e in unreached] == [("stranded", STRANDED_MESSAGE)]
@@ -1069,12 +1070,11 @@ class TestWaitUntilRetryWireThatStrandsABlockInAFunctionBody:
 
         body = _stranding_body(_log("orphan"))
 
+        payload = _function_definition(
+            _workflow(*_holding(_local_block("fn-1", body))), name="orphan_nested"
+        )
         with pytest.raises(function_service.SaveValidationError) as refused:
-            function_service.create_function(
-                _function_definition(
-                    _workflow(*_holding(_local_block("fn-1", body))), name="orphan_nested"
-                )
-            )
+            function_service.create_function(payload)
 
         assert _unreached(refused.value.errors) == [
             ("stranded", STRANDED_MESSAGE),

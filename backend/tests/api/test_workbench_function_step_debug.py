@@ -311,8 +311,6 @@ class TestSkipAtPauseFunction:
     async def test_skip_does_not_raise_diverging_conflict(self) -> None:
         """Direct service check: skipping a paused Function never raises the
         diverging-parent ConflictException (a Function has one egress)."""
-        from wavecore.api.exceptions import ConflictException
-
         session_id = "fn-skip-noconflict"
         session = _make_session(session_id)
         session["status"] = "paused"
@@ -325,10 +323,7 @@ class TestSkipAtPauseFunction:
         _wb_common._workbench_sessions[session_id] = session
 
         # Must not raise; if it raised a diverging conflict the test fails.
-        try:
-            result = workbench_service.skip_current_block(session_id=session_id)
-        except ConflictException as exc:  # pragma: no cover - failure path
-            pytest.fail(f"skip raised a conflict for a Function node: {exc}")
+        result = workbench_service.skip_current_block(session_id=session_id)
         assert result["skipped_node_id"] == "fn-1"
 
 

@@ -409,19 +409,18 @@ class TestAuthRequiredFieldGuards:
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/auth",
+                "auth_enabled": True,
+                "auth_mode": "basic",
+                "auth_username": "alice",
+            }
+        )
 
         with pytest.raises(ValueError, match='^Auth mode "Basic" requires Username and Password$'):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/auth",
-                        "auth_enabled": True,
-                        "auth_mode": "basic",
-                        "auth_username": "alice",
-                    }
-                )
-            )
+            await plugin.execute(context)
         assert http_server.requests == []
 
     @pytest.mark.asyncio
@@ -429,20 +428,19 @@ class TestAuthRequiredFieldGuards:
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/auth",
+                "auth_enabled": True,
+                "auth_mode": "basic",
+                "auth_username": "",
+                "auth_password": "wonder-pass",
+            }
+        )
 
         with pytest.raises(ValueError, match='^Auth mode "Basic" requires Username and Password$'):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/auth",
-                        "auth_enabled": True,
-                        "auth_mode": "basic",
-                        "auth_username": "",
-                        "auth_password": "wonder-pass",
-                    }
-                )
-            )
+            await plugin.execute(context)
         assert http_server.requests == []
 
     @pytest.mark.asyncio
@@ -450,18 +448,17 @@ class TestAuthRequiredFieldGuards:
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/auth",
+                "auth_enabled": True,
+                "auth_mode": "bearer",
+            }
+        )
 
         with pytest.raises(ValueError, match='^Auth mode "Bearer token" requires a Token$'):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/auth",
-                        "auth_enabled": True,
-                        "auth_mode": "bearer",
-                    }
-                )
-            )
+            await plugin.execute(context)
         assert http_server.requests == []
 
     @pytest.mark.asyncio
@@ -469,19 +466,18 @@ class TestAuthRequiredFieldGuards:
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/auth",
+                "auth_enabled": True,
+                "auth_mode": "api_key",
+                "auth_header_name": "X-API-Key",
+            }
+        )
 
         with pytest.raises(ValueError, match='^Auth mode "API key" requires Header Name and Key$'):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/auth",
-                        "auth_enabled": True,
-                        "auth_mode": "api_key",
-                        "auth_header_name": "X-API-Key",
-                    }
-                )
-            )
+            await plugin.execute(context)
         assert http_server.requests == []
 
     @pytest.mark.asyncio
@@ -489,20 +485,19 @@ class TestAuthRequiredFieldGuards:
         from wavecore.plugins.http_client import HTTPClientPlugin
 
         plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/auth",
+                "auth_enabled": True,
+                "auth_mode": "api_key",
+                "auth_header_name": "",
+                "auth_key": "ak-99887766",
+            }
+        )
 
         with pytest.raises(ValueError, match='^Auth mode "API key" requires Header Name and Key$'):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/auth",
-                        "auth_enabled": True,
-                        "auth_mode": "api_key",
-                        "auth_header_name": "",
-                        "auth_key": "ak-99887766",
-                    }
-                )
-            )
+            await plugin.execute(context)
         assert http_server.requests == []
 
 

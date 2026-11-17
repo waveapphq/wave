@@ -287,13 +287,17 @@ describe('VirtualizedList Component', () => {
   })
 
   describe('Item Size Strategy - Fixed Height', () => {
-    it('uses 48px height for test list context (default row)', () => {
+    it.each([
+      ['uses 48px height for test list context (default row)', 48, 'test-list'],
+      ['uses 40px height for execution log context (compact row)', 40, 'execution-log'],
+      ['uses 56px height for search results context (comfortable row)', 56, 'search-results'],
+    ] as const)('%s', (_name, itemHeight, context) => {
       const items = generateItems(100)
       render(
         <VirtualizedList
           items={items}
-          itemHeight={48}
-          context="test-list"
+          itemHeight={itemHeight}
+          context={context}
           containerHeight={400}
         >
           {(item: TestItem) => (
@@ -304,47 +308,7 @@ describe('VirtualizedList Component', () => {
         </VirtualizedList>
       )
       const item = screen.getByTestId('item-0')
-      expect(item).toHaveStyle({ height: '48px' })
-    })
-
-    it('uses 40px height for execution log context (compact row)', () => {
-      const items = generateItems(100)
-      render(
-        <VirtualizedList
-          items={items}
-          itemHeight={40}
-          context="execution-log"
-          containerHeight={400}
-        >
-          {(item: TestItem) => (
-            <VirtualizedListItem key={item.id} data-testid={item.id}>
-              {item.label}
-            </VirtualizedListItem>
-          )}
-        </VirtualizedList>
-      )
-      const item = screen.getByTestId('item-0')
-      expect(item).toHaveStyle({ height: '40px' })
-    })
-
-    it('uses 56px height for search results context (comfortable row)', () => {
-      const items = generateItems(100)
-      render(
-        <VirtualizedList
-          items={items}
-          itemHeight={56}
-          context="search-results"
-          containerHeight={400}
-        >
-          {(item: TestItem) => (
-            <VirtualizedListItem key={item.id} data-testid={item.id}>
-              {item.label}
-            </VirtualizedListItem>
-          )}
-        </VirtualizedList>
-      )
-      const item = screen.getByTestId('item-0')
-      expect(item).toHaveStyle({ height: '56px' })
+      expect(item).toHaveStyle({ height: `${itemHeight}px` })
     })
 
     it('calculates total height correctly for fixed-height items', () => {
@@ -1275,7 +1239,7 @@ describe('VirtualizedList Component', () => {
 
         // All 30 items should be rendered
         const renderedItems = Array.from(document.querySelectorAll('[data-list-item]'))
-        expect(renderedItems.length).toBe(30)
+        expect(renderedItems).toHaveLength(30)
       })
 
       it('applies virtualization for collections above threshold', () => {
@@ -1319,7 +1283,7 @@ describe('VirtualizedList Component', () => {
 
         // With threshold of 100, 75 items should not be virtualized
         const renderedItems = Array.from(document.querySelectorAll('[data-list-item]'))
-        expect(renderedItems.length).toBe(75)
+        expect(renderedItems).toHaveLength(75)
       })
     })
 
@@ -2100,7 +2064,7 @@ describe('VirtualizedList Component', () => {
         </VirtualizedList>
       )
       expect(screen.getByTestId('item-0')).toBeInTheDocument()
-      expect(Array.from(document.querySelectorAll('[data-list-item]')).length).toBe(1)
+      expect(Array.from(document.querySelectorAll('[data-list-item]'))).toHaveLength(1)
     })
 
     it('handles items with zero height gracefully', () => {

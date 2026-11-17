@@ -88,18 +88,24 @@ class TestBreakControlValidation:
 
     def test_validate_missing_target_loop(self) -> None:
         """Missing target_loop fails validation."""
+        validation = self.control.validate({})
+
         with pytest.raises(ValueError, match="^target_loop is required$"):
-            asyncio.run(self.control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_empty_string_target_loop(self) -> None:
         """Empty string target_loop fails validation."""
+        validation = self.control.validate({"target_loop": ""})
+
         with pytest.raises(ValueError, match="^target_loop must not be empty$"):
-            asyncio.run(self.control.validate({"target_loop": ""}))
+            asyncio.run(validation)
 
     def test_validate_whitespace_only_target_loop(self) -> None:
         """Whitespace-only target_loop fails validation."""
+        validation = self.control.validate({"target_loop": "   "})
+
         with pytest.raises(ValueError, match="^target_loop must not be empty$"):
-            asyncio.run(self.control.validate({"target_loop": "   "}))
+            asyncio.run(validation)
 
 
 class TestBreakControlExecution:

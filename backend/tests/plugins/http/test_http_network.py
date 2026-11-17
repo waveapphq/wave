@@ -525,17 +525,16 @@ class TestMutualTLS:
 
         plugin = HTTPClientPlugin()
 
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{mtls_server.base_url}/secure",
+                "ca_cert": tls_material.ca_cert_path,
+                "tls_max_version": "1.2",
+            }
+        )
         with pytest.raises(httpx.HTTPError):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{mtls_server.base_url}/secure",
-                        "ca_cert": tls_material.ca_cert_path,
-                        "tls_max_version": "1.2",
-                    }
-                )
-            )
+            await plugin.execute(context)
 
 
 class TestProxyModes:
@@ -612,7 +611,8 @@ class TestWaveSettingWithoutAProxy:
         result = await _run(target.parameters("/data", **choice))
 
         assert result["status_code"] == 200
-        assert built.clients and built.transport_trust_env
+        assert built.clients
+        assert built.transport_trust_env
         assert [client.trust_env for client in built.clients] == [False] * len(built.clients)
         assert built.transport_trust_env == [False] * len(built.transport_trust_env)
 
@@ -760,7 +760,8 @@ class TestWaveSettingRouting:
         result = await _run(target.parameters("/data", **choice))
 
         assert result["status_code"] == 200
-        assert built.clients and built.transport_trust_env
+        assert built.clients
+        assert built.transport_trust_env
         assert [client.trust_env for client in built.clients] == [False] * len(built.clients)
         assert built.transport_trust_env == [False] * len(built.transport_trust_env)
 
@@ -940,8 +941,9 @@ class TestTheProxyLogLine:
         _put_in_force(forward_proxy)
         logger = Mock()
 
+        parameters = {"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run({"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}, logger)
+            await _run(parameters, logger)
 
         assert _asked(forward_proxy) == [tls_target.asked_of_a_proxy()]
         assert tls_target.server.requests == []
@@ -955,17 +957,15 @@ class TestTheProxyLogLine:
         _put_in_force(forward_proxy)
         logger = Mock()
 
+        parameters = {
+            "method": "GET",
+            "url": tls_target.url("/secure"),
+            "retry_count": 1,
+            "retry_delay": 0.01,
+            **_WAVE_SETTING,
+        }
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run(
-                {
-                    "method": "GET",
-                    "url": tls_target.url("/secure"),
-                    "retry_count": 1,
-                    "retry_delay": 0.01,
-                    **_WAVE_SETTING,
-                },
-                logger,
-            )
+            await _run(parameters, logger)
 
         assert _asked(forward_proxy) == [tls_target.asked_of_a_proxy()] * 2
         assert _proxy_lines(logger) == [
@@ -979,8 +979,9 @@ class TestTheProxyLogLine:
         tls_target.server.enqueue(body=b"slow", delay=1.5)
         logger = Mock()
 
+        parameters = tls_target.parameters("/slow", timeout=1, **_WAVE_SETTING)
         with pytest.raises(httpx.ReadTimeout):
-            await _run(tls_target.parameters("/slow", timeout=1, **_WAVE_SETTING), logger)
+            await _run(parameters, logger)
 
         assert _asked(forward_proxy) == [tls_target.asked_of_a_proxy()]
         assert _proxy_lines(logger) == [
@@ -995,8 +996,9 @@ class TestTheProxyLogLine:
         plain_target.server.enqueue(status=302, headers=[("Location", there)])
         logger = Mock()
 
+        parameters = plain_target.parameters("/start", **_WAVE_SETTING)
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run(plain_target.parameters("/start", **_WAVE_SETTING), logger)
+            await _run(parameters, logger)
 
         assert _asked(forward_proxy) == [
             plain_target.asked_of_a_proxy("/start"),
@@ -1015,8 +1017,9 @@ class TestTheProxyLogLine:
         with Proxy(refuse=(status, reason)) as server:
             _put_in_force(server)
 
+            parameters = tls_target.parameters("/secure", **_WAVE_SETTING)
             with pytest.raises(httpx.ProxyError, match=rf": {status} {reason}$"):
-                await _run(tls_target.parameters("/secure", **_WAVE_SETTING), logger)
+                await _run(parameters, logger)
 
             assert _asked(server) == [tls_target.asked_of_a_proxy()]
 
@@ -1028,8 +1031,9 @@ class TestTheProxyLogLine:
         with Proxy(login=_LOGIN) as server:
             _put_in_force(server)
 
+            parameters = plain_target.parameters("/data", **_WAVE_SETTING)
             with pytest.raises(httpx.ProxyError, match=r": 407 Proxy Authentication Required$"):
-                await _run(plain_target.parameters("/data", **_WAVE_SETTING), logger)
+                await _run(parameters, logger)
 
         assert _proxy_lines(logger) == []
 
@@ -1039,10 +1043,11 @@ class TestTheProxyLogLine:
         _use_proxy(dead, dead)
         logger = Mock()
 
+        parameters = target.parameters("/data", timeout=5, **_WAVE_SETTING)
         with pytest.raises(
             httpx.ConnectError, match=rf"^Proxy 127\.0\.0\.1:{port} cannot be reached: .+$"
         ):
-            await _run(target.parameters("/data", timeout=5, **_WAVE_SETTING), logger)
+            await _run(parameters, logger)
 
         assert _proxy_lines(logger) == []
 
@@ -1052,8 +1057,9 @@ class TestTheProxyLogLine:
         _put_in_force(forward_proxy, _never)
         logger = Mock()
 
+        parameters = {"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run({"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}, logger)
+            await _run(parameters, logger)
 
         assert forward_proxy.untouched
         assert _proxy_lines(logger) == []
@@ -1071,6 +1077,7 @@ class TestProxyFailures:
         with Proxy(refuse=(status, reason)) as server:
             _put_in_force(server)
 
+            parameters = tls_target.parameters("/secure", **_WAVE_SETTING)
             with pytest.raises(
                 Exception,
                 match=_exact(
@@ -1078,7 +1085,7 @@ class TestProxyFailures:
                     f"127.0.0.1:{tls_target.port}: {status} {reason}"
                 ),
             ):
-                await _run(tls_target.parameters("/secure", **_WAVE_SETTING))
+                await _run(parameters)
 
         assert tls_target.server.requests == []
 
@@ -1111,8 +1118,9 @@ class TestProxyFailures:
         dead = core.ProxyEndpoint("127.0.0.1", port, None, None)
         _use_proxy(dead, dead)
 
+        parameters = target.parameters("/data", timeout=5, **_WAVE_SETTING)
         with pytest.raises(Exception, match=rf"^Proxy 127\.0\.0\.1:{port} cannot be reached: .+$"):
-            await _run(target.parameters("/data", timeout=5, **_WAVE_SETTING))
+            await _run(parameters)
 
         assert target.server.requests == []
 
@@ -1121,6 +1129,7 @@ class TestProxyFailures:
         with Proxy(login=_LOGIN) as server:
             _put_in_force(server)
 
+            parameters = plain_target.parameters("/data", **_WAVE_SETTING)
             with pytest.raises(
                 Exception,
                 match=_exact(
@@ -1128,7 +1137,7 @@ class TestProxyFailures:
                     f"127.0.0.1:{plain_target.port}: 407 Proxy Authentication Required"
                 ),
             ):
-                await _run(plain_target.parameters("/data", **_WAVE_SETTING))
+                await _run(parameters)
 
         assert plain_target.server.requests == []
 
@@ -1146,13 +1155,11 @@ class TestRetryCountAndTheProxy:
                 f"127.0.0.1:{tls_target.port}: 403 Forbidden"
             )
 
+            parameters = tls_target.parameters(
+                "/secure", retry_count=1, retry_delay=0.01, **_WAVE_SETTING
+            )
             with pytest.raises(httpx.ProxyError, match=_exact(refused)):
-                await _run(
-                    tls_target.parameters(
-                        "/secure", retry_count=1, retry_delay=0.01, **_WAVE_SETTING
-                    ),
-                    logger,
-                )
+                await _run(parameters, logger)
 
             assert _asked(server) == [tls_target.asked_of_a_proxy()] * 2
 
@@ -1162,12 +1169,11 @@ class TestRetryCountAndTheProxy:
         with Proxy(login=_LOGIN) as server:
             _put_in_force(server)
 
+            parameters = plain_target.parameters(
+                "/data", retry_count=1, retry_delay=0.01, **_WAVE_SETTING
+            )
             with pytest.raises(httpx.ProxyError, match=r": 407 Proxy Authentication Required$"):
-                await _run(
-                    plain_target.parameters(
-                        "/data", retry_count=1, retry_delay=0.01, **_WAVE_SETTING
-                    )
-                )
+                await _run(parameters)
 
             assert _asked(server) == [plain_target.asked_of_a_proxy("/data")] * 2
 
@@ -1178,15 +1184,13 @@ class TestRetryCountAndTheProxy:
         _use_proxy(dead, dead)
         logger = Mock()
 
+        parameters = target.parameters(
+            "/data", timeout=5, retry_count=1, retry_delay=0.01, **_WAVE_SETTING
+        )
         with pytest.raises(
             httpx.ConnectError, match=rf"^Proxy 127\.0\.0\.1:{port} cannot be reached: .+$"
         ) as caught:
-            await _run(
-                target.parameters(
-                    "/data", timeout=5, retry_count=1, retry_delay=0.01, **_WAVE_SETTING
-                ),
-                logger,
-            )
+            await _run(parameters, logger)
 
         logger.warning.assert_called_once_with(f"Request failed: {caught.value}, retrying (1/1)")
 
@@ -1200,11 +1204,9 @@ class TestRetryCountAndTheProxy:
         _put_in_force(forward_proxy, decide)
         logger = Mock()
 
+        parameters = target.parameters("/data", retry_count=2, retry_delay=0.01, **_WAVE_SETTING)
         with pytest.raises(_proxy_core().ProxyError, match=_exact(_UNUSABLE_HOST_VALUE)):
-            await _run(
-                target.parameters("/data", retry_count=2, retry_delay=0.01, **_WAVE_SETTING),
-                logger,
-            )
+            await _run(parameters, logger)
 
         assert asked == [target.scheme]
         assert forward_proxy.untouched
@@ -1222,8 +1224,9 @@ class TestAWaveHostValueWaveCannotUse:
             through_proxy=_unusable(target.scheme),
         )
 
+        parameters = target.parameters("/data", **_WAVE_SETTING)
         with pytest.raises(Exception, match=_exact(_UNUSABLE_HOST_VALUE)):
-            await _run(target.parameters("/data", **_WAVE_SETTING))
+            await _run(parameters)
 
         assert forward_proxy.untouched
         assert target.server.requests == []
@@ -1338,6 +1341,7 @@ class TestTheProxyPasswordNeverShows:
             endpoint = _endpoint(server, *_LOGIN)
             _use_proxy(endpoint, endpoint)
 
+            parameters = tls_target.parameters("/secure", **_WAVE_SETTING)
             with pytest.raises(
                 Exception,
                 match=_exact(
@@ -1345,7 +1349,7 @@ class TestTheProxyPasswordNeverShows:
                     f"127.0.0.1:{tls_target.port}: 403 Forbidden"
                 ),
             ) as caught:
-                await _run(tls_target.parameters("/secure", **_WAVE_SETTING), logger)
+                await _run(parameters, logger)
 
         assert "s3cret" not in repr(caught.value)
         assert "s3cret" not in repr(logger.mock_calls)
@@ -1356,10 +1360,11 @@ class TestTheProxyPasswordNeverShows:
         dead = _proxy_core().ProxyEndpoint("127.0.0.1", port, *_LOGIN)
         _use_proxy(dead, dead)
 
+        parameters = target.parameters("/data", timeout=5, **_WAVE_SETTING)
         with pytest.raises(
             Exception, match=rf"^Proxy 127\.0\.0\.1:{port} cannot be reached: .+$"
         ) as caught:
-            await _run(target.parameters("/data", timeout=5, **_WAVE_SETTING), logger)
+            await _run(parameters, logger)
 
         assert "s3cret" not in f"{caught.value} {caught.value!r}"
         assert "s3cret" not in repr(logger.mock_calls)
@@ -1370,6 +1375,7 @@ class TestTheProxyPasswordNeverShows:
         with Proxy(login=("wave", "another")) as server:
             _use_proxy(http=_endpoint(server, *_LOGIN))
 
+            parameters = plain_target.parameters("/data", **_WAVE_SETTING)
             with pytest.raises(
                 Exception,
                 match=_exact(
@@ -1377,7 +1383,7 @@ class TestTheProxyPasswordNeverShows:
                     f"127.0.0.1:{plain_target.port}: 407 Proxy Authentication Required"
                 ),
             ) as caught:
-                await _run(plain_target.parameters("/data", **_WAVE_SETTING), logger)
+                await _run(parameters, logger)
 
         assert "s3cret" not in repr(caught.value)
         assert "s3cret" not in repr(logger.mock_calls)
@@ -1412,8 +1418,9 @@ class TestHttpsThroughTheProxy:
         """No block CA means WAVE's built-in list, which does not hold the test CA."""
         _put_in_force(forward_proxy)
 
+        parameters = {"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run({"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING})
+            await _run(parameters)
 
         assert _asked(forward_proxy) == [tls_target.asked_of_a_proxy()]
         assert tls_target.server.requests == []
@@ -1424,8 +1431,9 @@ class TestHttpsThroughTheProxy:
         monkeypatch.setenv("SSL_CERT_FILE", tls_material.ca_cert_path)
         _put_in_force(forward_proxy)
 
+        parameters = {"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run({"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING})
+            await _run(parameters)
 
         assert _asked(forward_proxy) == [tls_target.asked_of_a_proxy()]
 
@@ -1488,8 +1496,9 @@ class TestHttpsThroughTheProxy:
     async def test_an_address_sent_direct_is_still_verified(self, tls_target, forward_proxy):
         _put_in_force(forward_proxy, _never)
 
+        parameters = {"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING}
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await _run({"method": "GET", "url": tls_target.url("/secure"), **_WAVE_SETTING})
+            await _run(parameters)
 
         assert forward_proxy.untouched
 
@@ -1680,19 +1689,18 @@ class TestTLSVersionPins:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "https://example.com",
+                    "tls_min_version": "1.3",
+                    "tls_max_version": "1.2",
+                }
+            )
             with pytest.raises(
                 ValueError, match=r"^Min TLS Version cannot exceed Max TLS Version$"
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "https://example.com",
-                            "tls_min_version": "1.3",
-                            "tls_max_version": "1.2",
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
         client.request.assert_not_awaited()
 
@@ -1800,16 +1808,15 @@ class TestCipherSuitePins:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "https://example.com",
+                    "cipher_suites": ["NOT-A-CIPHER"],
+                }
+            )
             with pytest.raises(ValueError, match=r'^Unknown cipher suite "NOT-A-CIPHER"$'):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "https://example.com",
-                            "cipher_suites": ["NOT-A-CIPHER"],
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
         client.request.assert_not_awaited()
 
@@ -1837,7 +1844,6 @@ class TestCipherSuitePins:
                 NullValueError, match=_exact(f"Row {row} in 'cipher_suites' is null")
             ):
                 await plugin.validate(params)
-                await plugin.execute(_context(params))
 
         client.request.assert_not_awaited()
 
@@ -1954,18 +1960,17 @@ class TestLegacyTLS:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "GET",
+                    "url": "https://example.com",
+                    "tls_max_version": "1.0",
+                }
+            )
             with pytest.raises(
                 ValueError, match=r"^Min TLS Version cannot exceed Max TLS Version$"
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "GET",
-                            "url": "https://example.com",
-                            "tls_max_version": "1.0",
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
         client.request.assert_not_awaited()
 
@@ -1979,17 +1984,16 @@ class TestZeroCipherSuites:
 
         plugin = HTTPClientPlugin()
 
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{tls_server.base_url}/zero",
+                "verify_ssl": False,
+                "cipher_suites": [],
+            }
+        )
         with pytest.raises(httpx.HTTPError):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{tls_server.base_url}/zero",
-                        "verify_ssl": False,
-                        "cipher_suites": [],
-                    }
-                )
-            )
+            await plugin.execute(context)
 
 
 class TestServerVerification:
@@ -2002,6 +2006,7 @@ class TestServerVerification:
 
         plugin = HTTPClientPlugin()
 
+        context = _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
         with pytest.raises(
             httpx.HTTPError,
             match=(
@@ -2009,9 +2014,7 @@ class TestServerVerification:
                 r'for certificate "CN=wave-test-server"$'
             ),
         ):
-            await plugin.execute(
-                _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
-            )
+            await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_custom_ca_file_path_passes_verification(self, tls_server, tls_material):
@@ -2104,8 +2107,9 @@ class TestAnSshTunnel:
     ):
         registry = tunnel_registry({tls_target.port: "api.internal:443"}, Mock())
 
+        parameters = tls_target.parameters("/secure", host)
         with pytest.raises(httpx.HTTPError, match=_far_host_mismatch("api.internal")):
-            await _run_with_tunnels(registry, tls_target.parameters("/secure", host))
+            await _run_with_tunnels(registry, parameters)
 
         assert tls_target.server.requests == []
 
@@ -2148,8 +2152,9 @@ class TestAnSshTunnel:
         names = record_sni(tls_target.server)
         registry = tunnel_registry({tls_target.port: "api.internal:443"}, Mock())
 
+        parameters = tls_target.parameters("/secure", **_WAVE_SETTING)
         with pytest.raises(httpx.HTTPError, match=_far_host_mismatch("api.internal")):
-            await _run_with_tunnels(registry, tls_target.parameters("/secure", **_WAVE_SETTING))
+            await _run_with_tunnels(registry, parameters)
 
         assert names == ["api.internal"]
         assert forward_proxy.untouched
@@ -2168,17 +2173,16 @@ class TestNetworkFailurePaths:
         probe.close()
         plugin = HTTPClientPlugin()
 
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"https://127.0.0.1:{dead_port}/x",
+                "verify_ssl": False,
+                "timeout": 5,
+            }
+        )
         with pytest.raises(httpx.ConnectError):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"https://127.0.0.1:{dead_port}/x",
-                        "verify_ssl": False,
-                        "timeout": 5,
-                    }
-                )
-            )
+            await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_saturated_backlog_maps_to_connect_timeout(self):
@@ -2200,10 +2204,9 @@ class TestNetworkFailurePaths:
         plugin = HTTPClientPlugin()
 
         try:
+            context = _context({"method": "GET", "url": f"http://127.0.0.1:{port}/x", "timeout": 1})
             with pytest.raises(httpx.ConnectTimeout):
-                await plugin.execute(
-                    _context({"method": "GET", "url": f"http://127.0.0.1:{port}/x", "timeout": 1})
-                )
+                await plugin.execute(context)
         finally:
             for filler in saturating:
                 filler.close()
@@ -2216,17 +2219,16 @@ class TestNetworkFailurePaths:
         plugin = HTTPClientPlugin()
         tls_server.enqueue(body=b"slow", delay=3.0)
 
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{tls_server.base_url}/slow",
+                "ca_cert": tls_material.ca_cert_path,
+                "timeout": 1,
+            }
+        )
         with pytest.raises(httpx.ReadTimeout):
-            await plugin.execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{tls_server.base_url}/slow",
-                        "ca_cert": tls_material.ca_cert_path,
-                        "timeout": 1,
-                    }
-                )
-            )
+            await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_plain_response_delay_maps_to_read_timeout(self, http_server):
@@ -2235,10 +2237,9 @@ class TestNetworkFailurePaths:
         plugin = HTTPClientPlugin()
         http_server.enqueue(body=b"slow", delay=3.0)
 
+        context = _context({"method": "GET", "url": f"{http_server.base_url}/slow", "timeout": 1})
         with pytest.raises(httpx.ReadTimeout):
-            await plugin.execute(
-                _context({"method": "GET", "url": f"{http_server.base_url}/slow", "timeout": 1})
-            )
+            await plugin.execute(context)
 
 
 _TLS_VERSIONS = ("1.0", "1.1", "1.2", "1.3")

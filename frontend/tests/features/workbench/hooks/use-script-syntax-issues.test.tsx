@@ -1329,7 +1329,7 @@ describe('useScriptSyntaxIssues in OpenSearch modes: positions in characters', (
 
     await advance(OS_DEBOUNCE_MS)
 
-    expect(Array.from(doc.slice(0, at)).length).toBe(at - 1)
+    expect(Array.from(doc.slice(0, at))).toHaveLength(at - 1)
     expect(result.current).toEqual([{ ...UNKNOWN_FIELD_WARNING, from: at, to: at + 11 }])
   })
 

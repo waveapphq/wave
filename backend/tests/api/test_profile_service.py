@@ -185,7 +185,7 @@ def _schema_fields(profile_type: str) -> dict[str, dict[str, Any]]:
 class TestListProfiles:
     """Test suite for list_profiles function."""
 
-    def test_list_profiles_returns_all_profiles(self) -> None:
+    def test_list_profiles_returns_all_profiles(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles returns all stored profiles."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -201,7 +201,7 @@ class TestListProfiles:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles()
 
             assert result["total"] == 1
@@ -210,18 +210,22 @@ class TestListProfiles:
             # Verify usage field is included (REQ-4.7.4)
             assert result["profiles"][0]["usage"] == 0
 
-    def test_list_profiles_returns_empty_list_when_no_profiles(self) -> None:
+    def test_list_profiles_returns_empty_list_when_no_profiles(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that list_profiles returns empty list when no profiles."""
         from wavecore.api.services.profiles import service as profile_service
 
         with _patch_profile_storage({}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles()
 
             assert result["profiles"] == []
             assert result["total"] == 0
 
-    def test_list_profiles_batch_usage_counts_references(self) -> None:
+    def test_list_profiles_batch_usage_counts_references(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that list_profiles computes usage via batch scan."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -237,7 +241,7 @@ class TestListProfiles:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             # Mock the cached test list to return a test referencing this profile
             with patch(
                 "wavecore.api.services.tests.service._cached_tests",
@@ -247,7 +251,7 @@ class TestListProfiles:
 
             assert result["profiles"][0]["usage"] == 1
 
-    def test_list_profiles_masks_secrets(self) -> None:
+    def test_list_profiles_masks_secrets(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles masks secret values."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -263,7 +267,7 @@ class TestListProfiles:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles()
 
             assert result["profiles"][0]["config"]["password"] == "********"
@@ -1058,7 +1062,8 @@ class TestUpdateProfile:
             )
             cached = _profile_common._profile_storage[own_id]
             assert (stored["name"], cached["name"]) == ("Own DB", "Own DB")
-            assert "description" not in stored and "description" not in cached
+            assert "description" not in stored
+            assert "description" not in cached
 
     def test_update_profile_refuses_a_name_only_the_storage_directory_holds(self) -> None:
         """A Profile on disk but not yet in the cache still holds its name."""
@@ -2998,7 +3003,7 @@ class TestCreateProfileTags:
 class TestUpdateProfileTags:
     """Test suite for profile tags in update_profile function (REQ-4.7.4)."""
 
-    def test_update_profile_with_tags(self) -> None:
+    def test_update_profile_with_tags(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that update_profile accepts tags parameter (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3017,7 +3022,7 @@ class TestUpdateProfileTags:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.update_profile(
                 profile_id,
                 tags=["new-tag", "another-tag"],
@@ -3026,7 +3031,7 @@ class TestUpdateProfileTags:
             assert result is not None
             assert result["tags"] == ["new-tag", "another-tag"]
 
-    def test_update_profile_replaces_all_tags(self) -> None:
+    def test_update_profile_replaces_all_tags(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that update_profile replaces all tags completely (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3045,7 +3050,7 @@ class TestUpdateProfileTags:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.update_profile(
                 profile_id,
                 tags=["single-tag"],
@@ -3054,7 +3059,9 @@ class TestUpdateProfileTags:
             assert result is not None
             assert result["tags"] == ["single-tag"]
 
-    def test_update_profile_with_empty_tags_clears_tags(self) -> None:
+    def test_update_profile_with_empty_tags_clears_tags(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that update_profile with empty list clears all tags (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3073,7 +3080,7 @@ class TestUpdateProfileTags:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.update_profile(
                 profile_id,
                 tags=[],
@@ -3082,7 +3089,9 @@ class TestUpdateProfileTags:
             assert result is not None
             assert result["tags"] == []
 
-    def test_update_profile_without_tags_preserves_existing(self) -> None:
+    def test_update_profile_without_tags_preserves_existing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that update_profile without tags param preserves existing tags (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3101,7 +3110,7 @@ class TestUpdateProfileTags:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.update_profile(
                 profile_id,
                 name="new-name",
@@ -3114,7 +3123,7 @@ class TestUpdateProfileTags:
 class TestListProfilesTags:
     """Test suite for profile tags in list_profiles function (REQ-4.7.4)."""
 
-    def test_list_profiles_returns_tags(self) -> None:
+    def test_list_profiles_returns_tags(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles returns tags for each profile (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3131,7 +3140,7 @@ class TestListProfilesTags:
                 }
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles()
 
             assert result["total"] == 1
@@ -3169,7 +3178,7 @@ class TestGetProfileTags:
 class TestListProfilesFiltering:
     """Test suite for list_profiles filtering capabilities (REQ-4.7.4)."""
 
-    def test_list_profiles_filter_by_single_tag(self) -> None:
+    def test_list_profiles_filter_by_single_tag(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles can filter by single tag (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3194,13 +3203,13 @@ class TestListProfilesFiltering:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(tags=["production"])
 
             assert result["total"] == 1
             assert result["profiles"][0]["name"] == "prod-database"
 
-    def test_list_profiles_filter_by_multiple_tags(self) -> None:
+    def test_list_profiles_filter_by_multiple_tags(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles can filter by multiple tags (OR logic: match any) (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3233,7 +3242,7 @@ class TestListProfilesFiltering:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             # OR semantics: selecting production OR critical matches prod-critical, prod-normal,
             # dev-critical
             result = profile_service.list_profiles(tags=["production", "critical"])
@@ -3242,7 +3251,9 @@ class TestListProfilesFiltering:
             names = {p["name"] for p in result["profiles"]}
             assert names == {"prod-critical", "prod-normal", "dev-critical"}
 
-    def test_list_profiles_filter_by_empty_tags_returns_all(self) -> None:
+    def test_list_profiles_filter_by_empty_tags_returns_all(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that list_profiles with empty tags filter returns all (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3267,12 +3278,14 @@ class TestListProfilesFiltering:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(tags=[])
 
             assert result["total"] == 2
 
-    def test_list_profiles_filter_by_nonexistent_tag_returns_empty(self) -> None:
+    def test_list_profiles_filter_by_nonexistent_tag_returns_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that list_profiles with nonexistent tag returns empty (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3289,7 +3302,7 @@ class TestListProfilesFiltering:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(tags=["nonexistent"])
 
             assert result["total"] == 0
@@ -3298,7 +3311,7 @@ class TestListProfilesFiltering:
 class TestListProfilesSearch:
     """Test suite for list_profiles search capabilities (REQ-4.7.4)."""
 
-    def test_list_profiles_search_by_name(self) -> None:
+    def test_list_profiles_search_by_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles can search by name (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3323,13 +3336,13 @@ class TestListProfilesSearch:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(search="production")
 
             assert result["total"] == 1
             assert result["profiles"][0]["name"] == "production-database"
 
-    def test_list_profiles_search_case_insensitive(self) -> None:
+    def test_list_profiles_search_case_insensitive(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles search is case insensitive (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3346,13 +3359,13 @@ class TestListProfilesSearch:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(search="PRODUCTION")
 
             assert result["total"] == 1
             assert result["profiles"][0]["name"] == "Production-Database"
 
-    def test_list_profiles_search_empty_returns_all(self) -> None:
+    def test_list_profiles_search_empty_returns_all(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles with empty search returns all (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3377,7 +3390,7 @@ class TestListProfilesSearch:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(search="")
 
             assert result["total"] == 2
@@ -3386,7 +3399,7 @@ class TestListProfilesSearch:
 class TestListProfilesTypeFilter:
     """Test suite for list_profiles type filtering (REQ-4.7.4)."""
 
-    def test_list_profiles_filter_by_type(self) -> None:
+    def test_list_profiles_filter_by_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles can filter by type (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3411,13 +3424,13 @@ class TestListProfilesTypeFilter:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(profile_type="database")
 
             assert result["total"] == 1
             assert result["profiles"][0]["name"] == "my-database"
 
-    def test_list_profiles_combined_filters(self) -> None:
+    def test_list_profiles_combined_filters(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles supports combined search, type, and tags filters (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3450,7 +3463,7 @@ class TestListProfilesTypeFilter:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(
                 search="prod",
                 profile_type="database",
@@ -3464,7 +3477,9 @@ class TestListProfilesTypeFilter:
 class TestListProfilesPagination:
     """Test suite for list_profiles pagination (REQ-4.7.4)."""
 
-    def test_list_profiles_returns_pagination_structure(self) -> None:
+    def test_list_profiles_returns_pagination_structure(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that list_profiles returns pagination metadata (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3481,7 +3496,7 @@ class TestListProfilesPagination:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(page=1, per_page=20)
 
             assert "profiles" in result
@@ -3490,7 +3505,7 @@ class TestListProfilesPagination:
             assert "per_page" in result
             assert "total_pages" in result
 
-    def test_list_profiles_paginates_results(self) -> None:
+    def test_list_profiles_paginates_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles returns correct page of results (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3506,7 +3521,7 @@ class TestListProfilesPagination:
             }
 
         with _patch_profile_storage(profiles):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(page=1, per_page=10)
 
             assert result["total"] == 25
@@ -3515,7 +3530,7 @@ class TestListProfilesPagination:
             assert result["total_pages"] == 3
             assert len(result["profiles"]) == 10
 
-    def test_list_profiles_page_2(self) -> None:
+    def test_list_profiles_page_2(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles returns page 2 correctly (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3531,13 +3546,13 @@ class TestListProfilesPagination:
             }
 
         with _patch_profile_storage(profiles):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(page=2, per_page=10)
 
             assert result["page"] == 2
             assert len(result["profiles"]) == 10
 
-    def test_list_profiles_last_page_partial(self) -> None:
+    def test_list_profiles_last_page_partial(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles returns partial last page (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3553,13 +3568,13 @@ class TestListProfilesPagination:
             }
 
         with _patch_profile_storage(profiles):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(page=3, per_page=10)
 
             assert result["page"] == 3
             assert len(result["profiles"]) == 5  # 25 - 20 = 5
 
-    def test_list_profiles_defaults_to_page_1(self) -> None:
+    def test_list_profiles_defaults_to_page_1(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles defaults to page 1 (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3576,12 +3591,12 @@ class TestListProfilesPagination:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles()
 
             assert result["page"] == 1
 
-    def test_list_profiles_defaults_to_per_page_20(self) -> None:
+    def test_list_profiles_defaults_to_per_page_20(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles defaults to per_page 20 (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3598,12 +3613,12 @@ class TestListProfilesPagination:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles()
 
             assert result["per_page"] == 20
 
-    def test_list_profiles_pagination_with_filters(self) -> None:
+    def test_list_profiles_pagination_with_filters(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that pagination works with filters applied (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3628,7 +3643,7 @@ class TestListProfilesPagination:
             }
 
         with _patch_profile_storage(profiles):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(page=1, per_page=10, tags=["production"])
 
             assert result["total"] == 15  # Only production profiles
@@ -3639,7 +3654,7 @@ class TestListProfilesPagination:
 class TestListProfilesSorting:
     """Test suite for list_profiles sorting (REQ-4.7.4)."""
 
-    def test_list_profiles_sort_by_name_asc(self) -> None:
+    def test_list_profiles_sort_by_name_asc(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles sorts by name ascending (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3664,13 +3679,13 @@ class TestListProfilesSorting:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(sort_by="name", sort_order="asc")
 
             assert result["profiles"][0]["name"] == "a-database"
             assert result["profiles"][1]["name"] == "z-database"
 
-    def test_list_profiles_sort_by_name_desc(self) -> None:
+    def test_list_profiles_sort_by_name_desc(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles sorts by name descending (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3695,13 +3710,13 @@ class TestListProfilesSorting:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(sort_by="name", sort_order="desc")
 
             assert result["profiles"][0]["name"] == "z-database"
             assert result["profiles"][1]["name"] == "a-database"
 
-    def test_list_profiles_sort_by_type(self) -> None:
+    def test_list_profiles_sort_by_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles sorts by type (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3726,13 +3741,13 @@ class TestListProfilesSorting:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(sort_by="type", sort_order="asc")
 
             assert result["profiles"][0]["type"] == "database"
             assert result["profiles"][1]["type"] == "ssh"
 
-    def test_list_profiles_defaults_to_asc_sort(self) -> None:
+    def test_list_profiles_defaults_to_asc_sort(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that list_profiles defaults to ascending sort (REQ-4.7.4)."""
         from wavecore.api.services.profiles import service as profile_service
 
@@ -3757,7 +3772,7 @@ class TestListProfilesSorting:
                 },
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = profile_service.list_profiles(sort_by="name")
 
             assert result["profiles"][0]["name"] == "a-database"
@@ -4717,7 +4732,9 @@ class TestProfileServiceFileStorageErrorHandling:
         names = {p["name"] for p in result["profiles"]}
         assert "valid-2" in names
 
-    def test_storage_directory_created_automatically(self, tmp_path: Any) -> None:
+    def test_storage_directory_created_automatically(
+        self, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that storage directory is created automatically if it doesn't exist."""
         from wavecore.api.services import storage_paths
         from wavecore.api.services.profiles import service as profile_service
@@ -4726,7 +4743,7 @@ class TestProfileServiceFileStorageErrorHandling:
         new_storage_path = tmp_path / "new_data"
         storage_paths.set_base_path(new_storage_path)
         _profile_common._clear_in_memory_cache()
-        _profile_common._cache_loaded = False
+        monkeypatch.setattr(_profile_common, "_cache_loaded", False)
 
         # Create should succeed and create directory
         profile = profile_service.create_profile(
@@ -4976,26 +4993,26 @@ class TestProfileSanitizeFilename:
 class TestProfileGenerateUniqueName:
     """Test suite for _generate_unique_name utility in profile service."""
 
-    def test_unique_name_when_no_conflict(self) -> None:
+    def test_unique_name_when_no_conflict(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Returns base name when it does not exist."""
 
         with _patch_profile_storage({}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_common._generate_unique_name("New Profile")
             assert result == "New Profile"
 
-    def test_unique_name_appends_counter_on_conflict(self) -> None:
+    def test_unique_name_appends_counter_on_conflict(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Appends (2) when base name is taken."""
 
         pid = str(uuid.uuid4())
         with _patch_profile_storage(
             {pid: {"id": pid, "name": "Existing", "type": "custom", "config": {}}},
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_common._generate_unique_name("Existing")
             assert result == "Existing (2)"
 
-    def test_unique_name_increments_counter(self) -> None:
+    def test_unique_name_increments_counter(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Increments past (2) when (2) is also taken."""
 
         p1 = str(uuid.uuid4())
@@ -5006,7 +5023,7 @@ class TestProfileGenerateUniqueName:
                 p2: {"id": p2, "name": "Prof (2)", "type": "custom", "config": {}},
             },
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_common._generate_unique_name("Prof")
             assert result == "Prof (3)"
 
@@ -5014,7 +5031,7 @@ class TestProfileGenerateUniqueName:
 class TestExportProfile:
     """Test suite for export_profile function."""
 
-    def test_export_yaml(self) -> None:
+    def test_export_yaml(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Export in YAML format returns valid YAML content and filename."""
         import yaml as yaml_mod
 
@@ -5031,7 +5048,7 @@ class TestExportProfile:
         }
 
         with _patch_profile_storage({pid: profile_data}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="mask")
 
         assert result is not None
@@ -5040,7 +5057,7 @@ class TestExportProfile:
         parsed = yaml_mod.safe_load(content)
         assert parsed["name"] == "DB Prod"
 
-    def test_export_json(self) -> None:
+    def test_export_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Export in JSON format returns valid JSON content and filename."""
         import json
 
@@ -5057,7 +5074,7 @@ class TestExportProfile:
         }
 
         with _patch_profile_storage({pid: profile_data}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "json", secrets="mask")
 
         assert result is not None
@@ -5066,11 +5083,11 @@ class TestExportProfile:
         parsed = json.loads(content)
         assert parsed["name"] == "SSH Gateway"
 
-    def test_export_not_found_returns_none(self) -> None:
+    def test_export_not_found_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Export returns None for non-existent profile."""
 
         with _patch_profile_storage({}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile("nonexistent-id")
 
         assert result is None
@@ -5087,12 +5104,12 @@ class TestExportProfile:
             "updated_at": "2025-01-01T00:00:00Z",
         }
 
-    def test_export_mask_mode_masks_config_secret(self) -> None:
+    def test_export_mask_mode_masks_config_secret(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import yaml as yaml_mod
 
         pid = str(uuid.uuid4())
         with _patch_profile_storage({pid: self._sealed_db_profile(pid)}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="mask")
 
         assert result is not None
@@ -5100,14 +5117,16 @@ class TestExportProfile:
         assert parsed["config"]["password"] == "********"
         assert parsed["config"]["host"] == "localhost"
 
-    def test_export_encrypted_mode_emits_sealed_config(self) -> None:
+    def test_export_encrypted_mode_emits_sealed_config(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import yaml as yaml_mod
 
         pid = str(uuid.uuid4())
         profile = self._sealed_db_profile(pid)
         sealed_password = profile["config"]["password"]
         with _patch_profile_storage({pid: profile}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="encrypted")
 
         assert result is not None
@@ -5115,19 +5134,21 @@ class TestExportProfile:
         assert parsed["config"]["password"] == sealed_password
         assert is_secret_envelope(parsed["config"]["password"])
 
-    def test_export_plaintext_mode_decrypts_config(self) -> None:
+    def test_export_plaintext_mode_decrypts_config(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import yaml as yaml_mod
 
         pid = str(uuid.uuid4())
         with _patch_profile_storage({pid: self._sealed_db_profile(pid)}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="plaintext")
 
         assert result is not None
         parsed = yaml_mod.safe_load(result[0])
         assert parsed["config"]["password"] == "secret123"
 
-    def test_export_plaintext_undecryptable_raises_conflict(self) -> None:
+    def test_export_plaintext_undecryptable_raises_conflict(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         pid = str(uuid.uuid4())
         profile_data: dict[str, Any] = {
             "id": pid,
@@ -5141,13 +5162,13 @@ class TestExportProfile:
         }
 
         with _patch_profile_storage({pid: profile_data}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             with pytest.raises(ConflictException) as exc_info:
                 _profile_import_export.export_profile(pid, "yaml", secrets="plaintext")
 
         assert str(exc_info.value) == _DECRYPTION_FAILED_MESSAGE
 
-    def test_export_replaces_env_ids_with_names(self) -> None:
+    def test_export_replaces_env_ids_with_names(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Export replaces environment IDs with environment names."""
         import yaml as yaml_mod
 
@@ -5174,7 +5195,7 @@ class TestExportProfile:
                 return_value=[{"id": env_id, "name": "production", "tags": []}],
             ),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="mask")
 
         assert result is not None
@@ -5183,7 +5204,7 @@ class TestExportProfile:
         assert "production" in parsed["environment_values"]
         assert env_id not in parsed["environment_values"]
 
-    def test_export_masks_secrets_in_env_values(self) -> None:
+    def test_export_masks_secrets_in_env_values(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Export masks secrets in environment_values too."""
         import yaml as yaml_mod
 
@@ -5210,7 +5231,7 @@ class TestExportProfile:
                 return_value=[{"id": env_id, "name": "staging", "tags": []}],
             ),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="mask")
 
         assert result is not None
@@ -5218,7 +5239,9 @@ class TestExportProfile:
         parsed = yaml_mod.safe_load(content)
         assert parsed["environment_values"]["staging"]["password"] == "********"
 
-    def test_export_env_id_falls_back_to_id_when_name_not_found(self) -> None:
+    def test_export_env_id_falls_back_to_id_when_name_not_found(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Export keeps env ID as-is when the environment is not found."""
         import yaml as yaml_mod
 
@@ -5245,7 +5268,7 @@ class TestExportProfile:
                 return_value=[],  # No environments
             ),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.export_profile(pid, "yaml", secrets="mask")
 
         assert result is not None
@@ -5258,7 +5281,7 @@ class TestExportProfile:
 class TestExportProfilesBatch:
     """Test suite for export_profiles_batch function."""
 
-    def test_batch_export_multiple(self) -> None:
+    def test_batch_export_multiple(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Batch export returns content for all requested profiles."""
         from wavecore.api.services.environments import service as environment_service
 
@@ -5291,7 +5314,7 @@ class TestExportProfilesBatch:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             results = _profile_import_export.export_profiles_batch([p1, p2], "yaml", "mask")
 
         assert len(results) == 2
@@ -5299,7 +5322,7 @@ class TestExportProfilesBatch:
         assert p1 in ids_returned
         assert p2 in ids_returned
 
-    def test_batch_export_deduplicates_filenames(self) -> None:
+    def test_batch_export_deduplicates_filenames(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Batch export deduplicates filenames for same-named profiles."""
         from wavecore.api.services.environments import service as environment_service
 
@@ -5332,13 +5355,13 @@ class TestExportProfilesBatch:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             results = _profile_import_export.export_profiles_batch([p1, p2], "yaml", "mask")
 
         filenames = {r[2] for r in results}
         assert len(filenames) == 2  # No duplicates
 
-    def test_batch_export_triple_duplicate_filenames(self) -> None:
+    def test_batch_export_triple_duplicate_filenames(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Batch export with 3+ same-named profiles increments counter past 2."""
         from wavecore.api.services.environments import service as environment_service
 
@@ -5382,7 +5405,7 @@ class TestExportProfilesBatch:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             results = _profile_import_export.export_profiles_batch([p1, p2, p3], "yaml", "mask")
 
         filenames = [r[2] for r in results]
@@ -5391,11 +5414,11 @@ class TestExportProfilesBatch:
         assert filenames[1] == "Dup-2.yaml"
         assert filenames[2] == "Dup-3.yaml"
 
-    def test_batch_export_not_found_raises(self) -> None:
+    def test_batch_export_not_found_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Batch export raises ValueError when a profile is not found."""
 
         with _patch_profile_storage({}):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             with pytest.raises(NotFoundException, match="Profile not found"):
                 _profile_import_export.export_profiles_batch(["nonexistent-id"])
 
@@ -5403,7 +5426,7 @@ class TestExportProfilesBatch:
 class TestValidateProfileImport:
     """Test suite for validate_profile_import function."""
 
-    def test_validate_ok_status(self) -> None:
+    def test_validate_ok_status(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """New profile with valid type returns ok status."""
         import yaml as yaml_mod
 
@@ -5415,7 +5438,7 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["total"] == 1
@@ -5423,7 +5446,7 @@ class TestValidateProfileImport:
         assert result["blocked"] == 0
         assert result["profiles"][0]["status"] == "ok"
 
-    def test_validate_conflict_status(self) -> None:
+    def test_validate_conflict_status(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Profile with existing name returns conflict status."""
         import yaml as yaml_mod
 
@@ -5437,14 +5460,14 @@ class TestValidateProfileImport:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["profiles"][0]["status"] == "conflict"
         assert result["profiles"][0]["existing_profile_id"] == pid
         assert result["importable"] == 1
 
-    def test_validate_fatal_missing_name(self) -> None:
+    def test_validate_fatal_missing_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Profile without name returns fatal status."""
         import yaml as yaml_mod
 
@@ -5456,14 +5479,14 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["profiles"][0]["status"] == "fatal"
         assert result["blocked"] == 1
         assert result["profiles"][0]["fatal_errors"][0]["code"] == "MISSING_NAME"
 
-    def test_validate_fixable_missing_type(self) -> None:
+    def test_validate_fixable_missing_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Profile without type produces fixable error."""
         import yaml as yaml_mod
 
@@ -5475,7 +5498,7 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["profiles"][0]["status"] == "fixable"
@@ -5483,7 +5506,7 @@ class TestValidateProfileImport:
         fixable_codes = [e["code"] for e in result["profiles"][0]["fixable_errors"]]
         assert "MISSING_TYPE" in fixable_codes
 
-    def test_validate_fixable_invalid_type(self) -> None:
+    def test_validate_fixable_invalid_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Profile with invalid type produces fixable error."""
         import yaml as yaml_mod
 
@@ -5495,14 +5518,14 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["profiles"][0]["status"] == "fixable"
         fixable_codes = [e["code"] for e in result["profiles"][0]["fixable_errors"]]
         assert "INVALID_TYPE" in fixable_codes
 
-    def test_validate_flags_sftp_as_an_unknown_type(self) -> None:
+    def test_validate_flags_sftp_as_an_unknown_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An sftp item carries the fixable unknown-type error (REQ-4.7.3)."""
         import yaml as yaml_mod
 
@@ -5516,7 +5539,7 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["importable"] == 1
@@ -5529,7 +5552,9 @@ class TestValidateProfileImport:
             }
         ]
 
-    def test_validate_fixable_unresolvable_environment(self) -> None:
+    def test_validate_fixable_unresolvable_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Profile referencing unknown environment produces fixable error."""
         import yaml as yaml_mod
 
@@ -5548,13 +5573,13 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         fixable_codes = [e["code"] for e in result["profiles"][0]["fixable_errors"]]
         assert "UNRESOLVABLE_ENVIRONMENT" in fixable_codes
 
-    def test_validate_masked_secret_warning(self) -> None:
+    def test_validate_masked_secret_warning(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Masked secrets in config produce warnings."""
         import yaml as yaml_mod
 
@@ -5572,13 +5597,15 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         warning_codes = [w["code"] for w in result["profiles"][0]["warnings"]]
         assert "MASKED_SECRET" in warning_codes
 
-    def test_validate_foreign_encrypted_secret_warning(self) -> None:
+    def test_validate_foreign_encrypted_secret_warning(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A foreign-instance envelope in a config field produces a warning."""
         import yaml as yaml_mod
 
@@ -5596,7 +5623,7 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         foreign = next(
@@ -5607,7 +5634,7 @@ class TestValidateProfileImport:
             "cannot be decrypted here; re-enter it after import"
         )
 
-    def test_validate_zip_multiple_profiles(self) -> None:
+    def test_validate_zip_multiple_profiles(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """ZIP with multiple profiles validates each one."""
         import io
         import zipfile
@@ -5629,13 +5656,15 @@ class TestValidateProfileImport:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(buf.getvalue(), "profiles.zip")
 
         assert result["total"] == 2
         assert result["importable"] == 2
 
-    def test_validate_conflict_overrides_fixable_status(self) -> None:
+    def test_validate_conflict_overrides_fixable_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """When name conflicts AND fixable errors exist, conflict takes precedence."""
         import yaml as yaml_mod
 
@@ -5650,7 +5679,7 @@ class TestValidateProfileImport:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.validate_profile_import(content, "profile.yaml")
 
         assert result["profiles"][0]["status"] == "conflict"
@@ -5659,7 +5688,7 @@ class TestValidateProfileImport:
 class TestImportProfiles:
     """Test suite for import_profiles function."""
 
-    def test_import_creates_new_profile(self) -> None:
+    def test_import_creates_new_profile(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Importing new profile creates it with new UUID."""
         import yaml as yaml_mod
 
@@ -5679,7 +5708,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
@@ -5688,7 +5717,7 @@ class TestImportProfiles:
         assert result["imported"][0]["action"] == "created"
         uuid.UUID(result["imported"][0]["id"])
 
-    def test_import_conflict_skip(self) -> None:
+    def test_import_conflict_skip(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Skipping a conflicting profile excludes it from import."""
         import yaml as yaml_mod
 
@@ -5711,7 +5740,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"Existing": "skip"}
             )
@@ -5720,7 +5749,7 @@ class TestImportProfiles:
         assert result["total_skipped"] == 1
         assert result["skipped"][0]["name"] == "Existing"
 
-    def test_import_conflict_rename(self) -> None:
+    def test_import_conflict_rename(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Renaming a conflicting profile appends (2)."""
         import yaml as yaml_mod
 
@@ -5743,7 +5772,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"Existing": "rename"}
             )
@@ -5752,7 +5781,7 @@ class TestImportProfiles:
         assert result["imported"][0]["action"] == "renamed"
         assert result["imported"][0]["name"] == "Existing (2)"
 
-    def test_import_conflict_overwrite(self) -> None:
+    def test_import_conflict_overwrite(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Overwriting uses the existing profile's ID."""
         import yaml as yaml_mod
 
@@ -5777,7 +5806,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"Existing": "overwrite"}
             )
@@ -5786,7 +5815,7 @@ class TestImportProfiles:
         assert result["imported"][0]["action"] == "overwritten"
         assert result["imported"][0]["id"] == pid
 
-    def test_import_fatal_missing_name_raises(self) -> None:
+    def test_import_fatal_missing_name_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Importing profile without name raises ValueError."""
         import yaml as yaml_mod
 
@@ -5798,11 +5827,11 @@ class TestImportProfiles:
             _patch_profile_storage({}),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             with pytest.raises(ValidationException, match="Fatal validation errors"):
                 _profile_import_export.import_profiles(content, "profile.yaml")
 
-    def test_import_auto_fix_missing_type(self) -> None:
+    def test_import_auto_fix_missing_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Import auto-fixes missing type to 'custom'."""
         import yaml as yaml_mod
 
@@ -5815,7 +5844,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
@@ -5825,7 +5854,7 @@ class TestImportProfiles:
         imported_id = result["imported"][0]["id"]
         assert storage[imported_id]["type"] == "custom"
 
-    def test_import_auto_fix_invalid_type(self) -> None:
+    def test_import_auto_fix_invalid_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Import auto-fixes invalid type to 'custom'."""
         import yaml as yaml_mod
 
@@ -5838,7 +5867,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
@@ -5848,7 +5877,7 @@ class TestImportProfiles:
         imported_id = result["imported"][0]["id"]
         assert storage[imported_id]["type"] == "custom"
 
-    def test_import_defaults_sftp_to_custom(self) -> None:
+    def test_import_defaults_sftp_to_custom(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An sftp item is imported as custom with the type fix note (REQ-4.7.3)."""
         import yaml as yaml_mod
 
@@ -5863,7 +5892,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
@@ -5875,7 +5904,7 @@ class TestImportProfiles:
         assert storage[imported_id]["type"] == "custom"
         assert storage[imported_id]["config"] == {"host": "files.example.com"}
 
-    def test_import_resolves_env_names_to_ids(self) -> None:
+    def test_import_resolves_env_names_to_ids(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Import resolves environment names to IDs."""
         import yaml as yaml_mod
 
@@ -5900,14 +5929,14 @@ class TestImportProfiles:
                 return_value=[{"id": env_id, "name": "staging", "tags": []}],
             ),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
         imported_id = result["imported"][0]["id"]
         assert env_id in storage[imported_id]["environment_values"]
 
-    def test_import_strips_unresolvable_environments(self) -> None:
+    def test_import_strips_unresolvable_environments(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Import strips unresolvable environment references."""
         import yaml as yaml_mod
 
@@ -5927,7 +5956,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
@@ -5937,7 +5966,7 @@ class TestImportProfiles:
         imported_id = result["imported"][0]["id"]
         assert storage[imported_id]["environment_values"] == {}
 
-    def test_import_zip_multiple(self) -> None:
+    def test_import_zip_multiple(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Importing ZIP creates multiple profiles."""
         import io
         import zipfile
@@ -5963,14 +5992,14 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(buf.getvalue(), "profiles.zip")
 
         assert result["total_imported"] == 2
         names = {i["name"] for i in result["imported"]}
         assert names == {"ZipP1", "ZipP2"}
 
-    def test_import_default_resolution_is_rename(self) -> None:
+    def test_import_default_resolution_is_rename(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Default conflict resolution (no explicit resolution) is rename."""
         import yaml as yaml_mod
 
@@ -5993,13 +6022,13 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["imported"][0]["action"] == "renamed"
         assert result["imported"][0]["name"] == "Default (2)"
 
-    def test_import_with_description(self) -> None:
+    def test_import_with_description(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Imported profile with description preserves it."""
         import yaml as yaml_mod
 
@@ -6019,13 +6048,13 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         imported_id = result["imported"][0]["id"]
         assert storage[imported_id]["description"] == "My description"
 
-    def test_import_skip_still_records_fixes(self) -> None:
+    def test_import_skip_still_records_fixes(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Skipped profile with fixable issues still records fixes_applied."""
         import yaml as yaml_mod
 
@@ -6049,7 +6078,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"SkipFix": "skip"}
             )
@@ -6058,7 +6087,9 @@ class TestImportProfiles:
         assert len(result["fixes_applied"]) == 1
         assert result["fixes_applied"][0]["name"] == "SkipFix"
 
-    def test_import_overwrite_with_fixes_records_them(self) -> None:
+    def test_import_overwrite_with_fixes_records_them(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Overwriting profile with fixable issues records fixes."""
         import yaml as yaml_mod
 
@@ -6081,7 +6112,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"OverwriteFix": "overwrite"}
             )
@@ -6090,7 +6121,7 @@ class TestImportProfiles:
         assert result["imported"][0]["action"] == "overwritten"
         assert len(result["fixes_applied"]) == 1
 
-    def test_import_rename_with_fixes_records_them(self) -> None:
+    def test_import_rename_with_fixes_records_them(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Renaming profile with fixable issues records fixes under new name."""
         import yaml as yaml_mod
 
@@ -6113,7 +6144,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"RenameFix": "rename"}
             )
@@ -6124,7 +6155,9 @@ class TestImportProfiles:
         assert len(result["fixes_applied"]) == 1
         assert result["fixes_applied"][0]["name"] == "RenameFix (2)"
 
-    def test_import_new_profile_with_fixes_records_them(self) -> None:
+    def test_import_new_profile_with_fixes_records_them(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """New profile with fixable issues records fixes."""
         import yaml as yaml_mod
 
@@ -6137,14 +6170,16 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(content, "profile.yaml")
 
         assert result["total_imported"] == 1
         assert len(result["fixes_applied"]) == 1
         assert result["fixes_applied"][0]["name"] == "NewFix"
 
-    def test_import_conflict_overwrite_with_description(self) -> None:
+    def test_import_conflict_overwrite_with_description(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Overwriting a conflicting profile preserves its description."""
         import yaml as yaml_mod
 
@@ -6174,7 +6209,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"Existing": "overwrite"}
             )
@@ -6183,7 +6218,7 @@ class TestImportProfiles:
         assert result["imported"][0]["action"] == "overwritten"
         assert storage[pid]["description"] == "Overwritten description"
 
-    def test_import_conflict_rename_with_description(self) -> None:
+    def test_import_conflict_rename_with_description(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Renaming a conflicting profile preserves its description."""
         import yaml as yaml_mod
 
@@ -6213,7 +6248,7 @@ class TestImportProfiles:
             _patch_profile_storage(storage),
             patch.object(environment_service, "list_environment_names", return_value=[]),
         ):
-            _profile_common._cache_loaded = True
+            monkeypatch.setattr(_profile_common, "_cache_loaded", True)
             result = _profile_import_export.import_profiles(
                 content, "profile.yaml", {"Existing": "rename"}
             )

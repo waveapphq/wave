@@ -469,15 +469,17 @@ class TestDiscoveryDenied:
         fake = DeniedDiscoveryClient(401, _failure("Unauthorized", "Unauthorized", 401))
         message = "Kubernetes API authentication failed: Unauthorized"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_403_renders_the_permission_row(self) -> None:
         detail = 'forbidden: User "wave" cannot get path "/api/v1"'
         fake = DeniedDiscoveryClient(403, _failure("Forbidden", detail, 403))
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(f"Kubernetes API permission denied: {detail}")):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_denied_walk_is_recordable_with_its_reason(self) -> None:
         detail = 'forbidden: User "wave" cannot get path "/api/v1"'
@@ -577,8 +579,9 @@ class TestNameModeRequest:
         body = _failure("NotFound", 'nodes "kwok-node-0" not found', 404)
         fake = FakeK8sClient(responses=[(404, body)], resources=_NODES)
 
+        params = _name_params(kind="Node", name="kwok-node-0")
         with pytest.raises(ValueError, match=exact("K8s Node 'kwok-node-0' not found")):
-            _run(fake, _name_params(kind="Node", name="kwok-node-0"))
+            _run(fake, params)
 
     def test_a_grouped_kind_rides_its_own_path_root(self) -> None:
         fake = _named_client(
@@ -715,14 +718,16 @@ class TestMissingTarget:
     def test_a_missing_name_fails_the_block_by_default(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_missing_name_fails_with_ignore_not_found_unticked(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
 
+        params = _name_params(ignore_not_found=False)
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            _run(fake, _name_params(ignore_not_found=False))
+            _run(fake, params)
 
     def test_a_missing_name_is_recordable(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
@@ -786,14 +791,16 @@ class TestMissingTarget:
             'configmaps "probe-a" not found'
         )
 
+        params = _selector_params(ignore_not_found=True)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _selector_params(ignore_not_found=True))
+            _run(fake, params)
 
     def test_ignore_not_found_does_not_swallow_a_denied_named_delete(self) -> None:
         fake = _refusing_client(403, _failure("Forbidden", _FORBIDDEN_DETAIL, 403))
 
+        params = _name_params(ignore_not_found=True)
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            _run(fake, _name_params(ignore_not_found=True))
+            _run(fake, params)
 
 
 class TestClusterRefusal:
@@ -802,10 +809,11 @@ class TestClusterRefusal:
     def test_401_renders_the_authentication_row(self) -> None:
         fake = _refusing_client(401, _failure("Unauthorized", "Unauthorized", 401))
 
+        params = _name_params()
         with pytest.raises(
             ValueError, match=exact("Kubernetes API authentication failed: Unauthorized")
         ):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_401_is_recordable_with_its_reason(self) -> None:
         fake = _refusing_client(401, _failure("Unauthorized", "Unauthorized", 401))
@@ -818,8 +826,9 @@ class TestClusterRefusal:
     def test_403_renders_the_permission_row(self) -> None:
         fake = _refusing_client(403, _failure("Forbidden", _FORBIDDEN_DETAIL, 403))
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_403_is_recordable_with_its_reason(self) -> None:
         fake = _refusing_client(403, _failure("Forbidden", _FORBIDDEN_DETAIL, 403))
@@ -832,14 +841,16 @@ class TestClusterRefusal:
     def test_a_server_error_on_a_named_delete_names_the_object(self) -> None:
         fake = _refusing_client(503, _failure("ServiceUnavailable", _SERVER_DETAIL, 503))
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_SERVER_MESSAGE)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_server_error_on_a_selector_delete_names_the_kind(self) -> None:
         fake = _refusing_client(503, _failure("ServiceUnavailable", _SERVER_DETAIL, 503))
 
+        params = _selector_params()
         with pytest.raises(ValueError, match=exact(_SELECTOR_SERVER_MESSAGE)):
-            _run(fake, _selector_params())
+            _run(fake, params)
 
     def test_an_error_without_a_message_names_the_http_status(self) -> None:
         fake = _refusing_client(502, {})
@@ -847,8 +858,9 @@ class TestClusterRefusal:
             f"Kubernetes could not delete ConfigMap 'probe-a' in namespace '{NAMESPACE}' (HTTP 502)"
         )
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_selector_error_without_a_message_names_the_kind_and_the_status(self) -> None:
         fake = _refusing_client(502, {})
@@ -856,31 +868,35 @@ class TestClusterRefusal:
             f"Kubernetes could not delete ConfigMap objects in namespace '{NAMESPACE}' (HTTP 502)"
         )
 
+        params = _selector_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _selector_params())
+            _run(fake, params)
 
     def test_a_missing_namespace_renders_the_namespace_row(self) -> None:
         body = _failure("NotFound", 'namespaces "gone" not found', 404)
         body["details"] = {"name": "gone", "kind": "namespaces"}
         fake = FakeK8sClient(responses=[(404, body)], resources=_CONFIGMAPS)
 
+        params = _name_params(namespace="gone")
         with pytest.raises(ValueError, match=exact("K8s namespace 'gone' not found")):
-            _run(fake, _name_params(namespace="gone"))
+            _run(fake, params)
 
     def test_a_namespace_row_without_a_name_falls_back_to_the_resolved_namespace(self) -> None:
         body = _failure("NotFound", "namespace not found", 404)
         body["details"] = {"kind": "namespaces"}
         fake = FakeK8sClient(responses=[(404, body)], resources=_CONFIGMAPS)
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(f"K8s namespace '{NAMESPACE}' not found")):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_an_already_exists_answer_renders_the_shared_row(self) -> None:
         fake = _refusing_client(409, _failure("AlreadyExists", "object already exists", 409))
         message = f"K8s ConfigMap 'probe-a' already exists in namespace '{NAMESPACE}'"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_conflict_answer_renders_the_update_row(self) -> None:
         detail = "the object has been modified; please apply your changes to the latest version"
@@ -890,8 +906,9 @@ class TestClusterRefusal:
             f"because it changed on the cluster first: {detail}"
         )
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_rejected_manifest_renders_the_manifest_row(self) -> None:
         detail = (
@@ -901,8 +918,9 @@ class TestClusterRefusal:
         fake = _refusing_client(422, _failure("Invalid", detail, 422))
         message = "Kubernetes rejected the manifest: .spec.replicas: expected integer"
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_refused_delete_issues_no_poll(self) -> None:
         fake = _refusing_client(403, _failure("Forbidden", _FORBIDDEN_DETAIL, 403))
@@ -993,8 +1011,9 @@ class TestLogging:
         fake = _refusing_client(403, _failure("Forbidden", _FORBIDDEN_DETAIL, 403))
         log = RecordingLog()
 
+        params = _name_params()
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            _run(fake, _name_params(), log=log)
+            _run(fake, params, log=log)
 
         assert log.entries == []
 
@@ -1046,8 +1065,9 @@ class TestWaitUntilGoneNameMode:
     def test_only_a_404_reads_as_gone_in_name_mode(self, poll: tuple[int, Any]) -> None:
         fake = FakeK8sClient(responses=[_accepted()], resources=_CONFIGMAPS, default=poll)
 
+        params = _name_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_NAME_TIMEOUT_MESSAGE)):
-            _run(fake, _name_params(timeout=5))
+            _run(fake, params)
 
     def test_the_wait_is_skipped_when_nothing_was_deleted(self) -> None:
         fake = FakeK8sClient(responses=[_gone()], resources=_CONFIGMAPS)
@@ -1086,8 +1106,9 @@ class TestWaitUntilGoneSelectorMode:
     ) -> None:
         fake = _selector_poll_client(poll)
 
+        params = _selector_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_SELECTOR_TIMEOUT_MESSAGE)):
-            _run(fake, _selector_params(timeout=5))
+            _run(fake, params)
 
     def test_a_two_hundred_answer_with_no_items_ends_the_wait(self) -> None:
         fake = FakeK8sClient(
@@ -1119,8 +1140,9 @@ class TestDeadlineLoop:
         clock = _Clock(start=1000.0)
         fake = _never_gone_client()
 
+        params = _name_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_NAME_TIMEOUT_MESSAGE)):
-            _run(fake, _name_params(timeout=5), clock=clock)
+            _run(fake, params, clock=clock)
 
         assert clock.sleeps == [1.0, 1.0, 1.0, 1.0, 1.0]
         assert [call.method for call in fake.calls].count("GET") == 6
@@ -1129,8 +1151,9 @@ class TestDeadlineLoop:
         clock = _Clock(step=100.0)
         fake = _never_gone_client()
 
+        params = _name_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_NAME_TIMEOUT_MESSAGE)):
-            _run(fake, _name_params(timeout=5), clock=clock)
+            _run(fake, params, clock=clock)
 
         assert [call.method for call in fake.calls] == ["DELETE", "GET"]
         assert clock.sleeps == []
@@ -1140,14 +1163,16 @@ class TestDeadlineLoop:
         fake.default = _still_there("web")
         message = "Timed out after 5 seconds waiting for deployment.apps/web to be deleted"
 
+        params = _name_params(kind="Deployment", name="web", timeout=5)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params(kind="Deployment", name="web", timeout=5))
+            _run(fake, params)
 
     def test_a_timed_out_selector_wait_names_the_matching_collection(self) -> None:
         fake = _selector_poll_client(_collection("probe-a"))
 
+        params = _selector_params(timeout=5)
         with pytest.raises(ValueError, match=exact(_SELECTOR_TIMEOUT_MESSAGE)):
-            _run(fake, _selector_params(timeout=5))
+            _run(fake, params)
 
     @pytest.mark.parametrize(
         ("timeout", "rendered"), [(5, "5"), (120, "120"), (None, "30"), (0.05, "0.05")]
@@ -1165,8 +1190,10 @@ class TestDeadlineLoop:
     def test_a_one_second_timeout_is_named_in_the_singular(self) -> None:
         message = "Timed out after 1 second waiting for configmap/probe-a to be deleted"
 
+        fake = _never_gone_client()
+        params = _name_params(timeout=1)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_never_gone_client(), _name_params(timeout=1))
+            _run(fake, params)
 
     def test_a_timed_out_wait_reports_nothing_deleted(self) -> None:
         outputs = _outputs(_never_gone_client(), _name_params(timeout=5, on_error="record"))
@@ -1204,8 +1231,9 @@ class TestDeadlineLoop:
         clock = _Clock()
         fake = _never_gone_client()
 
+        params = _name_params(timeout=2.5)
         with pytest.raises(ValueError):
-            _run(fake, _name_params(timeout=2.5), clock=clock)
+            _run(fake, params, clock=clock)
 
         assert clock.sleeps == [1.0, 1.0, 0.5]
 
@@ -1213,8 +1241,9 @@ class TestDeadlineLoop:
         clock = _Clock()
         fake = _never_gone_client()
 
+        params = _name_params(timeout=1)
         with patch(_INTERVAL_TARGET, 0.25), pytest.raises(ValueError):
-            _run(fake, _name_params(timeout=1), clock=clock)
+            _run(fake, params, clock=clock)
 
         assert clock.sleeps == [0.25, 0.25, 0.25, 0.25]
 
@@ -1273,8 +1302,9 @@ class TestClientConstruction:
         fake = _never_gone_client()
         message = "Timed out after 3 seconds waiting for configmap/probe-a to be deleted"
 
+        params = _name_params(timeout=3)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params(timeout=3), clock=clock)
+            _run(fake, params, clock=clock)
 
         assert _construction(fake)[1] == 3
         assert clock.sleeps == [1.0, 1.0, 1.0]
@@ -1343,8 +1373,9 @@ class TestAlwaysHardFail:
     def test_a_bogus_session_raises_in_both_modes(self, on_error: str) -> None:
         fake = _named_client()
 
+        params = _name_params(session="not-a-kubeconfig", on_error=on_error)
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(fake, _name_params(session="not-a-kubeconfig", on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_an_absent_session_raises_in_both_modes(self, on_error: str) -> None:
@@ -1362,13 +1393,15 @@ class TestAlwaysHardFail:
         )
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_CONFIGMAPS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _name_params(on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_request_timeout_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Kubernetes API request DELETE {_NAMED_PATH} timed out after 30 seconds"
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_CONFIGMAPS)
 
+        params = _name_params(on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _name_params(on_error=on_error))
+            _run(fake, params)

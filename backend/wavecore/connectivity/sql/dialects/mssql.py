@@ -84,6 +84,7 @@ def _tls_arguments(rows: dict[str, Any]) -> dict[str, Any]:
             OpenSSL.SSL.VERIFY_PEER, functools.partial(verify_peer, rows["server_name"])
         )
     else:
+        # SonarQube exclusion: SQ-TLS-001
         context.set_verify(OpenSSL.SSL.VERIFY_NONE)
 
     def identity(certificate: str, key: str | None) -> None:

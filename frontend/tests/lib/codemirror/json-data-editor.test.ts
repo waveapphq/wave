@@ -234,22 +234,15 @@ describe('json-data-editor', () => {
   })
 
   describe('JSON content handling', () => {
-    it('works with valid JSON content', () => {
+    it.each([
+      { kind: 'valid JSON', content: '{"name": "test", "value": 42}' },
+      // The linter will flag it
+      { kind: 'invalid JSON', content: '{invalid}' },
+      { kind: 'JSON array', content: '[1, 2, 3]' },
+    ])('works with $kind content', ({ content }) => {
       const extensions = createJsonDataEditorExtensions()
-      const view = createView('{"name": "test", "value": 42}', extensions)
-      expect(view.state.doc.toString()).toBe('{"name": "test", "value": 42}')
-    })
-
-    it('works with invalid JSON content (linter will flag it)', () => {
-      const extensions = createJsonDataEditorExtensions()
-      const view = createView('{invalid}', extensions)
-      expect(view.state.doc.toString()).toBe('{invalid}')
-    })
-
-    it('works with JSON array content', () => {
-      const extensions = createJsonDataEditorExtensions()
-      const view = createView('[1, 2, 3]', extensions)
-      expect(view.state.doc.toString()).toBe('[1, 2, 3]')
+      const view = createView(content, extensions)
+      expect(view.state.doc.toString()).toBe(content)
     })
   })
 })

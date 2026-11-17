@@ -1276,10 +1276,9 @@ class TestApplySecretsModeToVariableList:
         assert result[1] == {"name": "host", "type": "string", "value": "db.example.com"}
 
     def test_plaintext_undecryptable_secret_raises_conflict(self) -> None:
+        variables = _variable_list(_foreign_envelope("x"))
         with pytest.raises(ConflictException, match=rf"^{re.escape(_DECRYPTION_FAILED_MESSAGE)}$"):
-            shared.apply_secrets_mode_to_variable_list(
-                _variable_list(_foreign_envelope("x")), "plaintext"
-            )
+            shared.apply_secrets_mode_to_variable_list(variables, "plaintext")
 
     def test_the_input_is_not_mutated(self) -> None:
         envelope = seal_value("tok-classified-123")

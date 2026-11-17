@@ -68,12 +68,14 @@ class TestStoragePaths:
 
         assert result == Path(custom_path)
 
-    def test_get_base_path_caches_result(self, tmp_path: Path) -> None:
+    def test_get_base_path_caches_result(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that get_base_path caches the result."""
         # First call
         _result1 = storage_paths.get_base_path()
         # Change the path - should not affect cached result
-        storage_paths._base_path_cache = tmp_path / "cached"
+        monkeypatch.setattr(storage_paths, "_base_path_cache", tmp_path / "cached")
         result2 = storage_paths.get_base_path()
 
         # Should return cached value, not re-compute

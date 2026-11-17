@@ -285,7 +285,7 @@ def clear_dashboard_cache() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def clear_environment_storage(temp_storage_path: Path) -> Generator[None, None, None]:
+def clear_environment_storage(temp_storage_path: Path) -> None:
     """Clear environment storage between tests.
 
     This ensures tests for environment service are isolated
@@ -303,7 +303,6 @@ def clear_environment_storage(temp_storage_path: Path) -> Generator[None, None, 
 
     environment_service._clear_storage()
 
-    yield
     # Note: No teardown clearing - next test's setup will handle it
 
 
@@ -314,7 +313,7 @@ TEST_ENVIRONMENT_ID = "env-test-00000000-0000-0000-0000-000000000001"
 @pytest.fixture(autouse=True)
 def seed_test_environment(
     clear_environment_storage: None,
-) -> Generator[str, None, None]:
+) -> str:
     """Seed a default test environment for execution tests.
 
     Many execution tests call start_execution(), which requires
@@ -335,9 +334,8 @@ def seed_test_environment(
     environment_service._save_environment(environment)
     environment_service._environments[TEST_ENVIRONMENT_ID] = environment
 
-    yield TEST_ENVIRONMENT_ID
-
     # Cleanup happens via clear_environment_storage on next test
+    return TEST_ENVIRONMENT_ID
 
 
 _WORKBENCH_START_MOCK_FILES = {

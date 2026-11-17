@@ -135,9 +135,10 @@ class TestRead:
     def test_file_that_is_not_a_mapping_is_refused(self, tmp_path: Path) -> None:
         path = tmp_path / "settings.yaml"
         path.write_text("- a\n- b\n", encoding="utf-8")
+        defaults = _defaults()
 
         with pytest.raises(ValueError, match=r"^the file does not hold a YAML mapping$"):
-            settings_file.read(path, _defaults())
+            settings_file.read(path, defaults)
 
     def test_stored_value_replaces_a_mapping_default(self, tmp_path: Path) -> None:
         path = tmp_path / "settings.yaml"

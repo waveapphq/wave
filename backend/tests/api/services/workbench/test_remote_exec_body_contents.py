@@ -607,7 +607,11 @@ class TestAStopInsideAContainerInTheBody:
 
     async def test_the_host_is_stopped_then_closed(self) -> None:
         order: list[str] = []
-        with patch.object(_worker_registry, "stop_worker", lambda _w: order.append("stop")):
+
+        def _record_stop(_worker: object) -> None:
+            order.append("stop")
+
+        with patch.object(_worker_registry, "stop_worker", _record_stop):
             task = asyncio.create_task(_run(_for_graph(), _Run(hold_path="/in")))
             for _ in range(500):
                 await asyncio.sleep(0.01)

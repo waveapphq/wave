@@ -102,7 +102,7 @@ async def get_config() -> JSONResponse:
         )
 
     except RuntimeError as e:
-        logger.error(f"Internal error retrieving config: {e}")
+        logger.exception(f"Internal error retrieving config: {e}")
         raise InternalServerException() from e
 
 
@@ -150,5 +150,5 @@ async def get_config_value(key: str) -> JSONResponse:
     except (ValidationException, NotFoundException):
         raise
     except RuntimeError as e:
-        logger.error(f"Internal error retrieving config value {log_safe(key)}: {e}")
+        logger.exception(f"Internal error retrieving config value {log_safe(key)}: {e}")
         raise InternalServerException() from e

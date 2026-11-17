@@ -7,7 +7,6 @@ at the top level of a Test or inside a Local Function body.
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from typing import Any
 
 import pytest
@@ -18,7 +17,7 @@ pytestmark = pytest.mark.usefixtures("temp_storage_path")
 
 
 @pytest.fixture(autouse=True)
-def _register_k8s_plugins() -> Generator[None, None, None]:
+def _register_k8s_plugins() -> None:
     from wavecore.core.plugin_registry import register_plugin
     from wavecore.plugins.k8s_delete import K8sDeletePlugin
     from wavecore.plugins.k8s_events import K8sEventsPlugin
@@ -29,7 +28,6 @@ def _register_k8s_plugins() -> Generator[None, None, None]:
     register_plugin(K8sGetPlugin())
     register_plugin(K8sEventsPlugin())
     register_plugin(K8sTopPlugin())
-    yield
 
 
 def _plugin_node(

@@ -397,19 +397,21 @@ class TestAnchorsPem:
     ) -> None:
         paths = host_stores()
 
+        spec = _spec("host")
         with pytest.raises(
             ValueError,
             match=rf"^No certificate store found on this WAVE host: looked in {_looked_in(paths)}$",
         ):
-            anchors_pem(_spec("host"))
+            anchors_pem(spec)
 
     def test_the_refusal_names_every_location_in_order(
         self, host_stores: Callable[..., tuple[Path, ...]]
     ) -> None:
         paths = host_stores(names=("a.crt", "b.crt", "c.crt", "d.crt", "e.crt", "f.crt"))
 
+        spec = _spec("host")
         with pytest.raises(ValueError) as raised:
-            anchors_pem(_spec("host"), "this WAVE host")
+            anchors_pem(spec, "this WAVE host")
 
         listed = str(raised.value).split(": looked in ", 1)[1]
         assert listed.split(", ") == [str(path) for path in paths]
@@ -419,12 +421,13 @@ class TestAnchorsPem:
     ) -> None:
         paths = host_stores()
 
+        spec = _spec("host")
         with pytest.raises(
             ValueError,
             match=rf"^No certificate store found on the remote host: looked in "
             rf"{_looked_in(paths)}$",
         ):
-            anchors_pem(_spec("host"), _REMOTE)
+            anchors_pem(spec, _REMOTE)
 
 
 class TestLogLine:
@@ -543,8 +546,9 @@ class TestTrustIsLogged:
     ) -> None:
         host_stores()
 
+        spec = _spec("host")
         with pytest.raises(ValueError):
-            anchors_pem(_spec("host"))
+            anchors_pem(spec)
 
         assert run_lines == []
 
@@ -574,12 +578,13 @@ class TestTrustLocation:
         monkeypatch.setattr(trust_store, "LOCATION", trust_store.REMOTE_HOST)
         paths = host_stores()
 
+        spec = _spec("host")
         with pytest.raises(
             ValueError,
             match=rf"^No certificate store found on the remote host: looked in "
             rf"{_looked_in(paths)}$",
         ):
-            anchors_pem(_spec("host"))
+            anchors_pem(spec)
 
     def test_a_named_place_wins_over_the_location(
         self,

@@ -271,8 +271,9 @@ class TestMetricsProbe:
     def test_an_absent_metrics_api_hard_fails_in_both_modes(self, on_error: str) -> None:
         fake = FakeK8sClient(responses=[_PROBE_MISSING])
 
+        params = _params(select_by="all", on_error=on_error)
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            _run(_params(select_by="all", on_error=on_error), fake)
+            _run(params, fake)
 
         assert [_path_of(call) for call in fake.calls] == [_PROBE_PATH]
 
@@ -280,15 +281,17 @@ class TestMetricsProbe:
     def test_the_node_scope_hard_fails_on_the_same_probe(self, on_error: str) -> None:
         fake = FakeK8sClient(responses=[_PROBE_MISSING])
 
+        params = _params(scope="node", select_by="all", on_error=on_error)
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            _run(_params(scope="node", select_by="all", on_error=on_error), fake)
+            _run(params, fake)
 
     def test_a_failed_probe_logs_nothing(self) -> None:
         log = _Recorder()
         fake = FakeK8sClient(responses=[(404, {})])
 
+        params = _params(select_by="all", on_error="record")
         with pytest.raises(ValueError, match=exact(_METRICS_MISSING)):
-            _run(_params(select_by="all", on_error="record"), fake, log)
+            _run(params, fake, log)
 
         assert log.entries == []
 
@@ -670,15 +673,17 @@ class TestNodesTheMetricsApiDoesNotReport:
         fake = _fake((403, {"reason": "Forbidden", "message": "no access"}))
         message = "Kubernetes API permission denied: no access"
 
+        params = _params(scope="node", select_by="all")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(scope="node", select_by="all"), fake)
+            _run(params, fake)
 
     def test_a_404_on_the_node_objects_still_fails_the_read(self) -> None:
         missing = (404, {"reason": "NotFound", "message": "nodes 'gone' not found"})
         fake = _fake(missing, missing)
 
+        params = _params(scope="node", name="gone")
         with pytest.raises(ValueError, match=exact("K8s Node 'gone' not found")):
-            _run(_params(scope="node", name="gone"), fake)
+            _run(params, fake)
 
 
 class TestFailurePaths:
@@ -700,102 +705,116 @@ class TestFailurePaths:
         params = _params(select_by="all", on_error=on_error)
         del params["session"]
 
+        fake = _fake((200, _POD_LIST))
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(params, _fake((200, _POD_LIST)))
+            _run(params, fake)
 
     def test_a_permission_denial_renders_the_shared_row(self) -> None:
         fake = _fake((403, {"reason": "Forbidden", "message": "denied"}))
 
+        params = _params(select_by="all")
         with pytest.raises(ValueError, match=exact("Kubernetes API permission denied: denied")):
-            _run(_params(select_by="all"), fake)
+            _run(params, fake)
 
     def test_an_authentication_failure_renders_the_shared_row(self) -> None:
         fake = _fake((401, {"reason": "Unauthorized", "message": "token expired"}))
         message = "Kubernetes API authentication failed: token expired"
 
+        params = _params(select_by="all")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(select_by="all"), fake)
+            _run(params, fake)
 
     def test_an_absent_named_pod_renders_the_shared_not_found_row(self) -> None:
         fake = _fake((404, {"reason": "NotFound", "message": "pods 'web-1' not found"}))
         message = f"K8s Pod 'web-1' not found in namespace '{NAMESPACE}'"
 
+        params = _params(name="web-1")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(name="web-1"), fake)
+            _run(params, fake)
 
     def test_a_server_error_on_a_named_read_says_the_read_failed(self) -> None:
         detail = "the server is currently unable to handle the request"
         fake = _fake((503, {"reason": "ServiceUnavailable", "message": detail}))
         message = f"Kubernetes could not read Pod 'web-1' in namespace '{NAMESPACE}': {detail}"
 
+        params = _params(name="web-1")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(name="web-1"), fake)
+            _run(params, fake)
 
     def test_a_server_error_on_an_unnamed_read_names_the_kind(self) -> None:
         detail = "the server is currently unable to handle the request"
         fake = _fake((503, {"reason": "ServiceUnavailable", "message": detail}))
         message = f"Kubernetes could not list Pod objects in namespace '{NAMESPACE}': {detail}"
 
+        params = _params(select_by="all")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(select_by="all"), fake)
+            _run(params, fake)
 
     def test_a_gateway_answer_ends_with_the_http_status(self) -> None:
         fake = _fake((401, {}))
         message = f"Kubernetes could not read Pod 'web-1' in namespace '{NAMESPACE}' (HTTP 401)"
 
+        params = _params(name="web-1")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(name="web-1"), fake)
+            _run(params, fake)
 
     def test_an_absent_pod_is_reported_by_its_typed_name_and_namespace(self) -> None:
         fake = _fake((404, {"reason": "NotFound", "message": "pods 'web 1?' not found"}))
         message = "K8s Pod 'web 1?' not found in namespace 'my ns?'"
 
+        params = _params(name="web 1?", namespace="my ns?")
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_params(name="web 1?", namespace="my ns?"), fake)
+            _run(params, fake)
 
     @_BOTH_MODES
     def test_an_unknown_quantity_suffix_hard_fails(self, on_error: str) -> None:
         fake = _fake((200, _one_pod("5mm", "1Ki")))
 
+        params = _params(name="solo", on_error=on_error)
         with pytest.raises(KeyError, match=r"^'mm'$"):
-            _run(_params(name="solo", on_error=on_error), fake)
+            _run(params, fake)
 
     @_BOTH_MODES
     def test_a_malformed_quantity_number_hard_fails(self, on_error: str) -> None:
         fake = _fake((200, _one_pod("abc", "1Ki")))
 
+        params = _params(name="solo", on_error=on_error)
         with pytest.raises(InvalidOperation, match=exact("[<class 'decimal.ConversionSyntax'>]")):
-            _run(_params(name="solo", on_error=on_error), fake)
+            _run(params, fake)
 
     @_BOTH_MODES
     def test_a_pod_without_metadata_hard_fails(self, on_error: str) -> None:
         fake = _fake((200, {"kind": "PodMetrics", "containers": []}))
 
+        params = _params(name="solo", on_error=on_error)
         with pytest.raises(KeyError, match=r"^'metadata'$"):
-            _run(_params(name="solo", on_error=on_error), fake)
+            _run(params, fake)
 
     @_BOTH_MODES
     def test_a_container_without_usage_hard_fails(self, on_error: str) -> None:
         fake = _fake((200, _pod_metrics("solo", [{"name": "app"}])))
 
+        params = _params(name="solo", include_containers=True, on_error=on_error)
         with pytest.raises(KeyError, match=r"^'usage'$"):
-            _run(_params(name="solo", include_containers=True, on_error=on_error), fake)
+            _run(params, fake)
 
     @_BOTH_MODES
     def test_a_transport_failure_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = FakeK8sClient(responses=[K8sApiError(message)])
 
+        params = _params(select_by="all", on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(_params(select_by="all", on_error=on_error), fake)
+            _run(params, fake)
 
     @_BOTH_MODES
     def test_a_timeout_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Kubernetes API request GET {_POD_METRICS_PATH} timed out after 30 seconds"
         fake = _fake(K8sApiError(message))
 
+        params = _params(select_by="all", on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(_params(select_by="all", on_error=on_error), fake)
+            _run(params, fake)
 
 
 class TestRecordAndContinue:
@@ -906,8 +925,9 @@ class TestLogCalls:
         log = _Recorder()
         fake = _fake((403, {"reason": "Forbidden", "message": "denied"}))
 
+        params = _params(select_by="all", on_error="fail")
         with pytest.raises(ValueError):
-            _run(_params(select_by="all", on_error="fail"), fake, log)
+            _run(params, fake, log)
 
         assert log.entries == []
 

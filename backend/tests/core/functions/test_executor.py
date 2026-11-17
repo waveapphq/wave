@@ -1118,9 +1118,11 @@ class TestInputNamespaceNullRule:
         from wavecore.core.expressions.errors import NullValueError
         from wavecore.core.functions.executor import _build_input_namespace
 
+        function_def = _inputs_of({"name": "count", **declaration})
+
         with pytest.raises(NullValueError, match=r"^'count' is null$"):
             _build_input_namespace(
-                _inputs_of({"name": "count", **declaration}),
+                function_def,
                 {"count": None},
                 run_alone=False,
                 held={},
@@ -1488,10 +1490,12 @@ class TestTheInputRuleOnAFunctionBlock:
         expression: str,
         error: str,
     ) -> None:
+        function_def = make_echo_function("level", _enum_input(value_type, allowed))
+
         with pytest.raises(RuntimeError, match=_anchored(error)):
             await _run_block(
                 session_id,
-                make_echo_function("level", _enum_input(value_type, allowed)),
+                function_def,
                 expressions={"level": expression},
             )
 
@@ -1501,13 +1505,15 @@ class TestTheInputRuleOnAFunctionBlock:
     async def test_a_variable_outside_the_enum_fails_when_the_run_starts(
         self, session_id: str
     ) -> None:
+        function_def = make_echo_function("level", _enum_input("string", ["low", "high"]))
+
         with pytest.raises(
             RuntimeError,
             match=r"^Parameter 'level' must be one of: low, high; Actual value was 'mid'\.$",
         ):
             await _run_block(
                 session_id,
-                make_echo_function("level", _enum_input("string", ["low", "high"])),
+                function_def,
                 expressions={"level": "picked"},
                 variables={"picked": "mid"},
             )
@@ -1559,10 +1565,12 @@ class TestTheInputRuleOnAFunctionBlock:
     async def test_null_given_to_an_enum_input_is_refused(
         self, session_id: str, value_type: str, allowed: list[Any]
     ) -> None:
+        function_def = make_echo_function("level", _enum_input(value_type, allowed))
+
         with pytest.raises(RuntimeError, match=r"^'level' is null$"):
             await _run_block(
                 session_id,
-                make_echo_function("level", _enum_input(value_type, allowed)),
+                function_def,
                 expressions={"level": "None"},
             )
 

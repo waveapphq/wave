@@ -146,6 +146,7 @@ class _Reader:
 
 def _accept(key: str) -> str:
     """The Sec-WebSocket-Accept value RFC 6455 section 4.2.2 derives from a key."""
+    # SonarQube exclusion: SQ-HASH-001
     return base64.b64encode(hashlib.sha1((key + _GUID).encode()).digest()).decode()
 
 

@@ -458,26 +458,12 @@ describe('useInspectCreate - destructive type-switch gate', () => {
 })
 
 describe('useInspectCreate - secret flag in the built spec', () => {
-  it('marks a variable-mode spec secret when the draft is secret', () => {
-    const { result } = setup({ mode: 'variable' })
-    act(() => {
-      result.current.setDraftName('token')
-      result.current.setDraftSecret(true)
-    })
-    expect(result.current.buildSpec().secret).toBe(true)
-  })
-
-  it('marks an input-param spec secret when the draft is secret', () => {
-    const { result } = setup({ mode: 'input' })
-    act(() => {
-      result.current.setDraftName('token')
-      result.current.setDraftSecret(true)
-    })
-    expect(result.current.buildSpec().secret).toBe(true)
-  })
-
-  it('marks an output-param spec secret when the draft is secret', () => {
-    const { result } = setup({ mode: 'output' })
+  it.each([
+    ['marks a variable-mode spec secret when the draft is secret', 'variable'],
+    ['marks an input-param spec secret when the draft is secret', 'input'],
+    ['marks an output-param spec secret when the draft is secret', 'output'],
+  ] as const)('%s', (_title, mode) => {
+    const { result } = setup({ mode })
     act(() => {
       result.current.setDraftName('token')
       result.current.setDraftSecret(true)

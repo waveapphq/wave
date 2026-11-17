@@ -129,8 +129,7 @@ export function ExecutionToolbar({
       .catch(deleteFailure.report)
   }
 
-  const handleOpenRerun = async () => {
-    /* v8 ignore start - COV-V8-003: V8 loses coverage inside async event handler branches */
+  const handleOpenRerun = () => {
     if (execution.entity_type === 'suite') {
       const seedIds = Array.isArray(execution.selected_tests)
         ? (execution.selected_tests as string[])
@@ -154,7 +153,6 @@ export function ExecutionToolbar({
       setSelectedEnvId(execution.environment_id)
       setTestRerunOpen(true)
     }
-    /* v8 ignore stop */
   }
 
   const handleTestRerun = () => {
@@ -223,7 +221,7 @@ export function ExecutionToolbar({
           <Button
             variant="default"
             size="sm"
-            onClick={() => { handleOpenRerun().catch(rerunFailure.report) }}
+            onClick={handleOpenRerun}
           >
             <RotateCw className="mr-1.5 h-4 w-4" />
             Re-run

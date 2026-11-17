@@ -165,12 +165,12 @@ describe('nextAvailableTarget', () => {
 
 describe('isValidSemver length cap (MAX_VERSION_LENGTH = 32)', () => {
   it('rejects an otherwise-valid version longer than 32 characters', () => {
-    expect(VERSION_33.length).toBe(33)
+    expect(VERSION_33).toHaveLength(33)
     expect(isValidSemver(VERSION_33)).toBe(false)
   })
 
   it('accepts a well-formed version exactly 32 characters long', () => {
-    expect(VERSION_32.length).toBe(32)
+    expect(VERSION_32).toHaveLength(32)
     expect(isValidSemver(VERSION_32)).toBe(true)
   })
 

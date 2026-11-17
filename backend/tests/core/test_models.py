@@ -664,22 +664,24 @@ class TestBlockModel:
         from wavecore.models.plugins import BlockMetadata
 
         # Should reject duplicate parameter names
+        metadata = BlockMetadata(
+            name="Duplicate Parameters",
+            description="Test",
+            author="Test",
+            tags=[],
+        )
+        parameters = [
+            BlockParameter(name="timeout", type="integer", required=True),
+            BlockParameter(name="timeout", type="string", required=False),
+        ]
         with pytest.raises(ValidationError) as exc_info:
             Block(
                 id="dup-params",
                 version="1.0.0",
-                metadata=BlockMetadata(
-                    name="Duplicate Parameters",
-                    description="Test",
-                    author="Test",
-                    tags=[],
-                ),
+                metadata=metadata,
                 type="action",
                 plugin_id="test",
-                parameters=[
-                    BlockParameter(name="timeout", type="integer", required=True),
-                    BlockParameter(name="timeout", type="string", required=False),
-                ],
+                parameters=parameters,
                 plugins=[],
                 child_blocks=[],
             )
@@ -777,7 +779,8 @@ class TestBlockModel:
             )
 
         error_msg = str(exc_info.value).lower()
-        assert "required parameter" in error_msg and "cannot have a default value" in error_msg
+        assert "required parameter" in error_msg
+        assert "cannot have a default value" in error_msg
 
     def test_block_parameters_serialization_to_dict(self):
         """Test block with parameters serializes to dict correctly (REQ-3.1.2.1)."""

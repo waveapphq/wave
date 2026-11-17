@@ -401,8 +401,9 @@ class TestRequestDocumentation:
                             assert (
                                 "name" in param
                             ), f"Path parameter in {method.upper()} {path} must have name"
+                            assert "in" in param, "Path parameter must specify location as 'path'"
                             assert (
-                                "in" in param and param["in"] == "path"
+                                param["in"] == "path"
                             ), "Path parameter must specify location as 'path'"
                             assert "required" in param, "Path parameter must specify if required"
                             assert (
@@ -438,8 +439,9 @@ class TestRequestDocumentation:
                         assert (
                             "name" in param
                         ), f"Query parameter in {method.upper()} {path} must have name"
+                        assert "in" in param, "Query parameter must specify location as 'query'"
                         assert (
-                            "in" in param and param["in"] == "query"
+                            param["in"] == "query"
                         ), "Query parameter must specify location as 'query'"
                         assert "required" in param, (
                             "Query parameter must specify if required (required/optional "

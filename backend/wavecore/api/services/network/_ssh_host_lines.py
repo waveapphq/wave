@@ -51,6 +51,7 @@ def _is_wildcard(host: str) -> bool:
 
 
 def _host_and_port(name: str) -> tuple[str, int]:
+    # CodeQL exclusion: CQL-REDOS-001
     match = _BRACKETED.fullmatch(name)
     if match is None:
         return name, _DEFAULT_PORT

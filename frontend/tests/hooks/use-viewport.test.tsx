@@ -85,44 +85,18 @@ describe('useViewport Hook', () => {
   })
 
   describe('Breakpoint Detection', () => {
-    it('detects sm breakpoint at 640px', async () => {
-      mockWindowWidth(640)
+    it.each([
+      ['sm', 640],
+      ['md', 768],
+      ['lg', 1024],
+      ['xl', 1280],
+      ['2xl', 1536],
+    ])('detects %s breakpoint at %dpx', async (breakpoint, width) => {
+      mockWindowWidth(width)
       const { useViewport } = await import('@/hooks/use-viewport')
       const { result } = renderHook(() => useViewport())
 
-      expect(result.current.breakpoint).toBe('sm')
-    })
-
-    it('detects md breakpoint at 768px', async () => {
-      mockWindowWidth(768)
-      const { useViewport } = await import('@/hooks/use-viewport')
-      const { result } = renderHook(() => useViewport())
-
-      expect(result.current.breakpoint).toBe('md')
-    })
-
-    it('detects lg breakpoint at 1024px', async () => {
-      mockWindowWidth(1024)
-      const { useViewport } = await import('@/hooks/use-viewport')
-      const { result } = renderHook(() => useViewport())
-
-      expect(result.current.breakpoint).toBe('lg')
-    })
-
-    it('detects xl breakpoint at 1280px', async () => {
-      mockWindowWidth(1280)
-      const { useViewport } = await import('@/hooks/use-viewport')
-      const { result } = renderHook(() => useViewport())
-
-      expect(result.current.breakpoint).toBe('xl')
-    })
-
-    it('detects 2xl breakpoint at 1536px', async () => {
-      mockWindowWidth(1536)
-      const { useViewport } = await import('@/hooks/use-viewport')
-      const { result } = renderHook(() => useViewport())
-
-      expect(result.current.breakpoint).toBe('2xl')
+      expect(result.current.breakpoint).toBe(breakpoint)
     })
   })
 
@@ -369,8 +343,8 @@ describe('useViewport Hook', () => {
       expect(
         addEventListenerSpy.mock.calls.filter(
           (call) => call[0] === 'resize'
-        ).length
-      ).toBe(0)
+        )
+      ).toHaveLength(0)
 
       addEventListenerSpy.mockRestore()
       vi.doUnmock('@/lib/utils')

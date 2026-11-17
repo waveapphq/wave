@@ -73,15 +73,17 @@ class TestConfiguredKeyProvider:
         monkeypatch.delenv("WAVE_SECRET_KEY", raising=False)
         config = Config()
 
+        provider = ConfiguredKeyProvider(config)
         with pytest.raises(ValueError, match=MISSING_KEY_ERROR):
-            ConfiguredKeyProvider(config).get_key()
+            provider.get_key()
 
     def test_empty_key_raises_missing_key_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("WAVE_SECRET_KEY", raising=False)
         config = _config_with_security({"secret_key": ""})
 
+        provider = ConfiguredKeyProvider(config)
         with pytest.raises(ValueError, match=MISSING_KEY_ERROR):
-            ConfiguredKeyProvider(config).get_key()
+            provider.get_key()
 
     def test_non_base64_key_raises_with_exact_message(
         self, monkeypatch: pytest.MonkeyPatch
@@ -89,8 +91,9 @@ class TestConfiguredKeyProvider:
         monkeypatch.delenv("WAVE_SECRET_KEY", raising=False)
         config = _config_with_security({"secret_key": "not-valid-base64!!!"})
 
+        provider = ConfiguredKeyProvider(config)
         with pytest.raises(ValueError, match=INVALID_KEY_ERROR):
-            ConfiguredKeyProvider(config).get_key()
+            provider.get_key()
 
     def test_wrong_length_key_raises_with_exact_message(
         self, monkeypatch: pytest.MonkeyPatch
@@ -99,8 +102,9 @@ class TestConfiguredKeyProvider:
         short_key = base64.b64encode(b"sixteen-byte-key").decode()
         config = _config_with_security({"secret_key": short_key})
 
+        provider = ConfiguredKeyProvider(config)
         with pytest.raises(ValueError, match=INVALID_KEY_ERROR):
-            ConfiguredKeyProvider(config).get_key()
+            provider.get_key()
 
     def test_default_provider_reads_the_global_config(self) -> None:
         # Autouse fixture: WAVE_SECRET_KEY set, loader singleton reset
@@ -157,8 +161,9 @@ class TestExampleConfigShipsNoKey:
         monkeypatch.delenv("WAVE_SECRET_KEY", raising=False)
         config = load_config(EXAMPLE_CONFIG_FILE.read_text(encoding="utf-8"))
 
+        provider = ConfiguredKeyProvider(config)
         with pytest.raises(ValueError, match=MISSING_KEY_ERROR):
-            ConfiguredKeyProvider(config).get_key()
+            provider.get_key()
 
 
 class TestNewSecretKey:

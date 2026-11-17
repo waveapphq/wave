@@ -154,22 +154,23 @@ describe('CopyValuesModal', () => {
   // Environment categorization
   // --------------------------------------------------------------------------
   describe('Environment categorization', () => {
-    it('shows recommended section for environments with matching tags', () => {
+    it.each([
       // current is Production with tags: ['prod', 'critical', 'us-east']
       // QA has ['staging', 'critical', 'us-east'] - 2 matches (critical, us-east) = highest
       // Staging has ['staging', 'critical'] - 1 match (critical) = lower
+      ['shows recommended section for environments with matching tags', 'Recommended'],
+      ['shows "Other" section for environments with fewer matching tags', 'Other'],
+      ['shows "No Values" section for environments without values', 'No Values'],
+      // QA has 2 matching tags with Production (critical, us-east)
+      ['shows tag match count in recommended section', '2 tags match'],
+      // Staging has 1 matching tag (critical) - should show in Other section
+      ['shows singular "tag matches" for 1 match', '1 tag matches'],
+      // Development has ['dev'], no overlap with Production's ['prod', 'critical', 'us-east']
+      ['shows "0 tags match" for envs in Other with no matching tags', '0 tags match'],
+      ['border separator shown between sections and no values', 'No Values'],
+    ])('%s', (_title, text) => {
       renderModal({ currentEnvId: 'env-prod' })
-      expect(screen.getByText('Recommended')).toBeInTheDocument()
-    })
-
-    it('shows "Other" section for environments with fewer matching tags', () => {
-      renderModal({ currentEnvId: 'env-prod' })
-      expect(screen.getByText('Other')).toBeInTheDocument()
-    })
-
-    it('shows "No Values" section for environments without values', () => {
-      renderModal({ currentEnvId: 'env-prod' })
-      expect(screen.getByText('No Values')).toBeInTheDocument()
+      expect(screen.getByText(text)).toBeInTheDocument()
     })
 
     it('excludes current environment from the list', () => {
@@ -179,7 +180,7 @@ describe('CopyValuesModal', () => {
       const envButtons = buttons.filter(
         (b) => b.textContent?.includes('Production') && !b.textContent?.includes('Cancel')
       )
-      expect(envButtons.length).toBe(0)
+      expect(envButtons).toHaveLength(0)
     })
 
     it('puts all envs with values in "Other" when no tags match', () => {
@@ -202,24 +203,6 @@ describe('CopyValuesModal', () => {
       expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
         'Cannot copy from an environment with no values',
       )
-    })
-
-    it('shows tag match count in recommended section', () => {
-      renderModal({ currentEnvId: 'env-prod' })
-      // QA has 2 matching tags with Production (critical, us-east)
-      expect(screen.getByText('2 tags match')).toBeInTheDocument()
-    })
-
-    it('shows singular "tag matches" for 1 match', () => {
-      renderModal({ currentEnvId: 'env-prod' })
-      // Staging has 1 matching tag (critical) - should show in Other section
-      expect(screen.getByText('1 tag matches')).toBeInTheDocument()
-    })
-
-    it('shows "0 tags match" for envs in Other with no matching tags', () => {
-      renderModal({ currentEnvId: 'env-prod' })
-      // Development has ['dev'], no overlap with Production's ['prod', 'critical', 'us-east']
-      expect(screen.getByText('0 tags match')).toBeInTheDocument()
     })
 
     it('handles environment with no tags property', () => {
@@ -253,11 +236,6 @@ describe('CopyValuesModal', () => {
       // Both recommended and other sections should be rendered
       expect(screen.getByText('Recommended')).toBeInTheDocument()
       expect(screen.getByText('Other')).toBeInTheDocument()
-    })
-
-    it('border separator shown between sections and no values', () => {
-      renderModal({ currentEnvId: 'env-prod' })
-      expect(screen.getByText('No Values')).toBeInTheDocument()
     })
   })
 

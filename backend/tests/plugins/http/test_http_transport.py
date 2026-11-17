@@ -37,27 +37,31 @@ def _tls_stream(connection: object) -> http_client._TlsStream:
 class TestTlsStreamErrors:
     async def test_read_timeout_maps_to_read_timeout(self) -> None:
         connection = Mock(read=Mock(side_effect=TimeoutError("slow")))
+        stream = _tls_stream(connection)
 
         with pytest.raises(httpcore.ReadTimeout):
-            await _tls_stream(connection).read(16)
+            await stream.read(16)
 
     async def test_read_failure_maps_to_read_error(self) -> None:
         connection = Mock(read=Mock(side_effect=ValueError("record layer")))
+        stream = _tls_stream(connection)
 
         with pytest.raises(httpcore.ReadError):
-            await _tls_stream(connection).read(16)
+            await stream.read(16)
 
     async def test_write_timeout_maps_to_write_timeout(self) -> None:
         connection = Mock(write=Mock(side_effect=TimeoutError("slow")))
+        stream = _tls_stream(connection)
 
         with pytest.raises(httpcore.WriteTimeout):
-            await _tls_stream(connection).write(b"x")
+            await stream.write(b"x")
 
     async def test_write_failure_maps_to_write_error(self) -> None:
         connection = Mock(write=Mock(side_effect=ValueError("record layer")))
+        stream = _tls_stream(connection)
 
         with pytest.raises(httpcore.WriteError):
-            await _tls_stream(connection).write(b"x")
+            await stream.write(b"x")
 
     async def test_close_swallows_connection_errors(self) -> None:
         connection = Mock(close=Mock(side_effect=ValueError("already closed")))
@@ -80,21 +84,24 @@ class TestPlainStreamErrors:
 
     async def test_read_socket_error_maps_to_read_error(self) -> None:
         sock = Mock(recv=Mock(side_effect=OSError("reset")))
+        stream = self._plain_stream(sock)
 
         with pytest.raises(httpcore.ReadError):
-            await self._plain_stream(sock).read(16)
+            await stream.read(16)
 
     async def test_read_timeout_maps_to_read_timeout(self) -> None:
         sock = Mock(recv=Mock(side_effect=TimeoutError("slow")))
+        stream = self._plain_stream(sock)
 
         with pytest.raises(httpcore.ReadTimeout):
-            await self._plain_stream(sock).read(16)
+            await stream.read(16)
 
     async def test_write_socket_error_maps_to_write_error(self) -> None:
         sock = Mock(sendall=Mock(side_effect=OSError("broken pipe")))
+        stream = self._plain_stream(sock)
 
         with pytest.raises(httpcore.WriteError):
-            await self._plain_stream(sock).write(b"x")
+            await stream.write(b"x")
 
     def test_get_extra_info_is_none(self) -> None:
         assert self._plain_stream(Mock()).get_extra_info("ssl_object") is None
@@ -132,9 +139,10 @@ class TestPlainStreamErrors:
 
         monkeypatch.setattr(trust_store, "anchors_pem", _raise)
         sock = Mock()
+        stream = self._plain_stream(sock)
 
         with pytest.raises(ValueError, match=r"^No certificate store found on this WAVE host"):
-            await self._plain_stream(sock).start_tls(None, "host.test")
+            await stream.start_tls(None, "host.test")
 
         sock.close.assert_called_once_with()
 
@@ -353,11 +361,11 @@ class TestABlankCaTrustsWhatWaveTrusts:
         self, tls_server: Any, trust_settings: Callable[[Any], None]
     ) -> None:
         trust_settings(_spec())
+        plugin = http_client.HTTPClientPlugin()
+        context = _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
 
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await http_client.HTTPClientPlugin().execute(
-                _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
-            )
+            await plugin.execute(context)
 
     async def test_the_wave_hosts_store_verifies_the_server(
         self,
@@ -388,11 +396,11 @@ class TestABlankCaTrustsWhatWaveTrusts:
             r"^No certificate store found on this WAVE host: looked in "
             rf"{_looked_in(tmp_path / 'stores' / 'missing.crt', store)}$"
         )
+        plugin = http_client.HTTPClientPlugin()
+        context = _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
 
         with pytest.raises(ValueError, match=expected):
-            await http_client.HTTPClientPlugin().execute(
-                _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
-            )
+            await plugin.execute(context)
 
     async def test_settings_are_read_again_for_each_run(
         self, tls_server: Any, tls_material: Any
@@ -403,8 +411,9 @@ class TestABlankCaTrustsWhatWaveTrusts:
         plugin = http_client.HTTPClientPlugin()
         params = {"method": "GET", "url": f"{tls_server.base_url}/secure"}
         try:
+            context = _context(params)
             with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-                await plugin.execute(_context(params))
+                await plugin.execute(context)
             current[0] = _spec(additional_pem=tls_material.ca_cert_pem, additional_count=1)
 
             result = await plugin.execute(_context(params))
@@ -443,17 +452,17 @@ class TestASetCaIsTheOnlyTrust:
         self, tls_server: Any, tls_material: Any, trust_settings: Callable[[Any], None]
     ) -> None:
         trust_settings(_spec(additional_pem=tls_material.ca_cert_pem, additional_count=1))
+        plugin = http_client.HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{tls_server.base_url}/secure",
+                "ca_cert": _other_ca_pem(),
+            }
+        )
 
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await http_client.HTTPClientPlugin().execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{tls_server.base_url}/secure",
-                        "ca_cert": _other_ca_pem(),
-                    }
-                )
-            )
+            await plugin.execute(context)
 
     async def test_a_set_ca_never_reads_the_settings_trust(
         self,
@@ -486,11 +495,11 @@ class TestTheTrustLine:
     ) -> None:
         trust_settings(_spec())
         logger = Mock()
+        plugin = http_client.HTTPClientPlugin()
+        context = _context({"method": "GET", "url": f"{tls_server.base_url}/secure"}, logger)
 
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await http_client.HTTPClientPlugin().execute(
-                _context({"method": "GET", "url": f"{tls_server.base_url}/secure"}, logger)
-            )
+            await plugin.execute(context)
 
         assert _trust_lines(logger) == [_BUILT_IN_LINE]
 
@@ -713,10 +722,10 @@ class TestTheRunHoldsARunLog:
         self, tls_server: Any, trust_settings: Callable[[Any], None]
     ) -> None:
         trust_settings(_spec())
+        plugin = http_client.HTTPClientPlugin()
+        context = _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
 
         with pytest.raises(httpx.HTTPError, match=_UNTRUSTED):
-            await http_client.HTTPClientPlugin().execute(
-                _context({"method": "GET", "url": f"{tls_server.base_url}/secure"})
-            )
+            await plugin.execute(context)
 
         assert _run_log().RUN_LOG.get() is None

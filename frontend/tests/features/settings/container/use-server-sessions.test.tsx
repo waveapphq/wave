@@ -197,13 +197,13 @@ describe('useServerSessions', () => {
         vi.advanceTimersByTime(5000)
       })
       await flush()
-      expect(mockFetchServerStatus.mock.calls.length).toBe(callsAfterLoad + 1)
+      expect(mockFetchServerStatus.mock.calls).toHaveLength(callsAfterLoad + 1)
 
       await act(async () => {
         vi.advanceTimersByTime(5000)
       })
       await flush()
-      expect(mockFetchServerStatus.mock.calls.length).toBe(callsAfterLoad + 2)
+      expect(mockFetchServerStatus.mock.calls).toHaveLength(callsAfterLoad + 2)
 
       view.unmount()
     })
@@ -225,7 +225,7 @@ describe('useServerSessions', () => {
       })
       await flush()
 
-      expect(mockFetchServerStatus.mock.calls.length).toBe(callsAtDeactivation)
+      expect(mockFetchServerStatus.mock.calls).toHaveLength(callsAtDeactivation)
       view.unmount()
     })
 

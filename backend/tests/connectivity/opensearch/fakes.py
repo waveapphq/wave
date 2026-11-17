@@ -71,6 +71,7 @@ def serve(
     if require_client_cert:
         context.verify_mode = ssl.CERT_REQUIRED
         context.load_verify_locations(material.ca_cert_path)
+    # CodeQL exclusion: CQL-TLS-001
     server.socket = context.wrap_socket(server.socket, server_side=True)
     return _started(server, "https")
 

@@ -45,41 +45,19 @@ describe('Input Component', () => {
 
 
   describe('Design System Compliance', () => {
-    it('applies base input class', () => {
-      render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('input')
-    })
-
-    it('applies default height of 40px (h-10)', () => {
-      render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('h-10')
-    })
-
-    it('applies full width by default', () => {
-      render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('w-full')
-    })
-
-    it('applies horizontal padding (px-3 / 12px)', () => {
-      render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('px-3')
-    })
-
-    it('applies text-sm font size (14px)', () => {
-      render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('text-sm')
-    })
-
-    it('provides border, border-radius, focus ring, and background via .input CSS class', () => {
-      render(<Input />)
+    it.each([
+      ['applies base input class', 'input'],
+      ['applies default height of 40px (h-10)', 'h-10'],
+      ['applies full width by default', 'w-full'],
+      ['applies horizontal padding (px-3 / 12px)', 'px-3'],
+      ['applies text-sm font size (14px)', 'text-sm'],
       // The .input CSS class (index.css) provides: border-radius 4px, 1px solid border,
       // focus ring via box-shadow, and background-color - no Tailwind utilities needed
-      expect(screen.getByRole('textbox')).toHaveClass('input')
-    })
-
-    it('applies transition for smooth state changes', () => {
+      ['provides border, border-radius, focus ring, and background via .input CSS class', 'input'],
+      ['applies transition for smooth state changes', 'transition-[border-color,box-shadow]'],
+    ])('%s', (_title, className) => {
       render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('transition-[border-color,box-shadow]')
+      expect(screen.getByRole('textbox')).toHaveClass(className)
     })
   })
 

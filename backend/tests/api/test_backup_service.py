@@ -429,7 +429,8 @@ class TestCreateBackup:
 
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
             text = zf.read("profiles/Rates.yaml").decode("utf-8")
-        assert "e-05" not in text and "e+20" not in text
+        assert "e-05" not in text
+        assert "e+20" not in text
         assert "value: 0.00001" in text
         assert "big: 100000000000000000000.0" in text
         assert yaml.safe_load(text)["config"] == profile["config"]

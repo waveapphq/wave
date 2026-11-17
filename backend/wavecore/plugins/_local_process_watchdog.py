@@ -36,6 +36,7 @@ def _term_is_for_the_program(signum: int, frame: FrameType | None) -> None:
 def _run(program: list[str]) -> str:
     # The program stays in this group, so the group kill reaches it and its children.
     try:
+        # SonarQube exclusion: SQ-CMD-001
         child = subprocess.Popen(program, close_fds=True)
     except OSError as exc:
         return f"spawn-error {exc.strerror}"

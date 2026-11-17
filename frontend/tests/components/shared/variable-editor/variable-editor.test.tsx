@@ -551,11 +551,11 @@ describe('VariableEditor - renderValueCell', () => {
 
     fireEvent.click(screen.getByTestId('add-variable-btn'))
     expect(onChange).toHaveBeenCalledTimes(1)
-    expect((onChange.mock.calls[0][0] as VariableRow[]).length).toBe(2)
+    expect(onChange.mock.calls[0][0] as VariableRow[]).toHaveLength(2)
 
     fireEvent.click(screen.getByTestId('variable-delete-btn'))
     expect(onChange).toHaveBeenCalledTimes(2)
-    expect((onChange.mock.calls[1][0] as VariableRow[]).length).toBe(0)
+    expect(onChange.mock.calls[1][0] as VariableRow[]).toHaveLength(0)
   })
 })
 

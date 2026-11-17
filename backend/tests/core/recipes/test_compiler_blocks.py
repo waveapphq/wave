@@ -704,8 +704,10 @@ class TestTestdataDirsForwarding:
     def test_the_roots_are_keyword_only(self, tmp_path: Path) -> None:
         from wavecore.core.recipes.compiler import compile_recipe as compile_fn
 
+        recipe = testdata_recipe()
+
         with pytest.raises(TypeError):
-            compile_fn(testdata_recipe(), [str(tmp_path)])
+            compile_fn(recipe, [str(tmp_path)])
 
 
 STRICT_DEFAULT: dict[str, dict[str, Any]] = {

@@ -63,15 +63,14 @@ def _reset_admin_state() -> None:
 class TestAdminDeploymentGateConfiguration:
     """Test suite for deployment gate configuration (Layer 1 security)."""
 
-    def test_admin_allowed_defaults_to_disabled(self) -> None:
+    def test_admin_allowed_defaults_to_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that WAVE_ADMIN_ALLOWED defaults to disabled when not set."""
         from wavecore.api.routes.admin.routes import is_admin_allowed
 
         # Ensure env var is not set
         with patch.dict(os.environ, {}, clear=True):
             # Remove any existing WAVE_ADMIN_ALLOWED
-            if "WAVE_ADMIN_ALLOWED" in os.environ:
-                del os.environ["WAVE_ADMIN_ALLOWED"]
+            monkeypatch.delenv("WAVE_ADMIN_ALLOWED", raising=False)
 
             result = is_admin_allowed()
 

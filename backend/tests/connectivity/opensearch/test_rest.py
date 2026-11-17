@@ -630,9 +630,10 @@ class TestHeldCancel:
     ) -> None:
         live = _SpyLive()
         live.stop()
+        client = _client(os_http.base_url, live=live)
 
         with pytest.raises(Stopped):
-            _client(os_http.base_url, live=live).request("GET", "/_search")
+            client.request("GET", "/_search")
 
         assert os_http.requests == []
 
@@ -662,9 +663,10 @@ class TestHeldCancel:
     ) -> None:
         live = _SpyLive()
         _refuse_with(monkeypatch, ConnectionRefusedError(111, "Connection refused"), live.stop)
+        client = _client("http://127.0.0.1:9", live=live)
 
         with pytest.raises(Stopped):
-            _client("http://127.0.0.1:9", live=live).request("GET", "/_search")
+            client.request("GET", "/_search")
 
     def test_the_read_is_not_bounded_by_the_connect_timeout(
         self, os_http: RecordingHTTPServer
@@ -696,9 +698,10 @@ class TestJson:
 
     def test_an_error_answer_raises_its_failure(self) -> None:
         body = error_answer("index_not_found_exception", "no such index [nope]", 404)
+        encoded = json.dumps(body).encode()
 
         with pytest.raises(OpenSearchFailure) as caught:
-            self._json(404, json.dumps(body).encode())
+            self._json(404, encoded)
 
         assert caught.value.message == "index_not_found_exception: no such index [nope]"
         assert caught.value.reason == "RequestFailed"
@@ -710,9 +713,10 @@ class TestJson:
             400,
             root_cause=[{"type": "query_shard_exception", "reason": "bad"}],
         )
+        encoded = json.dumps(body).encode()
 
         with pytest.raises(OpenSearchFailure) as caught:
-            self._json(400, json.dumps(body).encode(), {"match_all": {}})
+            self._json(400, encoded, {"match_all": {}})
 
         assert caught.value.message == (
             "search_phase_execution_exception: all shards failed. First root cause: "

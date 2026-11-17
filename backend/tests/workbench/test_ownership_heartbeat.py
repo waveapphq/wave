@@ -9,6 +9,7 @@ import contextlib
 import json
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+import pytest
 from fastapi import WebSocket
 
 from wavecore.api.services.workbench import ownership
@@ -16,10 +17,12 @@ from wavecore.api.websocket import WebSocketManager
 
 
 class TestSweepStale:
-    async def test_stale_watched_holder_is_released_and_emits(self) -> None:
+    async def test_stale_watched_holder_is_released_and_emits(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with patch.object(ownership, "_emit") as mock_emit:
             ownership.claim("h1", "H1", "person")
-            ownership._watchers = 1
+            monkeypatch.setattr(ownership, "_watchers", 1)
             ownership._holder["last_heartbeat"] = 100.0
             mock_emit.reset_mock()
 
@@ -28,10 +31,12 @@ class TestSweepStale:
             assert ownership.get_holder() is None
             mock_emit.assert_called_once_with({"event": "holder_changed", "holder": None})
 
-    async def test_stale_but_unwatched_holder_is_retained(self) -> None:
+    async def test_stale_but_unwatched_holder_is_retained(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with patch.object(ownership, "_emit") as mock_emit:
             ownership.claim("h1", "H1", "person")
-            ownership._watchers = 0
+            monkeypatch.setattr(ownership, "_watchers", 0)
             ownership._holder["last_heartbeat"] = 100.0
             mock_emit.reset_mock()
 
@@ -41,10 +46,12 @@ class TestSweepStale:
             assert ownership.get_holder()["id"] == "h1"
             mock_emit.assert_not_called()
 
-    async def test_watched_holder_within_timeout_is_retained(self) -> None:
+    async def test_watched_holder_within_timeout_is_retained(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         with patch.object(ownership, "_emit") as mock_emit:
             ownership.claim("h1", "H1", "person")
-            ownership._watchers = 1
+            monkeypatch.setattr(ownership, "_watchers", 1)
             ownership._holder["last_heartbeat"] = 100.0
             mock_emit.reset_mock()
 
@@ -55,13 +62,13 @@ class TestSweepStale:
             mock_emit.assert_not_called()
 
     async def test_stale_holder_frees_the_slot_rather_than_granting_a_pending_request(
-        self,
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A pending requester may itself be gone, so a sweep frees rather than hands over."""
         with patch.object(ownership, "_emit") as mock_emit:
             ownership.claim("h1", "H1", "person")
             ownership.request_takeover("r1", "Requester One")
-            ownership._watchers = 1
+            monkeypatch.setattr(ownership, "_watchers", 1)
             ownership._holder["last_heartbeat"] = 100.0
             mock_emit.reset_mock()
 
@@ -150,10 +157,10 @@ class TestDisconnectReleases:
 class TestSweepLoop:
     """The startup background loop releases dead holders on its interval."""
 
-    async def test_loop_releases_stale_holder(self) -> None:
+    async def test_loop_releases_stale_holder(self, monkeypatch: pytest.MonkeyPatch) -> None:
         with patch.object(ownership, "_emit"):
             ownership.claim("h1", "H1", "person")
-            ownership._watchers = 1
+            monkeypatch.setattr(ownership, "_watchers", 1)
             ownership._holder["last_heartbeat"] = -10_000.0
 
             task = asyncio.create_task(ownership.run_stale_sweep_loop(interval=60.0))

@@ -184,17 +184,19 @@ class TestCommandSplitting:
 
     def test_an_unclosed_double_quote_is_refused_inside_the_verb(self) -> None:
         channel = _channel()
+        params = _valid_params(command='echo "unclosed')
 
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE)):
-            _run(channel, _valid_params(command='echo "unclosed'))
+            _run(channel, params)
 
         assert channel.calls == []
 
     def test_an_unclosed_single_quote_is_refused_inside_the_verb(self) -> None:
         channel = _channel()
+        params = _valid_params(command="echo 'unclosed")
 
         with pytest.raises(ValueError, match=exact(_UNCLOSED_QUOTE)):
-            _run(channel, _valid_params(command="echo 'unclosed"))
+            _run(channel, params)
 
         assert channel.calls == []
 
@@ -482,9 +484,10 @@ class TestClusterRefusal:
 
     def test_fail_mode_raises_the_refusal_row(self) -> None:
         channel = _channel(ExecRejected(_NOT_FOUND, "NotFound"))
+        params = _valid_params(on_error="fail")
 
         with pytest.raises(ValueError, match=exact(_row(_NOT_FOUND))):
-            _run(channel, _valid_params(on_error="fail"))
+            _run(channel, params)
 
     def test_record_mode_returns_the_failed_core(self) -> None:
         channel = _channel(ExecRejected(_NOT_FOUND, "NotFound"))
@@ -542,16 +545,18 @@ class TestClusterRefusal:
     @_NOT_RECORD
     def test_any_on_error_value_other_than_record_raises(self, on_error: Any) -> None:
         channel = _channel(ExecRejected(_NOT_FOUND, "NotFound"))
+        params = _valid_params(on_error=on_error)
 
         with pytest.raises(ValueError, match=exact(_row(_NOT_FOUND))):
-            _run(channel, _valid_params(on_error=on_error))
+            _run(channel, params)
 
     def test_fail_mode_writes_no_warn_line(self) -> None:
         channel = _channel(ExecRejected(_NOT_FOUND, "NotFound"))
         log = RecordingLog()
+        params = _valid_params(on_error="fail")
 
         with pytest.raises(ValueError, match=exact(_row(_NOT_FOUND))):
-            _run(channel, _valid_params(on_error="fail"), log)
+            _run(channel, params, log)
 
         assert log.entries == []
 
@@ -562,9 +567,10 @@ class TestAlwaysHardFail:
     @_BOTH_MODES
     def test_a_bogus_session_raises_before_any_exec_call(self, mode: str) -> None:
         channel = _channel()
+        params = _valid_params(session="not-a-kubeconfig", on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(channel, _valid_params(session="not-a-kubeconfig", on_error=mode))
+            _run(channel, params)
 
         assert channel.calls == []
 
@@ -581,9 +587,10 @@ class TestAlwaysHardFail:
 
     def test_a_session_that_is_not_a_string_raises(self) -> None:
         channel = _channel()
+        params = _valid_params(session={"server": SERVER})
 
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(channel, _valid_params(session={"server": SERVER}))
+            _run(channel, params)
 
         assert channel.calls == []
 
@@ -591,24 +598,27 @@ class TestAlwaysHardFail:
     def test_a_transport_failure_raises_in_both_modes(self, mode: str) -> None:
         detail = "Kubernetes exec channel closed before the command finished"
         channel = _channel(ExecTransportError(detail))
+        params = _valid_params(on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_row(detail))):
-            _run(channel, _valid_params(on_error=mode))
+            _run(channel, params)
 
     def test_the_transport_row_names_the_container_the_row_selected(self) -> None:
         detail = "Kubernetes refused the exec channel upgrade (HTTP 403)"
         channel = _channel(ExecTransportError(detail))
+        params = _valid_params(container="sidecar")
 
         with pytest.raises(ValueError, match=exact(_row(detail, container="sidecar"))):
-            _run(channel, _valid_params(container="sidecar"))
+            _run(channel, params)
 
     @_BOTH_MODES
     def test_a_transport_failure_writes_no_warn_line(self, mode: str) -> None:
         channel = _channel(ExecTransportError("boom"))
         log = RecordingLog()
+        params = _valid_params(on_error=mode)
 
         with pytest.raises(ValueError, match=exact(_row("boom"))):
-            _run(channel, _valid_params(on_error=mode), log)
+            _run(channel, params, log)
 
         assert log.entries == []
 
@@ -616,21 +626,24 @@ class TestAlwaysHardFail:
     def test_a_timeout_raises_in_both_modes(self, mode: str) -> None:
         channel = _channel(ExecTimeout("Kubernetes exec channel timed out after 60 seconds"))
         message = f"Command execution timed out after {TIMEOUT_DEFAULT} seconds"
+        params = _valid_params(on_error=mode)
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(channel, _valid_params(on_error=mode))
+            _run(channel, params)
 
     def test_the_timeout_row_names_the_configured_timeout_not_the_channel_number(self) -> None:
         channel = _channel(ExecTimeout("Kubernetes exec channel timed out after 9 seconds"))
+        params = _valid_params(timeout=45)
 
         with pytest.raises(ValueError, match=exact("Command execution timed out after 45 seconds")):
-            _run(channel, _valid_params(timeout=45))
+            _run(channel, params)
 
     def test_a_one_second_timeout_is_named_in_the_singular(self) -> None:
         channel = _channel(ExecTimeout("Kubernetes exec channel timed out after 1 second"))
+        params = _valid_params(timeout=1)
 
         with pytest.raises(ValueError, match=exact("Command execution timed out after 1 second")):
-            _run(channel, _valid_params(timeout=1))
+            _run(channel, params)
 
     def test_the_timeout_row_falls_back_to_sixty_when_no_timeout_is_set(self) -> None:
         channel = _channel(ExecTimeout("Kubernetes exec channel timed out after 9 seconds"))
@@ -645,9 +658,10 @@ class TestAlwaysHardFail:
     def test_a_timeout_writes_no_warn_line(self, mode: str) -> None:
         channel = _channel(ExecTimeout("timed out"))
         log = RecordingLog()
+        params = _valid_params(on_error=mode)
 
         with pytest.raises(ValueError):
-            _run(channel, _valid_params(on_error=mode), log)
+            _run(channel, params, log)
 
         assert log.entries == []
 

@@ -529,6 +529,7 @@ async def execute_function(
 
         logger.debug(
             "Function '%s' body failed: %s",
+            # CodeQL exclusion: CQL-LOG-001
             function_def.get("name"),
             scrub_message(session_id, str(exc), "SYSTEM"),
         )

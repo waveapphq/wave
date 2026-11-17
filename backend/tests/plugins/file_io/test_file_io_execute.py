@@ -233,14 +233,13 @@ class TestTheArtifactsFolderItself:
     ) -> None:
         (artifacts / "sub").mkdir()
         (artifacts / "sub" / "kept.txt").write_text("x", encoding="utf-8")
+        ctx = context(
+            {"operation": "delete", "path": root, "missing_ok": True},
+            artifacts_dir=artifacts,
+        )
 
         with pytest.raises(ValueError, match=exact(ARTIFACTS_FOLDER_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "delete", "path": root, "missing_ok": True},
-                    artifacts_dir=artifacts,
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert (artifacts / "sub" / "kept.txt").read_text(encoding="utf-8") == "x"
 
@@ -249,14 +248,13 @@ class TestTheArtifactsFolderItself:
     ) -> None:
         (artifacts / "kept.txt").write_text("x", encoding="utf-8")
         destination = tmp_path / "moved"
+        ctx = context(
+            {"operation": "move", "source": "artifact://", "destination": str(destination)},
+            artifacts_dir=artifacts,
+        )
 
         with pytest.raises(ValueError, match=exact(ARTIFACTS_FOLDER_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "move", "source": "artifact://", "destination": str(destination)},
-                    artifacts_dir=artifacts,
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert (artifacts / "kept.txt").read_text(encoding="utf-8") == "x"
         assert not destination.exists()
@@ -282,19 +280,19 @@ class TestTheArtifactsFolderItself:
         assert (artifacts / "top.txt").is_file()
 
     async def test_read_fails_as_on_any_folder(self, artifacts: Path) -> None:
+        ctx = context({"operation": "read", "path": "artifact://"}, artifacts_dir=artifacts)
+
         with pytest.raises(OSError, match=exact(f"File not found: {artifacts.resolve()}")):
-            await FileIOPlugin().execute(
-                context({"operation": "read", "path": "artifact://"}, artifacts_dir=artifacts)
-            )
+            await FileIOPlugin().execute(ctx)
 
     async def test_write_fails_as_over_any_existing_folder(self, artifacts: Path) -> None:
+        ctx = context(
+            {"operation": "write", "path": "artifact://", "content": "text"},
+            artifacts_dir=artifacts,
+        )
+
         with pytest.raises(OSError, match=exact(f"Destination is a folder: {artifacts.resolve()}")):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "write", "path": "artifact://", "content": "text"},
-                    artifacts_dir=artifacts,
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert artifacts.is_dir()
 
@@ -385,10 +383,10 @@ class TestTheTestDataRoot:
         assert resolver.call_for("testdata://")["read_only_ok"] is True
 
     async def test_read_fails_as_on_any_folder(self, testdata: Path) -> None:
+        ctx = context({"operation": "read", "path": "testdata://"}, testdata_dirs=[testdata])
+
         with pytest.raises(OSError, match=exact(f"File not found: {testdata.resolve()}")):
-            await FileIOPlugin().execute(
-                context({"operation": "read", "path": "testdata://"}, testdata_dirs=[testdata])
-            )
+            await FileIOPlugin().execute(ctx)
 
     @pytest.mark.parametrize(
         "rows",
@@ -403,11 +401,10 @@ class TestTheTestDataRoot:
         self, artifacts: Path, testdata: Path, rows: dict[str, Any]
     ) -> None:
         (artifacts / "a.txt").write_text("x", encoding="utf-8")
+        ctx = context(rows, artifacts_dir=artifacts, testdata_dirs=[testdata])
 
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(rows, artifacts_dir=artifacts, testdata_dirs=[testdata])
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert sorted(entry.name for entry in testdata.iterdir()) == ["input.csv"]
         assert (artifacts / "a.txt").is_file()
@@ -422,10 +419,10 @@ class TestTheTestDataRoot:
     async def test_delete_and_the_move_source_keep_the_read_only_refusal(
         self, artifacts: Path, testdata: Path, rows: dict[str, Any]
     ) -> None:
+        ctx = context(rows, artifacts_dir=artifacts, testdata_dirs=[testdata])
+
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(rows, artifacts_dir=artifacts, testdata_dirs=[testdata])
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert (testdata / "input.csv").is_file()
 
@@ -509,78 +506,76 @@ class TestTestdataIsReadOnly:
     """The write flavor refuses the test's own files however the block addresses them."""
 
     async def test_write(self, artifacts: Path, testdata: Path) -> None:
+        ctx = context(
+            {"operation": "write", "path": "testdata://out.txt", "content": "text"},
+            artifacts_dir=artifacts,
+            testdata_dirs=[testdata],
+        )
+
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "write", "path": "testdata://out.txt", "content": "text"},
-                    artifacts_dir=artifacts,
-                    testdata_dirs=[testdata],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
     async def test_delete(self, testdata: Path) -> None:
+        ctx = context(
+            {"operation": "delete", "path": "testdata://input.csv"},
+            testdata_dirs=[testdata],
+        )
+
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "delete", "path": "testdata://input.csv"},
-                    testdata_dirs=[testdata],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
     async def test_move_source(self, artifacts: Path, testdata: Path) -> None:
+        ctx = context(
+            {
+                "operation": "move",
+                "source": "testdata://input.csv",
+                "destination": "artifact://input.csv",
+            },
+            artifacts_dir=artifacts,
+            testdata_dirs=[testdata],
+        )
+
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {
-                        "operation": "move",
-                        "source": "testdata://input.csv",
-                        "destination": "artifact://input.csv",
-                    },
-                    artifacts_dir=artifacts,
-                    testdata_dirs=[testdata],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
     async def test_move_destination(self, artifacts: Path, testdata: Path) -> None:
         (artifacts / "a.txt").write_text("x", encoding="utf-8")
+        ctx = context(
+            {
+                "operation": "move",
+                "source": "artifact://a.txt",
+                "destination": "testdata://a.txt",
+            },
+            artifacts_dir=artifacts,
+            testdata_dirs=[testdata],
+        )
 
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {
-                        "operation": "move",
-                        "source": "artifact://a.txt",
-                        "destination": "testdata://a.txt",
-                    },
-                    artifacts_dir=artifacts,
-                    testdata_dirs=[testdata],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
     async def test_copy_destination(self, artifacts: Path, testdata: Path) -> None:
         (artifacts / "a.txt").write_text("x", encoding="utf-8")
+        ctx = context(
+            {
+                "operation": "copy",
+                "source": "artifact://a.txt",
+                "destination": "testdata://a.txt",
+            },
+            artifacts_dir=artifacts,
+            testdata_dirs=[testdata],
+        )
 
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {
-                        "operation": "copy",
-                        "source": "artifact://a.txt",
-                        "destination": "testdata://a.txt",
-                    },
-                    artifacts_dir=artifacts,
-                    testdata_dirs=[testdata],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
     async def test_create_folder(self, testdata: Path) -> None:
+        ctx = context(
+            {"operation": "create_folder", "path": "testdata://cases"},
+            testdata_dirs=[testdata],
+        )
+
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "create_folder", "path": "testdata://cases"},
-                    testdata_dirs=[testdata],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
 
 class TestTheTestDataAreaIsReadOnly:
@@ -599,43 +594,41 @@ class TestTheTestDataAreaIsReadOnly:
 
     async def test_a_write_into_another_tests_folder_by_absolute_path(self, zone: Path) -> None:
         target = zone / "other-test" / "out.txt"
+        ctx = context(
+            {"operation": "write", "path": str(target), "content": "text"},
+            testdata_dirs=[zone / "running-test"],
+        )
 
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "write", "path": str(target), "content": "text"},
-                    testdata_dirs=[zone / "running-test"],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert not target.exists()
 
     async def test_a_write_into_the_running_tests_folder_by_absolute_path(self, zone: Path) -> None:
         target = zone / "running-test" / "out.txt"
+        ctx = context(
+            {"operation": "write", "path": str(target), "content": "text"},
+            testdata_dirs=[zone / "running-test"],
+        )
 
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {"operation": "write", "path": str(target), "content": "text"},
-                    testdata_dirs=[zone / "running-test"],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert not target.exists()
 
     async def test_a_delete_in_another_tests_folder_through_a_parent_segment(
         self, zone: Path
     ) -> None:
+        ctx = context(
+            {
+                "operation": "delete",
+                "path": f"{zone}/running-test/../other-test/shared.csv",
+            },
+            testdata_dirs=[zone / "running-test"],
+        )
+
         with pytest.raises(ValueError, match=exact(READ_ONLY_MESSAGE)):
-            await FileIOPlugin().execute(
-                context(
-                    {
-                        "operation": "delete",
-                        "path": f"{zone}/running-test/../other-test/shared.csv",
-                    },
-                    testdata_dirs=[zone / "running-test"],
-                )
-            )
+            await FileIOPlugin().execute(ctx)
 
         assert (zone / "other-test" / "shared.csv").exists()
 

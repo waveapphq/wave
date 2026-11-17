@@ -370,6 +370,7 @@ class TestABranchRecordWithoutALimit:
 
         messages = log_messages(session_id)
         assert session["status"] == "passed", session.get("status")
-        assert "A" in messages and "B" in messages, messages
+        assert "A" in messages, messages
+        assert "B" in messages, messages
         assert messages.count("AFTER") == 1, messages
         assert "Branch 1" in " ".join(messages), messages

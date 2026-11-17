@@ -82,39 +82,17 @@ describe('Badge Component', () => {
 
 
   describe('Design System Compliance', () => {
-    it('has inline-flex display for proper alignment', () => {
+    it.each([
+      ['has inline-flex display for proper alignment', 'inline-flex'],
+      ['centers content with items-center', 'items-center'],
+      ['applies pill shape border radius (rounded-full)', 'rounded-full'],
+      ['applies semibold font weight', 'font-semibold'],
+      ['applies text-xs font size (12px)', 'text-xs'],
+      ['applies vertical padding (4px / py-1)', 'py-1'],
+      ['applies horizontal padding (10px / px-2.5)', 'px-2.5'],
+    ])('%s', (_name, className) => {
       render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('inline-flex')
-    })
-
-    it('centers content with items-center', () => {
-      render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('items-center')
-    })
-
-    it('applies pill shape border radius (rounded-full)', () => {
-      render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('rounded-full')
-    })
-
-    it('applies semibold font weight', () => {
-      render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('font-semibold')
-    })
-
-    it('applies text-xs font size (12px)', () => {
-      render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('text-xs')
-    })
-
-    it('applies vertical padding (4px / py-1)', () => {
-      render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('py-1')
-    })
-
-    it('applies horizontal padding (10px / px-2.5)', () => {
-      render(<Badge data-testid="badge">Label</Badge>)
-      expect(screen.getByTestId('badge')).toHaveClass('px-2.5')
+      expect(screen.getByTestId('badge')).toHaveClass(className)
     })
   })
 

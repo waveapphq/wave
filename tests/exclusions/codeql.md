@@ -8,7 +8,7 @@ This list is one of the exclusion lists in [README.md](README.md), which holds t
 
 - **Each entry lists its CodeQL alert numbers** - GitHub keeps an alert's number on every branch, so the numbers find the alerts in the repository's code scanning list
 - **Each alert number is in exactly one entry**
-- **The code carries the ID** - A one-line comment at each place holds the entry's ID, for example `# CQL-LOG-001` in Python and `// CQL-XSS-001` in TypeScript
+- **The code carries the ID** - A one-line comment at each place holds the entry's ID, for example `# CodeQL exclusion: CQL-LOG-001` in Python and `// CodeQL exclusion: CQL-XSS-001` in TypeScript
 - **Find a place by searching for the ID** - For example `git grep -n "CQL-LOG-001"`
 - **IDs never change** - An ID stays the same when its code moves to another file
 - **Orphaned IDs are violations** - An ID in this list but not in the code, or in the code but not in this list, is a policy violation
@@ -19,7 +19,6 @@ This list is one of the exclusion lists in [README.md](README.md), which holds t
 |----------|------|-------------|
 | LOG | `CQL-LOG-*` | Log and print lines that CodeQL takes for secrets |
 | REDOS | `CQL-REDOS-*` | Regular expressions that run in linear time |
-| TRACE | `CQL-TRACE-*` | Error replies that carry only an error message |
 | XSS | `CQL-XSS-*` | Browser parsing whose result never reaches the page |
 | EVAL | `CQL-EVAL-*` | Expressions that Test authors write |
 | BIND | `CQL-BIND-*` | Listeners that an admin opens to the network |
@@ -63,18 +62,6 @@ Two readers use patterns that CodeQL takes for slow ones. Each pattern reads its
 
 - The JSON reader of the OpenSearch client, which accepts comments and keeps exact decimals, skips white space and comments with one pattern and reads a string with another. Each one is matched at one fixed position and scans forward once, the two branches of the string pattern never overlap, and an unterminated comment or string stops the read at once.
 - The reader of known_hosts lines for the trusted SSH hosts splits a host field of the form `[host]:port`. The pattern must match the whole field, and its character class stops at the first closing bracket, so it is one pass over a field with no spaces.
-
----
-
-## Error Replies
-
-### CQL-TRACE-001: Error Replies Carry Only the Message
-
-- **Kind**: False positive
-- **Rule**: `py/stack-trace-exposure`, Information exposure through an exception
-- **CodeQL alerts**: 254, 256
-
-When the clone of a Regression, or the update of a Test or of its details, refuses a request, the reply carries the text of the error. The text of an exception is only its message, never a stack trace. The errors on these paths come from the route's own checks of IDs, names and JSON, and none of them carries a secret.
 
 ---
 

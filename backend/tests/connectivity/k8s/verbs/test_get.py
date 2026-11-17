@@ -577,16 +577,18 @@ class TestDiscoveryDenied:
     def test_401_renders_the_authentication_row(self) -> None:
         fake = DeniedDiscoveryClient(401, _failure("Unauthorized", "Unauthorized", 401))
         message = "Kubernetes API authentication failed: Unauthorized"
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_403_renders_the_permission_row(self) -> None:
         fake = DeniedDiscoveryClient(403, _failure("Forbidden", _DISCOVERY_FORBIDDEN, 403))
         message = f"Kubernetes API permission denied: {_DISCOVERY_FORBIDDEN}"
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params())
+            _run(fake, params)
 
     def test_a_denied_walk_is_recordable_with_its_reason(self) -> None:
         fake = DeniedDiscoveryClient(403, _failure("Forbidden", _DISCOVERY_FORBIDDEN, 403))
@@ -704,13 +706,18 @@ class TestOutputFormatTableUnsupported:
 
     def test_a_406_says_the_cluster_will_not_print_a_table(self) -> None:
         body = _failure("NotAcceptable", "only the following media types are accepted", 406)
+        fake = _serving(406, body)
+        params = _list_params(output_format="table")
 
         with pytest.raises(ValueError, match=exact(_TABLE_REFUSED_MESSAGE)):
-            _run(_serving(406, body), _list_params(output_format="table"))
+            _run(fake, params)
 
     def test_a_plain_object_body_says_the_cluster_will_not_print_a_table(self) -> None:
+        fake = _serving(200, _POD_LIST)
+        params = _list_params(output_format="table")
+
         with pytest.raises(ValueError, match=exact(_TABLE_REFUSED_MESSAGE)):
-            _run(_serving(200, _POD_LIST), _list_params(output_format="table"))
+            _run(fake, params)
 
     def test_the_message_names_the_resolved_kind(self) -> None:
         body = _failure("NotAcceptable", "only the following media types are accepted", 406)
@@ -719,9 +726,10 @@ class TestOutputFormatTableUnsupported:
             "This cluster will not print a table for kind 'Deployment' "
             "- choose Map, JSON or YAML for this kind"
         )
+        params = _list_params(kind="Deployment", output_format="table")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _list_params(kind="Deployment", output_format="table"))
+            _run(fake, params)
 
     def test_a_table_refusal_is_recordable_with_a_not_acceptable_reason(self) -> None:
         body = _failure("NotAcceptable", "only the following media types are accepted", 406)
@@ -854,77 +862,96 @@ class TestApiErrors:
     def test_a_missing_named_object_renders_the_not_found_row(self) -> None:
         body = _failure("NotFound", 'pods "web-1" not found', 404)
         message = "K8s Pod 'web-1' not found in namespace 'apps'"
+        fake = _serving(404, body)
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(404, body), _name_params())
+            _run(fake, params)
 
     def test_a_missing_cluster_scoped_object_drops_the_namespace_clause(self) -> None:
         body = _failure("NotFound", 'nodes "kwok-node-0" not found', 404)
         fake = FakeK8sClient(responses=[(404, body)], resources=_NODES)
         message = "K8s Node 'kwok-node-0' not found"
+        params = _name_params(kind="Node", name="kwok-node-0")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _name_params(kind="Node", name="kwok-node-0"))
+            _run(fake, params)
 
     def test_401_renders_the_authentication_row(self) -> None:
         body = _failure("Unauthorized", "Unauthorized", 401)
         message = "Kubernetes API authentication failed: Unauthorized"
+        fake = _serving(401, body)
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(401, body), _name_params())
+            _run(fake, params)
 
     def test_403_renders_the_permission_row(self) -> None:
         detail = 'pods "web-1" is forbidden: user cannot get resource "pods"'
         body = _failure("Forbidden", detail, 403)
         message = f"Kubernetes API permission denied: {detail}"
+        fake = _serving(403, body)
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(403, body), _name_params())
+            _run(fake, params)
 
     def test_a_server_error_on_a_named_read_says_the_read_failed(self) -> None:
         detail = "the server is currently unable to handle the request"
         body = _failure("ServiceUnavailable", detail, 503)
         message = f"Kubernetes could not read Pod 'web-1' in namespace 'apps': {detail}"
+        fake = _serving(503, body)
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(503, body), _name_params())
+            _run(fake, params)
 
     def test_a_server_error_on_a_list_read_names_the_kind_not_an_object(self) -> None:
         detail = "the server is currently unable to handle the request"
         body = _failure("ServiceUnavailable", detail, 503)
         message = f"Kubernetes could not list Pod objects in namespace 'apps': {detail}"
+        fake = _serving(503, body)
+        params = _list_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(503, body), _list_params())
+            _run(fake, params)
 
     def test_an_error_without_a_cluster_message_names_the_http_status(self) -> None:
         message = "Kubernetes could not read Pod 'web-1' in namespace 'apps' (HTTP 502)"
+        fake = _serving(502, {})
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(502, {}), _name_params())
+            _run(fake, params)
 
     def test_a_given_namespace_shows_in_the_not_found_row(self) -> None:
         body = _failure("NotFound", 'pods "web-1" not found', 404)
         message = "K8s Pod 'web-1' not found in namespace 'ops'"
+        fake = _serving(404, body)
+        params = _name_params(namespace="ops")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(404, body), _name_params(namespace="ops"))
+            _run(fake, params)
 
     def test_a_missing_object_is_reported_by_its_typed_name_not_its_encoded_one(self) -> None:
         body = _failure("NotFound", 'pods "web 1?" not found', 404)
         message = "K8s Pod 'web 1?' not found in namespace 'my ns?'"
+        fake = _serving(404, body)
+        params = _name_params(name="web 1?", namespace="my ns?")
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(404, body), _name_params(name="web 1?", namespace="my ns?"))
+            _run(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_a_gateway_answer_at_401_reads_the_same_in_every_text_format(
         self, output_format: str
     ) -> None:
         message = "Kubernetes could not read Pod 'web-1' in namespace 'apps' (HTTP 401)"
+        fake = _serving(401, GATEWAY_HTML)
+        params = _name_params(output_format=output_format)
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(401, GATEWAY_HTML), _name_params(output_format=output_format))
+            _run(fake, params)
 
 
 class TestUnreadableBody:
@@ -932,20 +959,27 @@ class TestUnreadableBody:
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_a_gateway_page_at_200_fails_the_block(self, output_format: str) -> None:
+        fake = _serving(200, GATEWAY_HTML)
+        params = _list_params(output_format=output_format)
+
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            _run(_serving(200, GATEWAY_HTML), _list_params(output_format=output_format))
+            _run(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_a_body_that_is_not_an_object_fails(self, output_format: str) -> None:
+        fake = _serving(200, b"[1, 2, 3]")
+        params = _list_params(output_format=output_format)
+
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            _run(_serving(200, b"[1, 2, 3]"), _list_params(output_format=output_format))
+            _run(fake, params)
 
     @pytest.mark.parametrize("output_format", ["json", "yaml"])
     def test_record_mode_does_not_soften_it(self, output_format: str) -> None:
         params = _list_params(output_format=output_format, on_error="record")
+        fake = _serving(200, GATEWAY_HTML)
 
         with pytest.raises(K8sApiError, match=exact(UNREADABLE_BODY_MESSAGE)):
-            _run(_serving(200, GATEWAY_HTML), params)
+            _run(fake, params)
 
 
 class TestAlwaysHardFail:
@@ -954,24 +988,27 @@ class TestAlwaysHardFail:
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_an_absent_session_raises_in_both_modes(self, on_error: str) -> None:
         params = {"kind": "Pod", "search_by": "name", "name": "web-1", "on_error": on_error}
+        fake = _serving(200, _POD)
 
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(_serving(200, _POD), params)
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_rejected_session_raises_in_both_modes(self, on_error: str) -> None:
         params = _name_params(session="not-a-kubeconfig", on_error=on_error)
+        fake = _serving(200, _POD)
 
         with pytest.raises(ValueError, match=exact(_SESSION_MESSAGE)):
-            _run(_serving(200, _POD), params)
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_transport_failure_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = FakeK8sClient(responses=[K8sApiError(message)], resources=_PODS)
+        params = _name_params(on_error=on_error)
 
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _name_params(on_error=on_error))
+            _run(fake, params)
 
 
 class TestRecordedFailure:
@@ -1067,9 +1104,11 @@ class TestRecordedFailure:
     def test_fail_is_the_default_mode(self) -> None:
         body = _failure("NotFound", 'pods "web-1" not found', 404)
         message = "K8s Pod 'web-1' not found in namespace 'apps'"
+        fake = _serving(404, body)
+        params = _name_params()
 
         with pytest.raises(ValueError, match=exact(message)):
-            _run(_serving(404, body), _name_params())
+            _run(fake, params)
 
 
 class TestSecrets:
@@ -1220,8 +1259,10 @@ class TestLogging:
     def test_a_failing_read_under_fail_mode_logs_nothing(self) -> None:
         body = _failure("NotFound", 'pods "web-1" not found', 404)
         log = _Log()
+        fake = _serving(404, body)
+        params = _name_params()
 
         with pytest.raises(ValueError):
-            _run(_serving(404, body), _name_params(), log=log)
+            _run(fake, params, log=log)
 
         assert log.entries == []

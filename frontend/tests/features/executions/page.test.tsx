@@ -166,9 +166,14 @@ function renderExecutionsPage(props: Partial<ExecutionsPageProps> = {}) {
 
 describe('ExecutionsPage', () => {
   describe('Page Structure', () => {
-    it('renders page container with correct testid', () => {
+    it.each([
+      ['renders page container with correct testid', 'executions-page'],
+      ['renders filters section', 'filters-section'],
+      ['renders executions table', 'executions-table'],
+      ['renders pagination controls', 'pagination'],
+    ])('%s', (_title, testId) => {
       renderExecutionsPage()
-      expect(screen.getByTestId('executions-page')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders page title "Executions" as h1', () => {
@@ -184,21 +189,6 @@ describe('ExecutionsPage', () => {
     it('does NOT render "+ New" button (LIST-8: executions created by running entities)', () => {
       renderExecutionsPage()
       expect(screen.queryByRole('button', { name: /New/i })).not.toBeInTheDocument()
-    })
-
-    it('renders filters section', () => {
-      renderExecutionsPage()
-      expect(screen.getByTestId('filters-section')).toBeInTheDocument()
-    })
-
-    it('renders executions table', () => {
-      renderExecutionsPage()
-      expect(screen.getByTestId('executions-table')).toBeInTheDocument()
-    })
-
-    it('renders pagination controls', () => {
-      renderExecutionsPage()
-      expect(screen.getByTestId('pagination')).toBeInTheDocument()
     })
   })
 

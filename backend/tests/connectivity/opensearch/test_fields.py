@@ -180,9 +180,10 @@ class TestReadFieldList:
 
     def test_a_refusal_fails_with_its_reason(self, cluster: RecordingHTTPServer) -> None:
         enqueue_json(cluster, error_answer("security_exception", SECURITY_REASON, 403), 403)
+        cluster_client = client(cluster)
 
         with pytest.raises(OpenSearchFailure) as caught:
-            read_field_list(client(cluster), "filebeat-*")
+            read_field_list(cluster_client, "filebeat-*")
 
         assert caught.value.message == f"security_exception: {SECURITY_REASON}"
         assert caught.value.reason == "AuthFailed"
@@ -270,9 +271,10 @@ class TestReadIndexes:
 
     def test_a_refusal_fails_with_its_reason(self, cluster: RecordingHTTPServer) -> None:
         enqueue_json(cluster, error_answer("security_exception", SECURITY_REASON, 403), 403)
+        cluster_client = client(cluster)
 
         with pytest.raises(OpenSearchFailure) as caught:
-            read_indexes(client(cluster), "logs-*")
+            read_indexes(cluster_client, "logs-*")
 
         assert caught.value.message == f"security_exception: {SECURITY_REASON}"
         assert caught.value.reason == "AuthFailed"

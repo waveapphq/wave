@@ -315,29 +315,33 @@ class TestExecute:
 
     async def test_unknown_session_raises(self) -> None:
         registry = SSHSessionRegistry()
+        context = _make_context(registry)
 
         with pytest.raises(
             ValueError,
             match=r"^SSH session 'ssh_session_abc123' not found or already closed$",
         ):
-            await SSHSessionScriptPlugin().execute(_make_context(registry))
+            await SSHSessionScriptPlugin().execute(context)
 
     async def test_closed_session_raises(self) -> None:
         registry, _conn = mock_session_registry()
         registry.close("ssh_session_abc123")
+        context = _make_context(registry)
 
         with pytest.raises(
             ValueError,
             match=r"^SSH session 'ssh_session_abc123' not found or already closed$",
         ):
-            await SSHSessionScriptPlugin().execute(_make_context(registry))
+            await SSHSessionScriptPlugin().execute(context)
 
     async def test_missing_registry_raises_session_not_found(self) -> None:
+        context = _make_context(None)
+
         with pytest.raises(
             ValueError,
             match=r"^SSH session 'ssh_session_abc123' not found or already closed$",
         ):
-            await SSHSessionScriptPlugin().execute(_make_context(None))
+            await SSHSessionScriptPlugin().execute(context)
 
     async def test_timeout_raises_with_the_configured_timeout(self) -> None:
         registry, conn = mock_session_registry()
@@ -357,9 +361,10 @@ class TestExecute:
     async def test_timeout_defaults_to_300_in_the_error(self) -> None:
         registry, conn = mock_session_registry()
         conn.create_process = AsyncMock(side_effect=TimeoutError())
+        context = _make_context(registry)
 
         with pytest.raises(TimeoutError, match=r"^Command execution timed out after 300 seconds$"):
-            await SSHSessionScriptPlugin().execute(_make_context(registry))
+            await SSHSessionScriptPlugin().execute(context)
 
     @pytest.mark.parametrize("blank", [None, ""], ids=["none", "empty"])
     async def test_a_blank_timeout_runs_with_300(self, blank: Any) -> None:
@@ -390,16 +395,18 @@ class TestStdinWriteGuardIsNarrow:
     async def test_a_broken_channel_at_process_start_still_raises(self) -> None:
         registry, conn = mock_session_registry()
         conn.create_process = AsyncMock(side_effect=BrokenPipeError("Channel not open for sending"))
+        context = _make_context(registry)
 
         with pytest.raises(BrokenPipeError, match=r"^Channel not open for sending$"):
-            await SSHSessionScriptPlugin().execute(_make_context(registry))
+            await SSHSessionScriptPlugin().execute(context)
 
     async def test_a_broken_channel_while_waiting_for_exit_still_raises(self) -> None:
         registry, conn = mock_session_registry()
         process_of(conn).wait = AsyncMock(side_effect=BrokenPipeError("connection lost"))
+        context = _make_context(registry)
 
         with pytest.raises(BrokenPipeError, match=r"^connection lost$"):
-            await SSHSessionScriptPlugin().execute(_make_context(registry))
+            await SSHSessionScriptPlugin().execute(context)
 
 
 async def _exits_without_reading_stdin(process: Any) -> None:
@@ -507,8 +514,9 @@ class TestTextThatCannotBeEncoded:
     ) -> None:
         registry, conn = mock_session_registry()
         params = {"session_id": SESSION_ID, "script": "echo hello", **overrides}
+        context = _make_context(registry, params)
 
         with pytest.raises(ValueError, match=_cannot_be_sent(label, line, column)):
-            await SSHSessionScriptPlugin().execute(_make_context(registry, params))
+            await SSHSessionScriptPlugin().execute(context)
 
         conn.create_process.assert_not_called()

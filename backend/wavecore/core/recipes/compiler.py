@@ -553,12 +553,7 @@ class _Emitter:
             kind, value = _form(condition["value"], template_place=True)
             if kind == "plain":
                 value = _as_written(value)
-        value_type = condition.get("value_type")
-        if not value_type:
-            if value is None or kind == "expr":
-                value_type = scope.variable_type(str(variable))
-            else:
-                value_type = "string" if kind == "template" else _infer_value_type(value)
+        value_type = self._comparison_value_type(condition, kind, value, scope)
         item: dict[str, Any] = {
             "id": self._next_condition_id(),
             "type": "literal",
@@ -574,6 +569,17 @@ class _Emitter:
         elif kind == "template":
             item["reference_is_template"] = True
         return item
+
+    @staticmethod
+    def _comparison_value_type(
+        condition: dict[str, Any], kind: str, value: Any, scope: _Scope
+    ) -> Any:
+        value_type = condition.get("value_type")
+        if value_type:
+            return value_type
+        if value is None or kind == "expr":
+            return scope.variable_type(str(condition.get("variable")))
+        return "string" if kind == "template" else _infer_value_type(value)
 
     def _condition_item(self, condition: Any, scope: _Scope) -> dict[str, Any]:
         if isinstance(condition, str):

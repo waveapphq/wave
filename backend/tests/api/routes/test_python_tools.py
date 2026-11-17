@@ -207,7 +207,8 @@ class TestCompletionItems:
         assert items
         for item in items:
             assert set(item) == ITEM_KEYS
-            assert isinstance(item["label"], str) and item["label"]
+            assert isinstance(item["label"], str)
+            assert item["label"]
             assert item["kind"] in KINDS
             assert item["signature"] is None or isinstance(item["signature"], str)
             assert item["doc"] is None or isinstance(item["doc"], str)
@@ -455,9 +456,12 @@ class TestSyntaxCheck:
         assert issues
         for issue in issues:
             assert set(issue) == ISSUE_KEYS
-            assert isinstance(issue["line"], int) and issue["line"] >= 1
-            assert isinstance(issue["column"], int) and issue["column"] >= 0
-            assert isinstance(issue["message"], str) and issue["message"]
+            assert isinstance(issue["line"], int)
+            assert issue["line"] >= 1
+            assert isinstance(issue["column"], int)
+            assert issue["column"] >= 0
+            assert isinstance(issue["message"], str)
+            assert issue["message"]
 
     def test_an_error_with_no_position_lands_on_the_first_line(self, client: TestClient) -> None:
         issues = issues_of(client.post(CHECK_PATH, json={"script": NULL_BYTE_SCRIPT}))

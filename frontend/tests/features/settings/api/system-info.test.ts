@@ -240,54 +240,30 @@ describe('System Info API', () => {
   })
 
   describe('Version Format', () => {
-    it('accepts standard semver version', async () => {
-      mockSuccessResponse({ ...mockSystemInfoApiResponse, version: '2.0.0' })
+    it.each([
+      ['accepts standard semver version', '2.0.0'],
+      ['accepts semver with prerelease', '2.0.0-beta.1'],
+      ['accepts development version', '0.0.0-dev'],
+    ])('%s', async (_name, version) => {
+      mockSuccessResponse({ ...mockSystemInfoApiResponse, version })
 
       const result = await fetchSystemInfo()
 
-      expect(result.version).toBe('2.0.0')
-    })
-
-    it('accepts semver with prerelease', async () => {
-      mockSuccessResponse({ ...mockSystemInfoApiResponse, version: '2.0.0-beta.1' })
-
-      const result = await fetchSystemInfo()
-
-      expect(result.version).toBe('2.0.0-beta.1')
-    })
-
-    it('accepts development version', async () => {
-      mockSuccessResponse({ ...mockSystemInfoApiResponse, version: '0.0.0-dev' })
-
-      const result = await fetchSystemInfo()
-
-      expect(result.version).toBe('0.0.0-dev')
+      expect(result.version).toBe(version)
     })
   })
 
   describe('Build Identifier', () => {
-    it('accepts git short hash', async () => {
-      mockSuccessResponse({ ...mockSystemInfoApiResponse, build: 'abc1234' })
+    it.each([
+      ['accepts git short hash', 'abc1234'],
+      ['accepts full git hash', 'abc1234567890def1234567890abc1234567890de'],
+      ['accepts "local" build identifier', 'local'],
+    ])('%s', async (_name, build) => {
+      mockSuccessResponse({ ...mockSystemInfoApiResponse, build })
 
       const result = await fetchSystemInfo()
 
-      expect(result.build).toBe('abc1234')
-    })
-
-    it('accepts full git hash', async () => {
-      mockSuccessResponse({ ...mockSystemInfoApiResponse, build: 'abc1234567890def1234567890abc1234567890de' })
-
-      const result = await fetchSystemInfo()
-
-      expect(result.build).toBe('abc1234567890def1234567890abc1234567890de')
-    })
-
-    it('accepts "local" build identifier', async () => {
-      mockSuccessResponse({ ...mockSystemInfoApiResponse, build: 'local' })
-
-      const result = await fetchSystemInfo()
-
-      expect(result.build).toBe('local')
+      expect(result.build).toBe(build)
     })
   })
 

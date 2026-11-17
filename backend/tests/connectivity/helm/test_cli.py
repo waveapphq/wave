@@ -525,9 +525,10 @@ class TestKubeconfigProxy:
 
     def test_a_proxy_value_wave_cannot_use_stops_the_run_with_its_own_text(self) -> None:
         _use(_refusing(_UNUSABLE_HOST_VALUE, "https"))
+        session = _session_at()
 
         with pytest.raises(Exception, match=exact(_UNUSABLE_HOST_VALUE)):
-            _cli.kubeconfig_text(_session_at())
+            _cli.kubeconfig_text(session)
 
     def test_on_a_remote_host_wave_decides_nothing(self) -> None:
         proxy = importlib.import_module("wavecore.connectivity.proxy")
@@ -613,10 +614,11 @@ class TestHelmWorkspace:
 
     def test_the_directory_is_removed_when_the_body_raises(self) -> None:
         path = ""
+        boom = RuntimeError("boom")
         with pytest.raises(RuntimeError, match=exact("boom")):
             with _cli.helm_workspace() as work:
                 path = work.path
-                raise RuntimeError("boom")
+                raise boom
 
         assert not os.path.exists(path)
 

@@ -500,6 +500,7 @@ def exec_server() -> Generator[Callable[..., _ExecServer], None, None]:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(material.server_cert_path, material.server_key_path)
         # HTTPServer.socket is typed as a plain socket; wrap_socket returns ssl.SSLSocket.
+        # CodeQL exclusion: CQL-TLS-001
         server.socket = context.wrap_socket(server.socket, server_side=True)  # type: ignore[assignment]
         return _start(server, "https")
 
@@ -1732,11 +1733,12 @@ class TestTransportFailures:
         probe.close()
         server = f"https://127.0.0.1:{port}"
 
+        context = _Ctx(server=server)
         with pytest.raises(
             ExecTransportError,
             match=rf"^Could not connect to the Kubernetes API at {re.escape(server)}: .+$",
         ):
-            _run(context=_Ctx(server=server), timeout=_LIVE_TIMEOUT)
+            _run(context=context, timeout=_LIVE_TIMEOUT)
 
     def test_an_untrusted_server_certificate_renders_the_tls_message(
         self, exec_server: Callable[..., _ExecServer], tls_material: TLSMaterial
@@ -1748,8 +1750,9 @@ class TestTransportFailures:
             'for certificate "CN=wave-test-server"'
         )
 
+        context = _Ctx(server=server.base_url)
         with pytest.raises(ExecTransportError, match=_exact(message)):
-            _run(context=_Ctx(server=server.base_url), timeout=_LIVE_TIMEOUT)
+            _run(context=context, timeout=_LIVE_TIMEOUT)
 
     def test_a_hostname_mismatch_renders_the_tls_message(
         self, exec_server: Callable[..., _ExecServer], tls_material: TLSMaterial
@@ -1802,8 +1805,9 @@ class TestLiveSocket:
     ) -> None:
         server = exec_server([_status(_SUCCESS)], accept="bm90LXRoZS1yaWdodC1vbmU=")
 
+        context = _Ctx(server=server.base_url)
         with pytest.raises(ExecTransportError, match=_exact(_BAD_ACCEPT_MESSAGE)):
-            _run(context=_Ctx(server=server.base_url), timeout=_LIVE_TIMEOUT)
+            _run(context=context, timeout=_LIVE_TIMEOUT)
 
     def test_a_tls_socket_exec_returns_the_streams_and_the_exit_code(
         self, exec_server: Callable[..., _ExecServer], tls_material: TLSMaterial
@@ -1880,8 +1884,9 @@ class TestWaveTrust:
         server = exec_server([_status(_SUCCESS)], material=tls_material)
         wave_trust.pem = tls_material.client_cert_pem
 
+        context = _Ctx(server=server.base_url)
         with pytest.raises(ExecTransportError, match=_exact(_untrusted(server.base_url))):
-            _run(context=_Ctx(server=server.base_url), timeout=_LIVE_TIMEOUT)
+            _run(context=context, timeout=_LIVE_TIMEOUT)
 
     def test_a_session_ca_is_the_only_certificate_trusted(
         self,
@@ -2962,24 +2967,28 @@ class TestRefusedServerAddress:
 
     @pytest.mark.parametrize("server", _PORTS_OUT_OF_RANGE, ids=_PORT_IDS)
     def test_a_port_outside_1_to_65535_is_refused(self, server: str, dials: list[Any]) -> None:
+        context = _unverified(server)
         with pytest.raises(ValueError):
-            _run(context=_unverified(server))
+            _run(context=context)
 
         assert dials == []
 
     def test_port_zero_fails_the_way_a_port_above_the_range_does(self, dials: list[Any]) -> None:
+        context = _unverified(_PORT_ZERO)
         with pytest.raises(ValueError) as zero:
-            _run(context=_unverified(_PORT_ZERO))
+            _run(context=context)
+        context = _unverified(_PORT_ABOVE_THE_RANGE)
         with pytest.raises(ValueError) as above:
-            _run(context=_unverified(_PORT_ABOVE_THE_RANGE))
+            _run(context=context)
 
         assert type(zero.value) is type(above.value)
         assert dials == []
 
     @pytest.mark.parametrize("server", _NO_HOST, ids=_NO_HOST_IDS)
     def test_an_address_with_no_host_is_refused(self, server: str, dials: list[Any]) -> None:
+        context = _unverified(server)
         with pytest.raises(ValueError):
-            _run(context=_unverified(server))
+            _run(context=context)
 
         assert dials == []
 
@@ -2987,8 +2996,9 @@ class TestRefusedServerAddress:
     def test_an_address_that_is_not_http_or_https_is_refused(
         self, server: str, dials: list[Any]
     ) -> None:
+        context = _unverified(server)
         with pytest.raises(ValueError):
-            _run(context=_unverified(server))
+            _run(context=context)
 
         assert dials == []
 
@@ -3044,8 +3054,9 @@ class TestRefusedServerAddress:
     def test_the_refusal_is_a_sentence_that_never_repeats_the_address(
         self, server: str, message: str, dials: list[Any]
     ) -> None:
+        context = _unverified(server)
         with pytest.raises(ValueError, match=message) as ran:
-            _run(context=_unverified(server))
+            _run(context=context)
         with pytest.raises(ValueError, match=message) as opened, _open(context=_unverified(server)):
             pass
 
@@ -3067,8 +3078,9 @@ class TestRefusedServerAddress:
     ) -> None:
         wire = _wire(monkeypatch, [_status(_SUCCESS)])
 
+        context = _unverified(server)
         with pytest.raises(ValueError, match=message):
-            _run(context=_unverified(server))
+            _run(context=context)
 
         assert wire.writes == []
 
@@ -3098,6 +3110,7 @@ def quick_exec_server() -> Generator[ExecStarter, None, None]:
         if material is not None:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(material.server_cert_path, material.server_key_path)
+            # CodeQL exclusion: CQL-TLS-001
             listening: Any = context.wrap_socket(server.socket, server_side=True)
             server.socket = listening
             scheme = "https"
@@ -3365,8 +3378,9 @@ class TestProxyFailures:
                 f"127.0.0.1:{target}: 403 Forbidden"
             )
 
+            context = _Ctx(server=api_url, verify=False)
             with pytest.raises(ExecTransportError, match=_exact(message)):
-                _run(context=_Ctx(server=api_url, verify=False))
+                _run(context=context)
 
     def test_a_proxy_that_cannot_be_reached_is_named(self) -> None:
         api_url = f"https://127.0.0.1:{closed_port()}"
@@ -3374,11 +3388,12 @@ class TestProxyFailures:
         _proxy_in_force(https=dead)
         prefix = re.escape(f"Could not connect to the Kubernetes API at {api_url}: ")
 
+        context = _Ctx(server=api_url, verify=False)
         with pytest.raises(
             ExecTransportError,
             match=rf"^{prefix}Proxy 127\.0\.0\.1:{dead} cannot be reached: .+$",
         ):
-            _run(context=_Ctx(server=api_url, verify=False))
+            _run(context=context)
 
     def test_a_wave_host_value_wave_cannot_use_keeps_its_own_text(
         self, quick_exec_server: ExecStarter, tls_material: TLSMaterial
@@ -3390,8 +3405,9 @@ class TestProxyFailures:
             f"{_UNUSABLE_HOST_VALUE}"
         )
 
+        context = _pinned(cluster, tls_material)
         with pytest.raises(ExecTransportError, match=_exact(message)):
-            _run(context=_pinned(cluster, tls_material))
+            _run(context=context)
 
         assert cluster.request_lines == []
 

@@ -665,19 +665,19 @@ class TestFileModeExplicitPath:
 
         http_server.enqueue(body=b"payload")
 
+        plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/download/blob",
+                "response_mode": "file",
+                "file_path": "testdata://out.bin",
+            },
+            artifacts_dir=str(tmp_path),
+            testdata_dirs=[str(tmp_path / "testdata")],
+        )
         with pytest.raises(ValueError, match=_exact(_READ_ONLY_MESSAGE)):
-            await HTTPClientPlugin().execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/download/blob",
-                        "response_mode": "file",
-                        "file_path": "testdata://out.bin",
-                    },
-                    artifacts_dir=str(tmp_path),
-                    testdata_dirs=[str(tmp_path / "testdata")],
-                )
-            )
+            await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_an_absolute_target_inside_test_data_is_refused(self, http_server, tmp_path):
@@ -687,19 +687,19 @@ class TestFileModeExplicitPath:
         testdata.mkdir()
         http_server.enqueue(body=b"payload")
 
+        plugin = HTTPClientPlugin()
+        context = _context(
+            {
+                "method": "GET",
+                "url": f"{http_server.base_url}/download/blob",
+                "response_mode": "file",
+                "file_path": str(testdata / "out.bin"),
+            },
+            artifacts_dir=str(tmp_path / "runs"),
+            testdata_dirs=[str(testdata)],
+        )
         with pytest.raises(ValueError, match=_exact(_READ_ONLY_MESSAGE)):
-            await HTTPClientPlugin().execute(
-                _context(
-                    {
-                        "method": "GET",
-                        "url": f"{http_server.base_url}/download/blob",
-                        "response_mode": "file",
-                        "file_path": str(testdata / "out.bin"),
-                    },
-                    artifacts_dir=str(tmp_path / "runs"),
-                    testdata_dirs=[str(testdata)],
-                )
-            )
+            await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_a_target_beside_the_artifacts_is_written_there(self, http_server, tmp_path):

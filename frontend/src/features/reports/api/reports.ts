@@ -189,23 +189,32 @@ export async function ensureReport(
   } catch (error) {
     throw classifyStartError(error)
   }
-  const repostState = { reposted: false }
-  for (;;) {
-    const { view } = state
-    if (view.status === 'completed') {
-      return { artifactId: view.artifact_id as string }
-    }
-    if (view.status === 'failed') {
-      throw reportError('job-failed', view.error as string)
-    }
-    opts.onProgress?.({
-      processed: view.progress.runs_processed,
-      total: view.progress.runs_total,
-    })
-    await delay(POLL_INTERVAL_MS)
-    if (opts.isCanceled?.()) {
-      throw reportError('canceled', 'Report generation canceled')
-    }
-    state = await advancePoll(state, executionId, format, repostState)
+  return pollUntilDone(state, executionId, format, opts, { reposted: false })
+}
+
+/** Follow the job one tick at a time until it completes, fails or is canceled. */
+async function pollUntilDone(
+  state: PollState,
+  executionId: string,
+  format: ReportFormat,
+  opts: EnsureReportOptions,
+  repostState: { reposted: boolean },
+): Promise<{ artifactId: string }> {
+  const { view } = state
+  if (view.status === 'completed') {
+    return { artifactId: view.artifact_id as string }
   }
+  if (view.status === 'failed') {
+    throw reportError('job-failed', view.error as string)
+  }
+  opts.onProgress?.({
+    processed: view.progress.runs_processed,
+    total: view.progress.runs_total,
+  })
+  await delay(POLL_INTERVAL_MS)
+  if (opts.isCanceled?.()) {
+    throw reportError('canceled', 'Report generation canceled')
+  }
+  const next = await advancePoll(state, executionId, format, repostState)
+  return pollUntilDone(next, executionId, format, opts, repostState)
 }

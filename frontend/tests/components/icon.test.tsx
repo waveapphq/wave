@@ -249,32 +249,8 @@ describe('Icon Component', () => {
       )
     })
 
-    it('uses strokeWidth of 2 for md size', () => {
-      render(<Icon icon={MockLucideIcon} size="md" />)
-      expect(MockLucideIcon).toHaveBeenCalledWith(
-        expect.objectContaining({ strokeWidth: 2 }),
-        undefined
-      )
-    })
-
-    it('uses strokeWidth of 2 for lg size', () => {
-      render(<Icon icon={MockLucideIcon} size="lg" />)
-      expect(MockLucideIcon).toHaveBeenCalledWith(
-        expect.objectContaining({ strokeWidth: 2 }),
-        undefined
-      )
-    })
-
-    it('uses strokeWidth of 2 for xl size', () => {
-      render(<Icon icon={MockLucideIcon} size="xl" />)
-      expect(MockLucideIcon).toHaveBeenCalledWith(
-        expect.objectContaining({ strokeWidth: 2 }),
-        undefined
-      )
-    })
-
-    it('uses strokeWidth of 2 for 2xl size', () => {
-      render(<Icon icon={MockLucideIcon} size="2xl" />)
+    it.each(['md', 'lg', 'xl', '2xl'] as const)('uses strokeWidth of 2 for %s size', (size) => {
+      render(<Icon icon={MockLucideIcon} size={size} />)
       expect(MockLucideIcon).toHaveBeenCalledWith(
         expect.objectContaining({ strokeWidth: 2 }),
         undefined

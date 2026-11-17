@@ -73,6 +73,24 @@ describe('SSR Utilities', () => {
     })
   })
 
+  describe('Without a window', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      globalThis.location.hash = ''
+    })
+
+    it('isSSR returns true', () => {
+      vi.stubGlobal('window', undefined)
+      expect(isSSR()).toBe(true)
+    })
+
+    it('getWindowLocationHash returns an empty string', () => {
+      globalThis.location.hash = '#kept-in-browser'
+      vi.stubGlobal('window', undefined)
+      expect(getWindowLocationHash()).toBe('')
+    })
+  })
+
   describe('Function Exports', () => {
     it('exports isSSR function', () => {
       expect(typeof isSSR).toBe('function')

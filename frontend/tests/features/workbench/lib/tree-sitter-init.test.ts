@@ -177,8 +177,14 @@ describe.sequential('Tree-sitter Initialization', () => {
       parser = await initializeTreeSitter()
     })
 
-    it('can parse a simple expression', () => {
-      const tree = parser.parse('x + y')
+    it.each([
+      ['a simple expression', 'x + y'],
+      ['a method chain', 'name.strip().upper()'],
+      ['a list comprehension', '[x * x for x in range(5)]'],
+      ['a lambda expression', 'lambda x: x * 2'],
+      ['nested comprehensions', '[y for x in matrix for y in x]'],
+    ])('can parse %s', (_name, source) => {
+      const tree = parser.parse(source)
 
       expect(tree).toBeDefined()
       expect(tree.rootNode).toBeDefined()
@@ -189,34 +195,6 @@ describe.sequential('Tree-sitter Initialization', () => {
 
       expect(tree).toBeDefined()
       expect(tree.rootNode.type).toBe('module')
-    })
-
-    it('can parse a method chain', () => {
-      const tree = parser.parse('name.strip().upper()')
-
-      expect(tree).toBeDefined()
-      expect(tree.rootNode).toBeDefined()
-    })
-
-    it('can parse a list comprehension', () => {
-      const tree = parser.parse('[x * x for x in range(5)]')
-
-      expect(tree).toBeDefined()
-      expect(tree.rootNode).toBeDefined()
-    })
-
-    it('can parse a lambda expression', () => {
-      const tree = parser.parse('lambda x: x * 2')
-
-      expect(tree).toBeDefined()
-      expect(tree.rootNode).toBeDefined()
-    })
-
-    it('can parse nested comprehensions', () => {
-      const tree = parser.parse('[y for x in matrix for y in x]')
-
-      expect(tree).toBeDefined()
-      expect(tree.rootNode).toBeDefined()
     })
 
     it('provides syntax error information for invalid input', () => {

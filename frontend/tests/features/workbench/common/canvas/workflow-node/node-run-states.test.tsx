@@ -90,22 +90,17 @@ describe('Node run state - status bar badges', () => {
     expect(badge).toHaveAttribute('data-state', 'pass')
   })
 
-  it('renders the FAIL badge when execution status is failed', async () => {
-    mockBlockExecutionStatus = 'failed'
+  it.each([
+    ['renders the FAIL badge when execution status is failed', 'failed', 'fail'],
+    ['renders the RUN badge when execution status is running', 'running', 'run'],
+    ['renders the STOPPED badge when execution status is stopped', 'stopped', 'stopped'],
+  ])('%s', async (_title, status, state) => {
+    mockBlockExecutionStatus = status
     const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
     renderWithReactFlow(
       <WorkflowNode id="n1" data={{ label: 'HTTP_Client', elementType: 'http-client' }} />,
     )
-    expect(screen.getByTestId('node-run-state-badge')).toHaveAttribute('data-state', 'fail')
-  })
-
-  it('renders the RUN badge when execution status is running', async () => {
-    mockBlockExecutionStatus = 'running'
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-    renderWithReactFlow(
-      <WorkflowNode id="n1" data={{ label: 'HTTP_Client', elementType: 'http-client' }} />,
-    )
-    expect(screen.getByTestId('node-run-state-badge')).toHaveAttribute('data-state', 'run')
+    expect(screen.getByTestId('node-run-state-badge')).toHaveAttribute('data-state', state)
   })
 
   it('RUN applies the animate-execution-pulse class to the outer card wrapper', async () => {
@@ -173,15 +168,6 @@ describe('Node run state - status bar badges', () => {
     const badge = screen.getByTestId('node-run-state-badge')
     expect(badge).toHaveAttribute('data-state', 'warn')
     expect(badge).toHaveTextContent('WARN')
-  })
-
-  it('renders the STOPPED badge when execution status is stopped', async () => {
-    mockBlockExecutionStatus = 'stopped'
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-    renderWithReactFlow(
-      <WorkflowNode id="n1" data={{ label: 'HTTP_Client', elementType: 'http-client' }} />,
-    )
-    expect(screen.getByTestId('node-run-state-badge')).toHaveAttribute('data-state', 'stopped')
   })
 
   it('renders the DISABLED badge when data.disabled is true', async () => {

@@ -591,14 +591,16 @@ class TestScalabilityGuard:
     def test_a_missing_object_is_a_not_found_and_not_a_scalability_refusal(self) -> None:
         fake = _fake(_OBJECT_MISSING)
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError, match=exact(_NOT_FOUND_MESSAGE)):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
     def test_a_missing_object_writes_nothing(self) -> None:
         fake = _fake(_OBJECT_MISSING)
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
         assert [call.method for call in fake.calls] == ["GET"]
 
@@ -607,14 +609,16 @@ class TestScalabilityGuard:
         body["details"] = {"name": "gone", "kind": "namespaces"}
         fake = _fake((404, body))
 
+        params = _valid_params(replicas=5, namespace="gone")
         with pytest.raises(ValueError, match=exact("K8s namespace 'gone' not found")):
-            _run(fake, _valid_params(replicas=5, namespace="gone"))
+            _run(fake, params)
 
     def test_a_body_with_no_details_at_all_reads_as_the_missing_subresource(self) -> None:
         fake = _fake(_NO_DETAILS_AT_ALL)
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError, match=exact(_cannot_scale("Deployment"))):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
 
 class TestFailureHandling:
@@ -623,16 +627,18 @@ class TestFailureHandling:
     def test_a_server_error_on_the_read_says_the_scale_failed(self) -> None:
         fake = _fake((503, _failure("ServiceUnavailable", _SERVER_DETAIL, 503)))
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError, match=exact(_SERVER_MESSAGE)):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
     def test_a_server_error_on_the_write_says_the_scale_failed_too(self) -> None:
         fake = _fake(
             (200, _scale_object(2)), (503, _failure("ServiceUnavailable", _SERVER_DETAIL, 503))
         )
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError, match=exact(_SERVER_MESSAGE)):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
     def test_a_recorded_server_error_on_the_write_logs_the_scale_shaped_warn_line(self) -> None:
         fake = _fake(
@@ -704,8 +710,9 @@ class TestFailureHandling:
             f"Kubernetes could not scale Deployment 'web' in namespace '{NAMESPACE}' (HTTP 500)"
         )
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError, match=exact(message)):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
     def test_a_write_error_without_a_message_names_the_http_status(self) -> None:
         fake = _fake((200, _scale_object(2)), (500, {}))
@@ -736,8 +743,9 @@ class TestFailureHandling:
         fake = _fake((403, _failure("Forbidden", _FORBIDDEN_DETAIL, 403)))
         log = RecordingLog()
 
+        params = _valid_params(replicas=5)
         with pytest.raises(ValueError, match=exact(_FORBIDDEN_MESSAGE)):
-            _run(fake, _valid_params(replicas=5), log=log)
+            _run(fake, params, log=log)
 
         assert log.entries == []
 
@@ -776,10 +784,11 @@ class TestDiscovery:
     def test_a_denied_walk_renders_the_authentication_row(self) -> None:
         fake = DeniedDiscoveryClient(401, _failure("Unauthorized", "Unauthorized", 401))
 
+        params = _valid_params(replicas=5)
         with pytest.raises(
             ValueError, match=exact("Kubernetes API authentication failed: Unauthorized")
         ):
-            _run(fake, _valid_params(replicas=5))
+            _run(fake, params)
 
     def test_a_denied_walk_is_recordable_with_its_reason_and_issues_no_request(self) -> None:
         detail = 'User "wave" cannot list resource "apis"'
@@ -867,21 +876,24 @@ class TestAlwaysHardFail:
         message = f"Could not connect to the Kubernetes API at {SERVER}: [Errno 111] refused"
         fake = _fake(K8sApiError(message))
 
+        params = _valid_params(replicas=5, on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _valid_params(replicas=5, on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_tls_failure_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Could not verify the TLS certificate of {SERVER}: self-signed certificate"
         fake = _fake(K8sApiError(message))
 
+        params = _valid_params(replicas=5, on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _valid_params(replicas=5, on_error=on_error))
+            _run(fake, params)
 
     @pytest.mark.parametrize("on_error", ["fail", "record"])
     def test_a_request_timeout_on_the_write_raises_in_both_modes(self, on_error: str) -> None:
         message = f"Kubernetes API request PATCH {_DEPLOY_SCALE} timed out after 30 seconds"
         fake = _fake((200, _scale_object(2)), K8sApiError(message))
 
+        params = _valid_params(replicas=5, on_error=on_error)
         with pytest.raises(K8sApiError, match=exact(message)):
-            _run(fake, _valid_params(replicas=5, on_error=on_error))
+            _run(fake, params)

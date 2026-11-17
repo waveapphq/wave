@@ -22,18 +22,20 @@ describe('EditModeMark - rendering', () => {
     expect(svg).not.toBeNull()
   })
 
-  it('uses currentColor on the stroke so theme styling controls the color', () => {
-    const { container } = render(<EditModeMark />)
-    const path = container.querySelector('svg path')
+  it.each([
     // stroke="currentColor" so Tailwind text-red-600/text-red-400
     // (set on the parent wrapper) drives the visible color.
-    expect(path?.getAttribute('stroke')).toBe('currentColor')
-  })
-
-  it('uses rounded line caps for the asterisk strokes', () => {
+    [
+      'uses currentColor on the stroke so theme styling controls the color',
+      'stroke',
+      'currentColor',
+    ],
+    ['uses rounded line caps for the asterisk strokes', 'stroke-linecap', 'round'],
+    ['does not fill the strokes (open asterisk, not solid)', 'fill', 'none'],
+  ])('%s', (_name, attribute, expected) => {
     const { container } = render(<EditModeMark />)
     const path = container.querySelector('svg path')
-    expect(path?.getAttribute('stroke-linecap')).toBe('round')
+    expect(path?.getAttribute(attribute)).toBe(expected)
   })
 
   it('renders the three asterisk strokes via a single path with three M..L segments', () => {
@@ -50,11 +52,5 @@ describe('EditModeMark - rendering', () => {
     const { container } = render(<EditModeMark />)
     const svg = container.querySelector('svg')
     expect(svg?.getAttribute('viewBox')).toBe('0 0 16 16')
-  })
-
-  it('does not fill the strokes (open asterisk, not solid)', () => {
-    const { container } = render(<EditModeMark />)
-    const path = container.querySelector('svg path')
-    expect(path?.getAttribute('fill')).toBe('none')
   })
 })

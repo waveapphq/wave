@@ -687,7 +687,7 @@ describe('ErrorBoundary Component', () => {
 
       // Only fallback alert, no toast
       const alerts = screen.getAllByRole('alert')
-      expect(alerts.length).toBe(1)
+      expect(alerts).toHaveLength(1)
       expect(document.querySelector('[data-toast]')).not.toBeInTheDocument()
     })
 
@@ -833,7 +833,14 @@ describe('ErrorFallback Component', () => {
   })
 
   describe('Container Styling (per design system)', () => {
-    it('applies bg-error-bg background color', () => {
+    it.each([
+      ['applies bg-error-bg background color', 'bg-error'],
+      ['applies rounded-lg border radius (8px per design system)', 'rounded-lg'],
+      ['applies p-6 padding (24px per space-6)', 'p-6'],
+      ['applies max-w-[480px] maximum width', 'max-w-[480px]'],
+      ['applies text-center for centered text alignment', 'text-center'],
+      ['applies items-center for horizontal centering', 'items-center'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback
@@ -843,7 +850,7 @@ describe('ErrorFallback Component', () => {
           />
         </TestWrapper>
       )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('bg-error')
+      expect(screen.getByTestId('error-fallback')).toHaveClass(className)
     })
 
     it('applies border border-error-border', () => {
@@ -860,58 +867,6 @@ describe('ErrorFallback Component', () => {
       expect(screen.getByTestId('error-fallback')).toHaveClass('border-error')
     })
 
-    it('applies rounded-lg border radius (8px per design system)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('rounded-lg')
-    })
-
-    it('applies p-6 padding (24px per space-6)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('p-6')
-    })
-
-    it('applies max-w-[480px] maximum width', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('max-w-[480px]')
-    })
-
-    it('applies text-center for centered text alignment', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('text-center')
-    })
-
     it('applies flex layout for vertical stacking', () => {
       render(
         <TestWrapper>
@@ -924,19 +879,6 @@ describe('ErrorFallback Component', () => {
       )
       expect(screen.getByTestId('error-fallback')).toHaveClass('flex')
       expect(screen.getByTestId('error-fallback')).toHaveClass('flex-col')
-    })
-
-    it('applies items-center for horizontal centering', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('items-center')
     })
   })
 
@@ -951,34 +893,18 @@ describe('ErrorFallback Component', () => {
       expect(icon).toBeInTheDocument()
     })
 
-    it('applies icon-xl size (24px per design system)', () => {
+    it.each([
+      ['applies icon-xl size (24px per design system)', 'icon-xl'],
+      ['applies text-error color', 'text-error'],
+      ['applies mb-4 margin bottom (16px per space-4)', 'mb-4'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
         </TestWrapper>
       )
       const icon = document.querySelector('[data-error-icon]')
-      expect(icon).toHaveClass('icon-xl')
-    })
-
-    it('applies text-error color', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const icon = document.querySelector('[data-error-icon]')
-      expect(icon).toHaveClass('text-error')
-    })
-
-    it('applies mb-4 margin bottom (16px per space-4)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const icon = document.querySelector('[data-error-icon]')
-      expect(icon).toHaveClass('mb-4')
+      expect(icon).toHaveClass(className)
     })
 
     it('icon has aria-hidden for decorative purpose', () => {
@@ -1002,40 +928,18 @@ describe('ErrorFallback Component', () => {
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
     })
 
-    it('applies text-lg font size (18px per design system)', () => {
+    it.each([
+      ['applies text-lg font size (18px per design system)', 'text-lg'],
+      ['applies font-semibold weight (600 per design system)', 'font-semibold'],
+      ['applies text-error color', 'text-error'],
+      ['applies mb-2 margin bottom (8px per space-2)', 'mb-2'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
         </TestWrapper>
       )
-      expect(screen.getByText('Something went wrong')).toHaveClass('text-lg')
-    })
-
-    it('applies font-semibold weight (600 per design system)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      expect(screen.getByText('Something went wrong')).toHaveClass('font-semibold')
-    })
-
-    it('applies text-error color', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      expect(screen.getByText('Something went wrong')).toHaveClass('text-error')
-    })
-
-    it('applies mb-2 margin bottom (8px per space-2)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      expect(screen.getByText('Something went wrong')).toHaveClass('mb-2')
+      expect(screen.getByText('Something went wrong')).toHaveClass(className)
     })
 
     it('renders as h3 element for semantic hierarchy', () => {
@@ -1072,54 +976,20 @@ describe('ErrorFallback Component', () => {
       expect(screen.getByText(/encountered an error/i)).toBeInTheDocument()
     })
 
-    it('applies text-sm font size (14px per design system)', () => {
+    it.each([
+      ['applies text-sm font size (14px per design system)', 'text-sm'],
+      ['applies font-normal weight (400 per design system)', 'font-normal'],
+      ['applies text-secondary color', 'text-secondary'],
+      ['applies leading-normal line height (1.5 per design system)', 'leading-normal'],
+      ['applies mb-6 margin bottom (24px per space-6)', 'mb-6'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
         </TestWrapper>
       )
       const description = screen.getByText(/encountered an error/i)
-      expect(description).toHaveClass('text-sm')
-    })
-
-    it('applies font-normal weight (400 per design system)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const description = screen.getByText(/encountered an error/i)
-      expect(description).toHaveClass('font-normal')
-    })
-
-    it('applies text-secondary color', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const description = screen.getByText(/encountered an error/i)
-      expect(description).toHaveClass('text-secondary')
-    })
-
-    it('applies leading-normal line height (1.5 per design system)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const description = screen.getByText(/encountered an error/i)
-      expect(description).toHaveClass('leading-normal')
-    })
-
-    it('applies mb-6 margin bottom (24px per space-6)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const description = screen.getByText(/encountered an error/i)
-      expect(description).toHaveClass('mb-6')
+      expect(description).toHaveClass(className)
     })
 
     it('renders as p element', () => {
@@ -1161,24 +1031,18 @@ describe('ErrorFallback Component', () => {
       expect(actionGroup).toBeInTheDocument()
     })
 
-    it('action group has flex layout', () => {
+    it.each([
+      ['action group has flex layout', 'flex'],
+      ['action group has gap-3 spacing (12px per space-3)', 'gap-3'],
+      ['action group wraps on mobile', 'flex-wrap'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
         </TestWrapper>
       )
       const actionGroup = document.querySelector('[data-action-group]')
-      expect(actionGroup).toHaveClass('flex')
-    })
-
-    it('action group has gap-3 spacing (12px per space-3)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const actionGroup = document.querySelector('[data-action-group]')
-      expect(actionGroup).toHaveClass('gap-3')
+      expect(actionGroup).toHaveClass(className)
     })
 
     it('action group centers items', () => {
@@ -1190,16 +1054,6 @@ describe('ErrorFallback Component', () => {
       const actionGroup = document.querySelector('[data-action-group]')
       expect(actionGroup).toHaveClass('items-center')
       expect(actionGroup).toHaveClass('justify-center')
-    })
-
-    it('action group wraps on mobile', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback error={new Error('Test error')} resetErrorBoundary={() => {}} />
-        </TestWrapper>
-      )
-      const actionGroup = document.querySelector('[data-action-group]')
-      expect(actionGroup).toHaveClass('flex-wrap')
     })
   })
 
@@ -1419,7 +1273,11 @@ describe('ErrorFallback Component', () => {
   })
 
   describe('Animation Behavior', () => {
-    it('applies animation classes for fade-in', () => {
+    it.each([
+      ['applies animation classes for fade-in', 'animate-fade-in'],
+      ['has duration-200 for 200ms fade-in (per design system)', 'duration-200'],
+      ['applies ease-out timing function for entrance', 'ease-out'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback
@@ -1429,38 +1287,16 @@ describe('ErrorFallback Component', () => {
           />
         </TestWrapper>
       )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('animate-fade-in')
-    })
-
-    it('has duration-200 for 200ms fade-in (per design system)', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('duration-200')
-    })
-
-    it('applies ease-out timing function for entrance', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('ease-out')
+      expect(screen.getByTestId('error-fallback')).toHaveClass(className)
     })
   })
 
   describe('isRecovering State', () => {
-    it('applies fade-out animation when isRecovering is true', () => {
+    it.each([
+      ['applies fade-out animation when isRecovering is true', 'animate-fade-out'],
+      ['applies duration-150 when isRecovering is true', 'duration-150'],
+      ['applies ease-in timing when isRecovering is true', 'ease-in'],
+    ])('%s', (_name, className) => {
       render(
         <TestWrapper>
           <ErrorFallback
@@ -1471,35 +1307,7 @@ describe('ErrorFallback Component', () => {
           />
         </TestWrapper>
       )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('animate-fade-out')
-    })
-
-    it('applies duration-150 when isRecovering is true', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            isRecovering={true}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('duration-150')
-    })
-
-    it('applies ease-in timing when isRecovering is true', () => {
-      render(
-        <TestWrapper>
-          <ErrorFallback
-            error={new Error('Test error')}
-            resetErrorBoundary={() => {}}
-            isRecovering={true}
-            data-testid="error-fallback"
-          />
-        </TestWrapper>
-      )
-      expect(screen.getByTestId('error-fallback')).toHaveClass('ease-in')
+      expect(screen.getByTestId('error-fallback')).toHaveClass(className)
     })
 
     it('applies fade-in animation when isRecovering is false (default)', () => {

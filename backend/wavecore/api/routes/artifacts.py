@@ -87,6 +87,7 @@ async def download_artifact_content(
     headers = download_headers(disposition, result["filename"], result["content_type"])
     if result["content_range"] is not None:
         headers["Content-Range"] = result["content_range"]
+    # SonarQube exclusion: SQ-XSS-001
     return Response(
         content=result["content"],
         status_code=result["status_code"],

@@ -404,41 +404,17 @@ describe('Preload Registry', () => {
       })
     })
 
-    it('preloads detail pages when on executions list', async () => {
+    it.each([
+      ['preloads detail pages when on executions list', 'execution-detail', '/executions'],
+      ['preloads edit page when on test detail page', 'test-edit', '/tests/123'],
+      ['preloads live page when on execution detail page', 'execution-live', '/executions/456'],
+    ] as const)('%s', async (_title, routeKey, path) => {
       const mod = await importModule()
       const preloadFn = vi.fn().mockResolvedValue({})
-      mod.registerPreloadFunction('execution-detail', preloadFn)
+      mod.registerPreloadFunction(routeKey, preloadFn)
 
       renderHook(() => mod.usePreloadRegistry(), {
-        wrapper: createWrapper('/executions'),
-      })
-
-      await waitFor(() => {
-        expect(preloadFn).toHaveBeenCalled()
-      })
-    })
-
-    it('preloads edit page when on test detail page', async () => {
-      const mod = await importModule()
-      const preloadFn = vi.fn().mockResolvedValue({})
-      mod.registerPreloadFunction('test-edit', preloadFn)
-
-      renderHook(() => mod.usePreloadRegistry(), {
-        wrapper: createWrapper('/tests/123'),
-      })
-
-      await waitFor(() => {
-        expect(preloadFn).toHaveBeenCalled()
-      })
-    })
-
-    it('preloads live page when on execution detail page', async () => {
-      const mod = await importModule()
-      const preloadFn = vi.fn().mockResolvedValue({})
-      mod.registerPreloadFunction('execution-live', preloadFn)
-
-      renderHook(() => mod.usePreloadRegistry(), {
-        wrapper: createWrapper('/executions/456'),
+        wrapper: createWrapper(path),
       })
 
       await waitFor(() => {

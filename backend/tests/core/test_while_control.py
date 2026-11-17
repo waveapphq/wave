@@ -135,45 +135,44 @@ class TestWhileControlValidation:
             _run_fill({"mode": "invalid", "conditions": ONE_CONDITION})
 
     def test_validate_missing_conditions(self) -> None:
+        validation = self.control.validate({"mode": "while-do"})
         with pytest.raises(ValueError, match="^conditions parameter is required$"):
-            asyncio.run(self.control.validate({"mode": "while-do"}))
+            asyncio.run(validation)
 
     def test_validate_conditions_not_list(self) -> None:
+        validation = self.control.validate({"mode": "while-do", "conditions": "not-a-list"})
         with pytest.raises(ValueError, match="^conditions must be a list$"):
-            asyncio.run(self.control.validate({"mode": "while-do", "conditions": "not-a-list"}))
+            asyncio.run(validation)
 
     @pytest.mark.parametrize("value", [True, 5.0, "5"])
     def test_validate_max_iterations_that_is_not_a_whole_number(self, value: object) -> None:
+        validation = self.control.validate(
+            {"mode": "while-do", "conditions": ONE_CONDITION, "max_iterations": value}
+        )
         with pytest.raises(ValueError, match="^max_iterations must be >= 1$"):
-            asyncio.run(
-                self.control.validate(
-                    {"mode": "while-do", "conditions": ONE_CONDITION, "max_iterations": value}
-                )
-            )
+            asyncio.run(validation)
 
     def test_validate_max_iterations_zero(self) -> None:
+        validation = self.control.validate(
+            {
+                "mode": "while-do",
+                "conditions": ONE_CONDITION,
+                "max_iterations": 0,
+            }
+        )
         with pytest.raises(ValueError, match="^max_iterations must be >= 1$"):
-            asyncio.run(
-                self.control.validate(
-                    {
-                        "mode": "while-do",
-                        "conditions": ONE_CONDITION,
-                        "max_iterations": 0,
-                    }
-                )
-            )
+            asyncio.run(validation)
 
     def test_validate_max_iterations_negative(self) -> None:
+        validation = self.control.validate(
+            {
+                "mode": "while-do",
+                "conditions": ONE_CONDITION,
+                "max_iterations": -1,
+            }
+        )
         with pytest.raises(ValueError, match="^max_iterations must be >= 1$"):
-            asyncio.run(
-                self.control.validate(
-                    {
-                        "mode": "while-do",
-                        "conditions": ONE_CONDITION,
-                        "max_iterations": -1,
-                    }
-                )
-            )
+            asyncio.run(validation)
 
     def test_validate_passes_while_do(self) -> None:
         asyncio.run(
@@ -197,8 +196,9 @@ class TestWhileControlValidation:
 
     def test_validate_default_mode_requires_conditions(self) -> None:
         """Missing mode defaults to 'while-do', conditions still required."""
+        validation = self.control.validate({})
         with pytest.raises(ValueError, match="^conditions parameter is required$"):
-            asyncio.run(self.control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_passes_with_max_iterations(self) -> None:
         asyncio.run(
@@ -405,22 +405,25 @@ class TestWhileValidate:
         ids=["while-do", "before-the-iteration-cap"],
     )
     def test_validate_refuses_an_empty_condition_list(self, params: dict[str, Any]) -> None:
+        validation = WhileControl().validate(params)
         with pytest.raises(ValueError, match="^Required parameter 'conditions' is empty$"):
-            asyncio.run(WhileControl().validate(params))
+            asyncio.run(validation)
 
     def test_validate_refuses_conditions_side_by_side_with_the_save_text(self) -> None:
         params = {"mode": "while-do", "conditions": [*ONE_CONDITION, *ONE_CONDITION]}
+        validation = WhileControl().validate(params)
 
         with pytest.raises(
             ValueError,
             match="^Condition items in 'conditions' must be joined by 'and' or 'or'$",
         ):
-            asyncio.run(WhileControl().validate(params))
+            asyncio.run(validation)
 
     def test_validate_still_refuses_max_iterations_below_one_from_an_expression(self) -> None:
         stored = {"mode": "while-do", "conditions": ONE_CONDITION, "max_iterations": "limit - 3"}
         resolved = _run_fill(stored, {"max_iterations"}, {"limit": 3})
 
         assert resolved["max_iterations"] == 0
+        validation = WhileControl().validate(resolved)
         with pytest.raises(ValueError, match="^max_iterations must be >= 1$"):
-            asyncio.run(WhileControl().validate(resolved))
+            asyncio.run(validation)

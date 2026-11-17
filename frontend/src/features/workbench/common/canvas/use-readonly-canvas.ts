@@ -7,7 +7,7 @@ type AnyData = Record<string, unknown> | undefined
 
 function findDeepestSharedOnPath(
   drillPath: { nodeId: string }[],
-  nodes: { id: string; data?: AnyData }[],
+  nodes: { id: string; data?: Record<string, unknown> }[],
 ): { data: AnyData } | null {
   if (drillPath.length === 0) return null
   let cursor = nodes
@@ -20,7 +20,7 @@ function findDeepestSharedOnPath(
       deepestShared = { data }
     }
     const localDef = data?.localDefinition as
-      | { workflow?: { nodes: { id: string; data?: AnyData }[] } }
+      | { workflow?: { nodes: { id: string; data?: Record<string, unknown> }[] } }
       | undefined
     if (!localDef?.workflow?.nodes) return deepestShared
     cursor = localDef.workflow.nodes
@@ -49,7 +49,7 @@ export function useDrilledSharedInfo(): DrilledSharedInfo | null {
   const drillPath = useWorkflowStore((state) => state.drillPath)
   const nodes = useWorkflowStore((state) => state.nodes)
   if (drillPath.length === 0) return null
-  let cursor: { id: string; data?: AnyData }[] = nodes
+  let cursor: { id: string; data?: Record<string, unknown> }[] = nodes
   let deepest: { nodeId: string; data: Record<string, unknown> } | null = null
   for (const entry of drillPath) {
     const node = cursor.find((n) => n.id === entry.nodeId)
@@ -59,7 +59,7 @@ export function useDrilledSharedInfo(): DrilledSharedInfo | null {
       deepest = { nodeId: entry.nodeId, data }
     }
     const localDef = data?.localDefinition as
-      | { workflow?: { nodes: { id: string; data?: AnyData }[] } }
+      | { workflow?: { nodes: { id: string; data?: Record<string, unknown> }[] } }
       | undefined
     if (!localDef?.workflow?.nodes) return deepest ? toInfo(deepest) : null
     cursor = localDef.workflow.nodes

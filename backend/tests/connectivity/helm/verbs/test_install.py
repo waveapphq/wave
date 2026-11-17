@@ -447,8 +447,10 @@ class TestInstallFailure:
     def test_a_name_still_in_use_stops_the_block(self) -> None:
         message = "INSTALL FAILED: cannot re-use a name that is still in use"
 
+        params = _params()
+        results = [helm_failed(STDERR_STILL_IN_USE)]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(install, _params(), [helm_failed(STDERR_STILL_IN_USE)])
+            run_verb(install, params, results)
 
     def test_a_recorded_refusal_reports_the_reason(self) -> None:
         outputs = outputs_of(
@@ -498,8 +500,10 @@ class TestInstallFailure:
     def test_the_process_deadline_is_the_timeout_itself(self) -> None:
         message = "helm install did not finish within 300 s"
 
+        params = _params()
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(install, _params(), [helm_timed_out()])
+            run_verb(install, params, results)
 
     def test_a_recorded_deadline_reports_timeout(self) -> None:
         outputs = outputs_of(install, _params(on_error="record"), [helm_timed_out()])
@@ -509,8 +513,10 @@ class TestInstallFailure:
     def test_a_shorter_timeout_shortens_the_deadline_in_the_message(self) -> None:
         message = "helm install did not finish within 20 s"
 
+        params = _params(timeout=20)
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(install, _params(timeout=20), [helm_timed_out()])
+            run_verb(install, params, results)
 
     def test_a_one_second_timeout_is_the_whole_deadline(self) -> None:
         fake = run_verb(install, _params(timeout=1, on_error="record"), [helm_timed_out()])
@@ -534,11 +540,13 @@ class TestInstallFailure:
     def test_the_cleanup_room_names_itself_in_the_deadline_message(self) -> None:
         message = "helm install did not finish within 46 s"
 
+        params = _params(timeout=1, atomic=True, cleanup_timeout=45)
+        results = [helm_timed_out()]
         with pytest.raises(ValueError, match=exact(message)):
             run_verb(
                 install,
-                _params(timeout=1, atomic=True, cleanup_timeout=45),
-                [helm_timed_out()],
+                params,
+                results,
             )
 
     def test_a_cleanup_timeout_without_atomic_buys_nothing(self) -> None:
@@ -552,8 +560,10 @@ class TestInstallFailure:
         message = "Helm v3.9.4 found at /opt/helm, WAVE needs 3.13 or newer"
 
         with patch_floor_probe("install", message):
+            params = _params()
+            results = [helm_failed(STDERR_UNKNOWN_FLAG)]
             with pytest.raises(ValueError, match=exact(message)):
-                run_verb(install, _params(), [helm_failed(STDERR_UNKNOWN_FLAG)])
+                run_verb(install, params, results)
 
     def test_a_recorded_floor_violation_reads_as_invalid(self) -> None:
         message = "Helm v3.9.4 found at /opt/helm, WAVE needs 3.13 or newer"
@@ -567,14 +577,18 @@ class TestInstallFailure:
 
     def test_a_current_helm_lets_its_own_error_through(self) -> None:
         with patch_floor_probe("install", None):
+            params = _params()
+            results = [helm_failed(STDERR_UNKNOWN_FLAG)]
             with pytest.raises(ValueError, match=exact("unknown flag: --ignore-not-found")):
-                run_verb(install, _params(), [helm_failed(STDERR_UNKNOWN_FLAG)])
+                run_verb(install, params, results)
 
     def test_a_run_that_printed_no_document_is_a_failure(self) -> None:
         message = "helm install printed no release document"
 
+        params = _params()
+        results = [helm_ok("NAME: web\n")]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(install, _params(), [helm_ok("NAME: web\n")])
+            run_verb(install, params, results)
 
     def test_a_recorded_missing_document_reads_as_invalid(self) -> None:
         outputs = outputs_of(install, _params(on_error="record"), [helm_ok("NAME: web\n")])
@@ -589,8 +603,9 @@ class TestInstallFailure:
         params = _params(on_error="record")
         params["session"] = "nonsense"
 
+        results = [helm_ok(release_json())]
         with pytest.raises(ValueError, match=exact(message)):
-            run_verb(install, params, [helm_ok(release_json())])
+            run_verb(install, params, results)
 
 
 class TestInstallOciCredentials:

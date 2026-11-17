@@ -389,6 +389,7 @@ async def _drain_session_broadcasts(
         except Exception:
             # One bad entry must never end the session's stream; CancelledError
             # is a BaseException, so teardown still stops this task.
+            # CodeQL exclusion: CQL-LOG-001
             _logger.exception("Log broadcast failed for session %s", log_safe(session_id))
         queue.task_done()
 

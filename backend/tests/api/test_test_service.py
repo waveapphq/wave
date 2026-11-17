@@ -2209,7 +2209,8 @@ class TestReadsOfLocalFunctionSecrets:
     def _workflows(test_id: str) -> list[dict[str, Any]]:
         test = test_service.get_test(test_id)
         workflow = test_service.get_test_workflow(test_id)
-        assert test is not None and workflow is not None
+        assert test is not None
+        assert workflow is not None
         return [test["workflow"], workflow]
 
     def test_masked_while_the_reveal_is_off(self) -> None:
@@ -9957,8 +9958,9 @@ class TestReadOnlyGateAtImport:
             },
         )
 
+        content = yaml.dump(document).encode()
         with pytest.raises(test_service.ReadOnlyExpressionImportError) as exc_info:
-            test_service.import_tests(yaml.dump(document).encode(), "changing.yaml")
+            test_service.import_tests(content, "changing.yaml")
 
         assert exc_info.value.message == (
             "Cannot import test 'Changing Condition'. The append method changes data. "

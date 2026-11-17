@@ -352,7 +352,8 @@ def _run_bundle_lines(
             stderr=stderr,
             env=env,
         )
-        assert proc.stdin is not None and proc.stdout is not None
+        assert proc.stdin is not None
+        assert proc.stdout is not None
         lines: queue.Queue[bytes] = queue.Queue()
         threading.Thread(target=_pump, args=(proc.stdout, lines), daemon=True).start()
         received: list[bytes] = []
@@ -764,7 +765,8 @@ class TestBundleNetcatRegistration:
         assert results.row_count() == 1
         *cells, time_ms = results.row(0).to_list()
         assert cells == [port, "tcp", "open", ""]
-        assert isinstance(time_ms, int) and not isinstance(time_ms, bool)
+        assert isinstance(time_ms, int)
+        assert not isinstance(time_ms, bool)
         assert outputs["success"] is True
 
 
@@ -848,7 +850,8 @@ class TestBundleSqlVendoring:
         self, unit: str
     ) -> None:
         root = _carried_unit_root(unit)
-        assert root is not None and root.exists(), f"{unit} is not on disk"
+        assert root is not None, f"{unit} is not on disk"
+        assert root.exists(), f"{unit} is not on disk"
         listing = module_listing(unit, root)
         sources = _vendored_sources()
 
@@ -886,7 +889,8 @@ class TestBundleOpensearchVendoring:
         self, unit: str
     ) -> None:
         root = _carried_unit_root(unit)
-        assert root is not None and root.exists(), f"{unit} is not on disk"
+        assert root is not None, f"{unit} is not on disk"
+        assert root.exists(), f"{unit} is not on disk"
         listing = module_listing(unit, root)
         sources = _vendored_sources()
 
@@ -1300,6 +1304,7 @@ def _tls_serve(tmp_path: Path, *, require_client_cert: bool = False) -> Iterator
         ca_path.write_text(root.cert_pem)
         context.verify_mode = ssl.CERT_REQUIRED
         context.load_verify_locations(str(ca_path))
+    # CodeQL exclusion: CQL-TLS-001
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -1393,6 +1398,7 @@ class TestBundleTLSParity:
         context.load_cert_chain(str(tmp_path / "sc.pem"), str(tmp_path / "sk.pem"))
         context.verify_mode = ssl.CERT_REQUIRED
         context.load_verify_locations(str(tmp_path / "ca.pem"))
+        # CodeQL exclusion: CQL-TLS-001
         httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
@@ -2486,6 +2492,7 @@ def _tls_target(tmp_path: Path, name: str) -> Iterator[tuple[int, str]]:
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(str(cert_path), str(key_path))
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), _EchoHandler)
+    # CodeQL exclusion: CQL-TLS-001
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()

@@ -321,24 +321,12 @@ describe('useCanvasConnections', () => {
       expect(valid).toBe(true)
     })
 
-    it('rejects cross-scope connections even during relocation', () => {
-      mockValidate.mockReturnValue({ valid: false, reason: 'cross-scope' })
-      const { result } = renderHook(() => useCanvasConnections({ isExecuting: false }))
-
-      // Simulate relocation mode
-      result.current.relocatingEdgeRef.current = { id: 'e1', source: 'a', target: 'b' }
-
-      const valid = result.current.isValidConnection({
-        source: 'node-1',
-        target: 'node-2',
-        id: 'e1',
-      } as unknown as import('@xyflow/react').Edge)
-
-      expect(valid).toBe(false)
-    })
-
-    it('allows has-egress during relocation (old edge will be swapped)', () => {
-      mockValidate.mockReturnValue({ valid: false, reason: 'has-egress' })
+    it.each([
+      ['rejects cross-scope connections even during relocation', 'cross-scope', false],
+      ['allows has-egress during relocation (old edge will be swapped)', 'has-egress', true],
+      ['allows has-ingress during relocation', 'has-ingress', true],
+    ])('%s', (_title, reason, expected) => {
+      mockValidate.mockReturnValue({ valid: false, reason })
       const { result } = renderHook(() => useCanvasConnections({ isExecuting: false }))
 
       // Enter relocation mode
@@ -350,26 +338,15 @@ describe('useCanvasConnections', () => {
         id: 'e1',
       } as unknown as import('@xyflow/react').Edge)
 
-      expect(valid).toBe(true)
+      expect(valid).toBe(expected)
     })
 
-    it('allows has-ingress during relocation', () => {
-      mockValidate.mockReturnValue({ valid: false, reason: 'has-ingress' })
-      const { result } = renderHook(() => useCanvasConnections({ isExecuting: false }))
-
-      result.current.relocatingEdgeRef.current = { id: 'e1', source: 'a', target: 'b' }
-
-      const valid = result.current.isValidConnection({
-        source: 'node-1',
-        target: 'node-2',
-        id: 'e1',
-      } as unknown as import('@xyflow/react').Edge)
-
-      expect(valid).toBe(true)
-    })
-
-    it('rejects has-egress when not in relocation mode', () => {
-      mockValidate.mockReturnValue({ valid: false, reason: 'has-egress' })
+    it.each([
+      ['rejects has-egress when not in relocation mode', 'has-egress'],
+      ['returns false for other validation failures without special conditions', 'duplicate'],
+      ['returns false for cycle reason without relocation', 'cycle'],
+    ])('%s', (_title, reason) => {
+      mockValidate.mockReturnValue({ valid: false, reason })
       const { result } = renderHook(() => useCanvasConnections({ isExecuting: false }))
 
       const valid = result.current.isValidConnection({
@@ -392,32 +369,6 @@ describe('useCanvasConnections', () => {
         target: 'node-2',
         targetHandle: 'ingress_1',
       } as unknown as import('@xyflow/react').Connection)
-
-      expect(valid).toBe(false)
-    })
-
-    it('returns false for other validation failures without special conditions', () => {
-      mockValidate.mockReturnValue({ valid: false, reason: 'duplicate' })
-      const { result } = renderHook(() => useCanvasConnections({ isExecuting: false }))
-
-      const valid = result.current.isValidConnection({
-        source: 'node-1',
-        target: 'node-2',
-        id: 'e1',
-      } as unknown as import('@xyflow/react').Edge)
-
-      expect(valid).toBe(false)
-    })
-
-    it('returns false for cycle reason without relocation', () => {
-      mockValidate.mockReturnValue({ valid: false, reason: 'cycle' })
-      const { result } = renderHook(() => useCanvasConnections({ isExecuting: false }))
-
-      const valid = result.current.isValidConnection({
-        source: 'node-1',
-        target: 'node-2',
-        id: 'e1',
-      } as unknown as import('@xyflow/react').Edge)
 
       expect(valid).toBe(false)
     })

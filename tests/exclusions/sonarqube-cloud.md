@@ -7,7 +7,7 @@ This list is one of the exclusion lists in [README.md](README.md), which holds t
 ## Correlation Rules
 
 - **Each entry names its rule key** - SonarQube Cloud gives an issue a new key on each branch, so entries never list issue keys
-- **The code carries the ID** - A one-line comment at each place holds the entry's ID, for example `# SQ-HASH-001`
+- **The code carries the ID** - A one-line comment at each place holds the entry's ID, for example `# SonarQube exclusion: SQ-HASH-001`
 - **Find a place by searching for the ID** - For example `git grep -n "SQ-HASH-001"`
 - **IDs never change** - An ID stays the same when its code moves to another file
 - **Orphaned IDs are violations** - An ID in this list but not in the code, or in the code but not in this list, is a policy violation
@@ -22,6 +22,7 @@ This list is one of the exclusion lists in [README.md](README.md), which holds t
 | TLS | `SQ-TLS-*` | Certificate checks that a Test author turns off |
 | CMD | `SQ-CMD-*` | Programs that WAVE starts on purpose |
 | PATH | `SQ-PATH-*` | Files that WAVE opens on purpose |
+| ASYNC | `SQ-ASYNC-*` | Hooks that a library requires to be async |
 
 ---
 
@@ -98,3 +99,14 @@ The Shell command, Shell script and Python Blocks run their program on the WAVE 
 - **Rule**: `pythonsecurity:S2083`, I/O function calls should not be vulnerable to path injection attacks
 
 The Python Block runs its script through a small helper inside the interpreter that the author names. The helper opens the script that WAVE names in the helper's own input file, which WAVE writes to a private folder before the run. In File mode the script is the Test author's own file and may be anywhere, so a folder check would break the Block. Nothing from a web request reaches this path.
+
+---
+
+## Async Hooks
+
+### SQ-ASYNC-001: The HTTP Block's Trace Hook
+
+- **Kind**: False positive
+- **Rule**: `python:S7503`, Async functions should use async features
+
+The HTTP Block records when the connect and TLS steps of each request start and end, for its trace output. The HTTP library reports these steps to a hook that WAVE hands it. WAVE sends requests through the library's async interface, and that interface accepts only an async hook: it awaits what the hook returns, and it fails the request when the hook is a plain function. The hook only records each step, so it has nothing to await.

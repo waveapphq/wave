@@ -140,24 +140,18 @@ describe('ImportDialog (Tests Adapter)', () => {
       expect(screen.getByText('Test Two')).toBeInTheDocument()
     })
 
-    it('shows conflict resolution dropdown for conflicts', async () => {
+    it.each([
+      ['shows conflict resolution dropdown for conflicts', 'resolution-Test Two'],
+      ['shows Import button', 'import-button'],
+      ['shows Back button', 'back-button'],
+    ])('%s', async (_name, testId) => {
       await goToReviewStep()
-      expect(screen.getByTestId('resolution-Test Two')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('shows import summary', async () => {
       await goToReviewStep()
       expect(screen.getByTestId('import-summary')).toHaveTextContent('2 importable, 0 blocked')
-    })
-
-    it('shows Import button', async () => {
-      await goToReviewStep()
-      expect(screen.getByTestId('import-button')).toBeInTheDocument()
-    })
-
-    it('shows Back button', async () => {
-      await goToReviewStep()
-      expect(screen.getByTestId('back-button')).toBeInTheDocument()
     })
 
     it('Back button returns to upload step', async () => {

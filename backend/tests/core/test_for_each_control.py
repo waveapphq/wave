@@ -135,23 +135,31 @@ class TestForEachControlValidation:
 
     def test_validate_missing_collection(self) -> None:
         """Missing collection raises ValueError with exact message."""
+        validation = self.control.validate({})
+
         with pytest.raises(ValueError, match="^collection parameter is required$"):
-            asyncio.run(self.control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_collection_not_iterable(self) -> None:
         """Non-iterable collection raises ValueError with exact message."""
+        validation = self.control.validate({"collection": 42})
+
         with pytest.raises(ValueError, match="^collection must be a list, dict, or table$"):
-            asyncio.run(self.control.validate({"collection": 42}))
+            asyncio.run(validation)
 
     def test_validate_collection_string_not_iterable(self) -> None:
         """String collection is not considered iterable for ForEach purposes."""
+        validation = self.control.validate({"collection": "not-a-collection"})
+
         with pytest.raises(ValueError, match="^collection must be a list, dict, or table$"):
-            asyncio.run(self.control.validate({"collection": "not-a-collection"}))
+            asyncio.run(validation)
 
     def test_validate_collection_bool_not_iterable(self) -> None:
         """Boolean collection is not iterable."""
+        validation = self.control.validate({"collection": True})
+
         with pytest.raises(ValueError, match="^collection must be a list, dict, or table$"):
-            asyncio.run(self.control.validate({"collection": True}))
+            asyncio.run(validation)
 
     def test_validate_valid_list(self) -> None:
         """Valid list collection passes validation."""
@@ -194,12 +202,16 @@ class TestForEachControlValidation:
 
     def test_validate_tuple_not_iterable(self) -> None:
         """A tuple is not one of the three declared collection types."""
+        validation = self.control.validate({"collection": (1, 2, 3)})
+
         with pytest.raises(ValueError, match="^collection must be a list, dict, or table$"):
-            asyncio.run(self.control.validate({"collection": (1, 2, 3)}))
+            asyncio.run(validation)
 
     def test_validate_float_not_iterable(self) -> None:
+        validation = self.control.validate({"collection": 1.5})
+
         with pytest.raises(ValueError, match="^collection must be a list, dict, or table$"):
-            asyncio.run(self.control.validate({"collection": 1.5}))
+            asyncio.run(validation)
 
 
 class TestForEachControlExecution:

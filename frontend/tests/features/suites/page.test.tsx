@@ -148,9 +148,14 @@ function renderSuitesPage(props: Partial<SuitesPageProps> = {}) {
 
 describe('SuitesPage', () => {
   describe('Page Structure', () => {
-    it('renders page container with correct testid', () => {
+    it.each([
+      ['renders page container with correct testid', 'suites-page'],
+      ['renders filters section', 'filters-section'],
+      ['renders suites table', 'suites-table'],
+      ['renders pagination controls', 'pagination'],
+    ])('%s', (_title, testId) => {
       renderSuitesPage()
-      expect(screen.getByTestId('suites-page')).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders page title "Suites" as h1', () => {
@@ -168,21 +173,6 @@ describe('SuitesPage', () => {
       const newButton = screen.getByRole('button', { name: /New Suite/i })
       expect(newButton).toBeVisible()
       expect(newButton).toBeEnabled()
-    })
-
-    it('renders filters section', () => {
-      renderSuitesPage()
-      expect(screen.getByTestId('filters-section')).toBeInTheDocument()
-    })
-
-    it('renders suites table', () => {
-      renderSuitesPage()
-      expect(screen.getByTestId('suites-table')).toBeInTheDocument()
-    })
-
-    it('renders pagination controls', () => {
-      renderSuitesPage()
-      expect(screen.getByTestId('pagination')).toBeInTheDocument()
     })
   })
 

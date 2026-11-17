@@ -27,16 +27,13 @@ describe('ExecutionCard Component', () => {
   }
 
   describe('Basic Rendering', () => {
-    it('renders execution card element', () => {
+    it.each([
+      ['renders execution card element', 'execution-card'],
+      ['renders status indicator', 'execution-status-indicator'],
+      ['renders progress bar for running executions', 'execution-progress'],
+    ])('%s', (_title, testId) => {
       render(<ExecutionCard {...defaultProps} />)
-      expect(screen.getByTestId('execution-card')).toBeInTheDocument()
-    })
-
-    it('renders status indicator', () => {
-      render(<ExecutionCard {...defaultProps} />)
-      expect(
-        screen.getByTestId('execution-status-indicator')
-      ).toBeInTheDocument()
+      expect(screen.getByTestId(testId)).toBeInTheDocument()
     })
 
     it('renders execution name', () => {
@@ -52,42 +49,20 @@ describe('ExecutionCard Component', () => {
         'Running · 45% · 27 of 60 tests'
       )
     })
-
-    it('renders progress bar for running executions', () => {
-      render(<ExecutionCard {...defaultProps} />)
-      expect(screen.getByTestId('execution-progress')).toBeInTheDocument()
-    })
   })
 
   describe('Status Indicator', () => {
-    it('applies blue color for running status', () => {
-      render(<ExecutionCard {...defaultProps} status="running" />)
+    it.each([
+      ['applies blue color for running status', 'running', 'bg-info'],
+      ['applies green color for passed status', 'passed', 'bg-success'],
+      ['applies red color for failed status', 'failed', 'bg-error'],
+      ['applies gray color for stopped status', 'stopped', 'bg-muted'],
+      ['applies amber color for paused status', 'paused', 'bg-warning'],
+      ['running indicator has pulse animation', 'running', 'animate-pulse'],
+    ] as const)('%s', (_title, status, className) => {
+      render(<ExecutionCard {...defaultProps} status={status} />)
       const indicator = screen.getByTestId('execution-status-indicator')
-      expect(indicator).toHaveClass('bg-info')
-    })
-
-    it('applies green color for passed status', () => {
-      render(<ExecutionCard {...defaultProps} status="passed" />)
-      const indicator = screen.getByTestId('execution-status-indicator')
-      expect(indicator).toHaveClass('bg-success')
-    })
-
-    it('applies red color for failed status', () => {
-      render(<ExecutionCard {...defaultProps} status="failed" />)
-      const indicator = screen.getByTestId('execution-status-indicator')
-      expect(indicator).toHaveClass('bg-error')
-    })
-
-    it('applies gray color for stopped status', () => {
-      render(<ExecutionCard {...defaultProps} status="stopped" />)
-      const indicator = screen.getByTestId('execution-status-indicator')
-      expect(indicator).toHaveClass('bg-muted')
-    })
-
-    it('applies amber color for paused status', () => {
-      render(<ExecutionCard {...defaultProps} status="paused" />)
-      const indicator = screen.getByTestId('execution-status-indicator')
-      expect(indicator).toHaveClass('bg-warning')
+      expect(indicator).toHaveClass(className)
     })
 
     it('indicator is a small dot', () => {
@@ -96,12 +71,6 @@ describe('ExecutionCard Component', () => {
       expect(indicator).toHaveClass('w-2')
       expect(indicator).toHaveClass('h-2')
       expect(indicator).toHaveClass('rounded-full')
-    })
-
-    it('running indicator has pulse animation', () => {
-      render(<ExecutionCard {...defaultProps} status="running" />)
-      const indicator = screen.getByTestId('execution-status-indicator')
-      expect(indicator).toHaveClass('animate-pulse')
     })
 
     it('non-running indicators do not pulse', () => {
@@ -177,22 +146,14 @@ describe('ExecutionCard Component', () => {
       )
     })
 
-    it('status info has status-specific color for running', () => {
-      render(<ExecutionCard {...defaultProps} status="running" />)
+    it.each([
+      ['status info has status-specific color for running', 'running', 'text-info'],
+      ['status info has status-specific color for passed', 'passed', 'text-success'],
+      ['status info has status-specific color for failed', 'failed', 'text-error'],
+    ] as const)('%s', (_title, status, className) => {
+      render(<ExecutionCard {...defaultProps} status={status} />)
       const statusInfo = screen.getByTestId('execution-status-info')
-      expect(statusInfo).toHaveClass('text-info')
-    })
-
-    it('status info has status-specific color for passed', () => {
-      render(<ExecutionCard {...defaultProps} status="passed" />)
-      const statusInfo = screen.getByTestId('execution-status-info')
-      expect(statusInfo).toHaveClass('text-success')
-    })
-
-    it('status info has status-specific color for failed', () => {
-      render(<ExecutionCard {...defaultProps} status="failed" />)
-      const statusInfo = screen.getByTestId('execution-status-info')
-      expect(statusInfo).toHaveClass('text-error')
+      expect(statusInfo).toHaveClass(className)
     })
 
     it('status info has xs text size', () => {
@@ -271,22 +232,14 @@ describe('ExecutionCard Component', () => {
   })
 
   describe('Layout', () => {
-    it('applies flex layout', () => {
+    it.each([
+      ['applies flex layout', 'flex'],
+      ['applies flex-col for vertical stacking', 'flex-col'],
+      ['has gap between elements', 'gap-1'],
+    ])('%s', (_title, className) => {
       render(<ExecutionCard {...defaultProps} />)
       const card = screen.getByTestId('execution-card')
-      expect(card).toHaveClass('flex')
-    })
-
-    it('applies flex-col for vertical stacking', () => {
-      render(<ExecutionCard {...defaultProps} />)
-      const card = screen.getByTestId('execution-card')
-      expect(card).toHaveClass('flex-col')
-    })
-
-    it('has gap between elements', () => {
-      render(<ExecutionCard {...defaultProps} />)
-      const card = screen.getByTestId('execution-card')
-      expect(card).toHaveClass('gap-1')
+      expect(card).toHaveClass(className)
     })
   })
 

@@ -6,11 +6,13 @@ import os
 from tlslite.utils.keyfactory import parsePEMKey
 
 _SCRAMBLE_LENGTH = 20
+# SonarQube exclusion: SQ-HASH-001
 _HASH_LENGTH = hashlib.sha1().digest_size
 
 
 def _mgf1(seed: bytes, length: int) -> bytes:
     blocks = range((length + _HASH_LENGTH - 1) // _HASH_LENGTH)
+    # SonarQube exclusion: SQ-HASH-001
     stream = b"".join(hashlib.sha1(seed + n.to_bytes(4, "big")).digest() for n in blocks)
     return stream[:length]
 
@@ -22,6 +24,7 @@ def _xor(data: bytes, mask: bytes) -> bytes:
 def _oaep(message: bytes, size: int) -> bytes:
     """RFC 8017 EME-OAEP encoding with SHA-1, MGF1-SHA-1 and an empty label."""
     padding = b"\0" * (size - len(message) - 2 * _HASH_LENGTH - 2)
+    # SonarQube exclusion: SQ-HASH-001
     block = hashlib.sha1(b"").digest() + padding + b"\1" + message
     seed = os.urandom(_HASH_LENGTH)
     masked_block = _xor(block, _mgf1(seed, size - _HASH_LENGTH - 1))

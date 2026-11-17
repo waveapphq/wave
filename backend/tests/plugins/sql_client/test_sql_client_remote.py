@@ -652,10 +652,11 @@ class TestTheBlockInsideARemoteExecutionBody:
     ) -> None:
         database = tmp_path / "t.db"
 
+        body = _body(sqlite_params(database))
+        session = _session()
+        worker = _worker(BEYOND)
         with pytest.raises(RuntimeError, match=exact(f"{HOST_FAILED}{UNSUPPORTED_SQLITE_TEXT}")):
-            await _run_sql_body(
-                _body(sqlite_params(database)), _session(), _worker(BEYOND), _bundle_worker
-            )
+            await _run_sql_body(body, session, worker, _bundle_worker)
 
         assert not database.exists()
 
@@ -678,6 +679,8 @@ class TestTheBlockInsideARemoteExecutionBody:
         )
         session["ssh_session_registry"] = registry
 
+        body = _body(sqlite_params(tmp_path / "t.db"))
+        executed: set[str] = set()
         with (
             patch.object(_remote_exec, "run_on_worker", _bundle_worker),
             patch.object(_remote_exec, "close_worker", AsyncMock()),
@@ -691,11 +694,11 @@ class TestTheBlockInsideARemoteExecutionBody:
             await execute_remote_container(
                 "rex-1",
                 {"rex-1": [("body-1", "body")]},
-                _body(sqlite_params(tmp_path / "t.db")),
+                body,
                 {},
                 session,
                 session["session_id"],
-                set(),
+                executed,
                 [],
                 None,
             )
@@ -782,7 +785,10 @@ class TestAMissingWaveSideFileFollowsOnError:
         database = tmp_path / "t.db"
         values, message = _missing_file_block(kind, "testdata://", database)
 
+        body = _body(values)
+        folders = _folders(tmp_path)
+        worker = _worker()
         with pytest.raises(RuntimeError, match=exact(f"{HOST_FAILED}{message}")):
-            await _run_sql_body(_body(values), _folders(tmp_path), _worker(), _sqlite_host_worker)
+            await _run_sql_body(body, folders, worker, _sqlite_host_worker)
 
         assert not database.exists()

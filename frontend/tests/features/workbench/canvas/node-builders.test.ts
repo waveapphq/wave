@@ -754,9 +754,16 @@ describe('connectFromFirstFreeEgress', () => {
     expect(addEdge).not.toHaveBeenCalled()
   })
 
-  it('picks the first free handle of a for-loop anchor', () => {
+  it.each([
+    ['picks the first free handle of a for-loop anchor', 'for'],
+    // The canvas draws body + then lanes for every loop type. A While left out of
+    // the handle list connects with no sourceHandle, and Break / Continue only
+    // count a loop whose body edge carries 'body', so the While goes undetected.
+    ['picks the first free handle of a while anchor (body then then)', 'while'],
+    ['picks the first free handle of a remote-execution anchor (body then then)', 'remote-execution'],
+  ])('%s', (_title, anchorType) => {
     const { connected, addEdge } = run({
-      nodes: [makeNode('a', 'for'), makeNode('b', 'log')],
+      nodes: [makeNode('a', anchorType), makeNode('b', 'log')],
       edges: [{ id: 'edge-a-b', source: 'a', target: 'b', sourceHandle: 'body' }],
     })
     expect(connected).toBe(true)
@@ -779,22 +786,6 @@ describe('connectFromFirstFreeEgress', () => {
     expect(addEdge).not.toHaveBeenCalled()
   })
 
-  // The canvas draws body + then lanes for every loop type. A While left out of
-  // the handle list connects with no sourceHandle, and Break / Continue only
-  // count a loop whose body edge carries 'body', so the While goes undetected.
-  it('picks the first free handle of a while anchor (body then then)', () => {
-    const { connected, addEdge } = run({
-      nodes: [makeNode('a', 'while'), makeNode('b', 'log')],
-      edges: [{ id: 'edge-a-b', source: 'a', target: 'b', sourceHandle: 'body' }],
-    })
-    expect(connected).toBe(true)
-    expect(addEdge.mock.calls[0][0]).toMatchObject({
-      source: 'a',
-      target: 'new-1',
-      sourceHandle: 'then',
-    })
-  })
-
   it('links the first block under a while onto the body lane', () => {
     const { connected, addEdge } = run({ nodes: [makeNode('a', 'while')] })
     expect(connected).toBe(true)
@@ -802,19 +793,6 @@ describe('connectFromFirstFreeEgress', () => {
       source: 'a',
       target: 'new-1',
       sourceHandle: 'body',
-    })
-  })
-
-  it('picks the first free handle of a remote-execution anchor (body then then)', () => {
-    const { connected, addEdge } = run({
-      nodes: [makeNode('a', 'remote-execution'), makeNode('b', 'log')],
-      edges: [{ id: 'edge-a-b', source: 'a', target: 'b', sourceHandle: 'body' }],
-    })
-    expect(connected).toBe(true)
-    expect(addEdge.mock.calls[0][0]).toMatchObject({
-      source: 'a',
-      target: 'new-1',
-      sourceHandle: 'then',
     })
   })
 

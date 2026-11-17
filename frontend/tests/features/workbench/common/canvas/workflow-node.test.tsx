@@ -76,121 +76,41 @@ describe('WorkflowNode - WAVE Business Logic', () => {
   })
 
   describe('Icon Mapping (WAVE Registry)', () => {
-    it('maps "shell-script" elementType to the file terminal icon', async () => {
+    it.each([
+      ['maps "shell-script" elementType to the file terminal icon', 'Shell Script', 'shell-script', 'file-terminal'],
+      ['maps "http-client" elementType to globe icon', 'HTTP', 'http-client', 'globe'],
+      ['maps "python" elementType to file-code-2 icon', 'Python', 'python', 'file-code-2'],
+      ['maps "log" elementType to scroll-text icon', 'Log', 'log', 'scroll-text'],
+      ['maps "sql" elementType to database icon', 'SQL', 'sql', 'database'],
+      ['uses fallback box icon for unknown elementType', 'Custom', 'unknown-xyz', 'box'],
+    ])('%s', async (_title, label, elementType, iconName) => {
       const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
-          data={{ label: 'Shell Script', elementType: 'shell-script' }}
+          data={{ label, elementType }}
         />
       )
 
       const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'file-terminal')
+      expect(icon).toHaveAttribute('data-icon', iconName)
     })
 
-    it('maps "http-client" elementType to globe icon', async () => {
+    it.each([
+      ['maps "if-else" control elementType to git-fork icon', 'If/Else', 'if-else', 'git-fork'],
+      ['maps "loop" control elementType to repeat icon', 'Loop', 'loop', 'repeat'],
+      ['maps "parallel" control elementType to split icon', 'Parallel', 'parallel', 'split'],
+    ])('%s', async (_title, label, elementType, iconName) => {
       const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
-          data={{ label: 'HTTP', elementType: 'http-client' }}
+          data={{ label, elementType, nodeType: 'control' }}
         />
       )
 
       const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'globe')
-    })
-
-    it('maps "python" elementType to file-code-2 icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'Python', elementType: 'python' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'file-code-2')
-    })
-
-    it('maps "if-else" control elementType to git-fork icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'If/Else', elementType: 'if-else', nodeType: 'control' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'git-fork')
-    })
-
-    it('maps "loop" control elementType to repeat icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'Loop', elementType: 'loop', nodeType: 'control' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'repeat')
-    })
-
-    it('maps "parallel" control elementType to split icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'Parallel', elementType: 'parallel', nodeType: 'control' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'split')
-    })
-
-    it('maps "log" elementType to scroll-text icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'Log', elementType: 'log' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'scroll-text')
-    })
-
-    it('maps "sql" elementType to database icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'SQL', elementType: 'sql' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'database')
-    })
-
-    it('uses fallback box icon for unknown elementType', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
-      renderWithReactFlow(
-        <WorkflowNode
-          id="node-1"
-          data={{ label: 'Custom', elementType: 'unknown-xyz' }}
-        />
-      )
-
-      const icon = screen.getByTestId('workflow-node-icon')
-      expect(icon).toHaveAttribute('data-icon', 'box')
+      expect(icon).toHaveAttribute('data-icon', iconName)
     })
   })
 

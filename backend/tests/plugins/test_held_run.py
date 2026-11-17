@@ -428,8 +428,9 @@ class TestHeld:
     def test_the_timer_is_canceled_when_the_work_raises(
         self, cancels: Cancels, deadline: type[FakeTimer]
     ) -> None:
+        holding = _held_run.held(live_with(cancels))
         with pytest.raises(RuntimeError, match=exact("boom")):
-            with _held_run.held(live_with(cancels)):
+            with holding:
                 raise RuntimeError("boom")
 
         assert deadline.made[0].canceled is True
@@ -447,8 +448,9 @@ class TestHeld:
     def test_the_stop_is_released_when_the_work_raises(
         self, cancels: Cancels, deadline: type[FakeTimer], groups: HeldGroups
     ) -> None:
+        holding = _held_run.held(live_with(cancels))
         with pytest.raises(RuntimeError, match=exact("boom")):
-            with _held_run.held(live_with(cancels)):
+            with holding:
                 raise RuntimeError("boom")
 
         assert groups.cancels == []

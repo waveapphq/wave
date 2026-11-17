@@ -152,7 +152,7 @@ describe('useBreadcrumbContext - segments matrix', () => {
 
     const { result } = renderHook(() => useBreadcrumbContext(), { wrapper })
     await waitFor(() => {
-      expect((result.current.segments as Segment[]).length).toBe(2)
+      expect(result.current.segments as Segment[]).toHaveLength(2)
     })
     const segments = result.current.segments as Segment[]
     expect(segments[0]).toMatchObject({ type: 'suite', label: 'Healthchecks', href: '/suites/suite-1' })
@@ -170,7 +170,7 @@ describe('useBreadcrumbContext - segments matrix', () => {
 
     const { result } = renderHook(() => useBreadcrumbContext(), { wrapper })
     await waitFor(() => {
-      expect((result.current.segments as Segment[]).length).toBe(3)
+      expect(result.current.segments as Segment[]).toHaveLength(3)
     })
     const segments = result.current.segments as Segment[]
     expect(segments[0]).toMatchObject({ type: 'regression', label: 'Smoke - Prod', href: '/regressions/reg-1' })
@@ -208,7 +208,7 @@ describe('useBreadcrumbContext - segments matrix', () => {
 
     const { result } = renderHook(() => useBreadcrumbContext(), { wrapper })
     await waitFor(() => {
-      expect((result.current.segments as Segment[]).length).toBe(3)
+      expect(result.current.segments as Segment[]).toHaveLength(3)
     })
     const segments = result.current.segments as Segment[]
     expect(segments[0]).toMatchObject({ type: 'execution-root', label: 'Executions', href: '/executions' })
@@ -244,7 +244,7 @@ describe('useBreadcrumbContext - segments matrix', () => {
 
     const { result } = renderHook(() => useBreadcrumbContext(), { wrapper })
     await waitFor(() => {
-      expect((result.current.segments as Segment[]).length).toBe(4)
+      expect(result.current.segments as Segment[]).toHaveLength(4)
     })
     const segments = result.current.segments as Segment[]
     expect(segments[0]).toMatchObject({ type: 'execution-root', label: 'Executions', href: '/executions' })
@@ -284,7 +284,7 @@ describe('useBreadcrumbContext - caching', () => {
 
     const { result, rerender } = renderHook(() => useBreadcrumbContext(), { wrapper })
     await waitFor(() => {
-      expect((result.current.segments as Segment[]).length).toBe(2)
+      expect(result.current.segments as Segment[]).toHaveLength(2)
     })
     const callsAfterFirstRender = fetchSuiteDetailMock.mock.calls.length
 
@@ -293,7 +293,7 @@ describe('useBreadcrumbContext - caching', () => {
     rerender()
 
     // Re-renders MUST NOT re-fetch the same suite id; the cache holds.
-    expect(fetchSuiteDetailMock.mock.calls.length).toBe(callsAfterFirstRender)
+    expect(fetchSuiteDetailMock.mock.calls).toHaveLength(callsAfterFirstRender)
   })
 
   it('uses the cached suite name when suiteId toggles A -> B -> A', async () => {
@@ -324,7 +324,7 @@ describe('useBreadcrumbContext - caching', () => {
     await waitFor(() => {
       expect((result.current.segments as Segment[])[0].label).toBe('Suite suite-A')
     })
-    expect(fetchSuiteDetailMock.mock.calls.length).toBe(callsAfterB)
+    expect(fetchSuiteDetailMock.mock.calls).toHaveLength(callsAfterB)
   })
 
   it('uses the cached regression name when regressionId toggles A -> B -> A', async () => {
@@ -354,7 +354,7 @@ describe('useBreadcrumbContext - caching', () => {
     await waitFor(() => {
       expect((result.current.segments as Segment[])[0].label).toBe('Reg reg-A')
     })
-    expect(fetchRegressionDetailMock.mock.calls.length).toBe(callsAfterB)
+    expect(fetchRegressionDetailMock.mock.calls).toHaveLength(callsAfterB)
   })
 
   it('uses the cached parent execution info when parentExecutionId toggles A -> B -> A', async () => {
@@ -385,7 +385,7 @@ describe('useBreadcrumbContext - caching', () => {
     await waitFor(() => {
       expect((result.current.segments as Segment[])[1]?.label).toBe('Parent exec-A')
     })
-    expect(fetchExecutionMock.mock.calls.length).toBe(callsAfterB)
+    expect(fetchExecutionMock.mock.calls).toHaveLength(callsAfterB)
   })
 })
 
@@ -561,7 +561,7 @@ describe('useBreadcrumbContext - a name read that fails', () => {
     })
 
     await waitFor(() => {
-      expect((result.current.segments as Segment[]).length).toBe(2)
+      expect(result.current.segments as Segment[]).toHaveLength(2)
     })
     expect(usePageBlockStore.getState().block).toBeNull()
   })

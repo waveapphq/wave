@@ -59,36 +59,17 @@ describe('QuickActionCard Component', () => {
   })
 
   describe('Icon Rendering', () => {
-    it('renders plus icon', () => {
-      render(<QuickActionCard {...defaultProps} icon="plus" />)
+    it.each([
+      { icon: 'plus' as const },
+      { icon: 'play' as const },
+      { icon: 'bar-chart' as const },
+      { icon: 'compass' as const },
+    ])('renders $icon icon', ({ icon }) => {
+      render(<QuickActionCard {...defaultProps} icon={icon} />)
       const iconWrapper = screen
         .getByTestId('quick-action-new-test')
         .querySelector('[data-action-icon]')
-      expect(iconWrapper).toHaveAttribute('data-icon-name', 'plus')
-    })
-
-    it('renders play icon', () => {
-      render(<QuickActionCard {...defaultProps} icon="play" />)
-      const iconWrapper = screen
-        .getByTestId('quick-action-new-test')
-        .querySelector('[data-action-icon]')
-      expect(iconWrapper).toHaveAttribute('data-icon-name', 'play')
-    })
-
-    it('renders bar-chart icon', () => {
-      render(<QuickActionCard {...defaultProps} icon="bar-chart" />)
-      const iconWrapper = screen
-        .getByTestId('quick-action-new-test')
-        .querySelector('[data-action-icon]')
-      expect(iconWrapper).toHaveAttribute('data-icon-name', 'bar-chart')
-    })
-
-    it('renders compass icon', () => {
-      render(<QuickActionCard {...defaultProps} icon="compass" />)
-      const iconWrapper = screen
-        .getByTestId('quick-action-new-test')
-        .querySelector('[data-action-icon]')
-      expect(iconWrapper).toHaveAttribute('data-icon-name', 'compass')
+      expect(iconWrapper).toHaveAttribute('data-icon-name', icon)
     })
 
     it('icon has appropriate size', () => {
@@ -101,22 +82,14 @@ describe('QuickActionCard Component', () => {
   })
 
   describe('Title Styling', () => {
-    it('title has font-medium weight', () => {
+    it.each([
+      { trait: 'font-medium weight', className: 'font-medium' },
+      { trait: 'base text size', className: 'text-sm' },
+      { trait: 'primary text color by default', className: 'text-primary' },
+    ])('title has $trait', ({ className }) => {
       render(<QuickActionCard {...defaultProps} />)
       const title = screen.getByText('New Test')
-      expect(title).toHaveClass('font-medium')
-    })
-
-    it('title has base text size', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      const title = screen.getByText('New Test')
-      expect(title).toHaveClass('text-sm')
-    })
-
-    it('title has primary text color by default', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      const title = screen.getByText('New Test')
-      expect(title).toHaveClass('text-primary')
+      expect(title).toHaveClass(className)
     })
 
     it('title has white color for primary variant', () => {
@@ -147,26 +120,14 @@ describe('QuickActionCard Component', () => {
   })
 
   describe('Default Variant Styling', () => {
-    it('applies card base class', () => {
+    it.each([
+      { name: 'card base class', className: 'card' },
+      { name: 'card background', className: 'bg-card' },
+      { name: 'border', className: 'border' },
+      { name: 'rounded corners', className: 'rounded-lg' },
+    ])('applies $name', ({ className }) => {
       render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass('card')
-    })
-
-    it('applies card background', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass('bg-card')
-    })
-
-    it('applies border', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass('border')
-    })
-
-    it('applies rounded corners', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'rounded-lg'
-      )
+      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(className)
     })
 
     it('icon has muted color for default variant', () => {
@@ -210,40 +171,16 @@ describe('QuickActionCard Component', () => {
   })
 
   describe('Card Layout', () => {
-    it('applies flex layout', () => {
+    it.each([
+      { name: 'applies flex layout', className: 'flex' },
+      { name: 'applies column direction', className: 'flex-col' },
+      { name: 'has gap between elements', className: 'gap-2' },
+      { name: 'has padding', className: 'p-4' },
+      { name: 'centers content', className: 'items-center' },
+      { name: 'centers text', className: 'text-center' },
+    ])('$name', ({ className }) => {
       render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass('flex')
-    })
-
-    it('applies column direction', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'flex-col'
-      )
-    })
-
-    it('has gap between elements', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass('gap-2')
-    })
-
-    it('has padding', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass('p-4')
-    })
-
-    it('centers content', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'items-center'
-      )
-    })
-
-    it('centers text', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'text-center'
-      )
+      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(className)
     })
   })
 
@@ -258,25 +195,13 @@ describe('QuickActionCard Component', () => {
       expect(handleClick).toHaveBeenCalledTimes(1)
     })
 
-    it('applies cursor-pointer', () => {
+    it.each([
+      { name: 'cursor-pointer', className: 'cursor-pointer' },
+      { name: 'hover shadow for default variant', className: 'hover:shadow-md' },
+      { name: 'hover lift effect', className: 'hover:-translate-y-0.5' },
+    ])('applies $name', ({ className }) => {
       render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'cursor-pointer'
-      )
-    })
-
-    it('applies hover shadow for default variant', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'hover:shadow-md'
-      )
-    })
-
-    it('applies hover lift effect', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'hover:-translate-y-0.5'
-      )
+      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(className)
     })
 
     it('is focusable', () => {
@@ -463,25 +388,16 @@ describe('QuickActionCard Component', () => {
   })
 
   describe('Transitions', () => {
-    it('applies transition for hover/focus states', () => {
+    it.each([
+      {
+        name: 'applies hover/focus transition',
+        className: 'transition-[transform,box-shadow,background-color]',
+      },
+      { name: 'has appropriate transition duration', className: 'duration-200' },
+      { name: 'respects reduced-motion preference', className: 'motion-reduce:transition-none' },
+    ])('$name', ({ className }) => {
       render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'transition-[transform,box-shadow,background-color]'
-      )
-    })
-
-    it('has appropriate transition duration', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'duration-200'
-      )
-    })
-
-    it('respects reduced-motion preference', () => {
-      render(<QuickActionCard {...defaultProps} />)
-      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(
-        'motion-reduce:transition-none'
-      )
+      expect(screen.getByTestId('quick-action-new-test')).toHaveClass(className)
     })
   })
 })

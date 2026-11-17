@@ -50,7 +50,7 @@ describe('ActionBarReadonlyChrome - read-only variant (default)', () => {
     const splitters = container.querySelectorAll(
       '[data-testid="action-bar-readonly-splitter"]',
     )
-    expect(splitters.length).toBe(2)
+    expect(splitters).toHaveLength(2)
   })
 
   it('Edit button is NOT disabled', () => {
@@ -101,7 +101,7 @@ describe('ActionBarReadonlyChrome - edit-mode variant', () => {
     const splitters = container.querySelectorAll(
       '[data-testid="action-bar-readonly-splitter"]',
     )
-    expect(splitters.length).toBe(2)
+    expect(splitters).toHaveLength(2)
   })
 })
 

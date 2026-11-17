@@ -80,10 +80,10 @@ export function VariableSetterEditor({
   onValidChange,
   secretSaveTarget,
 }: Readonly<VariableSetterEditorProps>) {
-  const [heldRows, setRows] = useState<VariableRow[]>(() => rowsAtOpen(slots, availableVariables))
+  const [heldRows, setHeldRows] = useState<VariableRow[]>(() => rowsAtOpen(slots, availableVariables))
   const rows = useMemo(() => declaredRows(heldRows, availableVariables), [heldRows, availableVariables])
   const rowGuard = useRowRemovalGuard()
-  const ops = useRowOperations(rows, setRows, { availableVariables, onSlotsChange, onValidChange })
+  const ops = useRowOperations(rows, setHeldRows, { availableVariables, onSlotsChange, onValidChange })
 
   // Auto-focus: first empty row on mount, or newly added row
   const firstNameRef = useRef<HTMLTextAreaElement>(null)

@@ -150,18 +150,24 @@ describe('PalettePanel', () => {
       )
     })
 
-    it('hides flyout when clicking outside', async () => {
+    it.each([
+      ['hides flyout when clicking outside', 'controls'],
+      ['closes search flyout when clicking outside', 'search'],
+      ['closes recent flyout when clicking outside', 'recent'],
+      ['closes most-used flyout when clicking outside', 'most-used'],
+      ['closes plugins flyout when clicking outside', 'plugins'],
+    ])('%s', async (_title, flyout) => {
       const user = userEvent.setup()
       const { PalettePanel } = await import('@/features/workbench/common/palette')
       render(<PalettePanel defaultCollapsed={true} />, { wrapper: Wrapper })
 
-      await user.click(screen.getByTestId('palette-icon-controls'))
-      expect(await screen.findByTestId('palette-flyout-controls')).toBeInTheDocument()
+      await user.click(screen.getByTestId(`palette-icon-${flyout}`))
+      expect(await screen.findByTestId(`palette-flyout-${flyout}`)).toBeInTheDocument()
 
       // Click outside to close
       await user.click(document.body)
       await waitFor(() => {
-        expect(screen.queryByTestId('palette-flyout-controls')).not.toBeInTheDocument()
+        expect(screen.queryByTestId(`palette-flyout-${flyout}`)).not.toBeInTheDocument()
       })
     })
 
@@ -269,36 +275,6 @@ describe('PalettePanel', () => {
       expect(searchInput).toHaveValue('')
     })
 
-    it('closes search flyout when clicking outside', async () => {
-      const user = userEvent.setup()
-      const { PalettePanel } = await import('@/features/workbench/common/palette')
-      render(<PalettePanel defaultCollapsed={true} />, { wrapper: Wrapper })
-
-      await user.click(screen.getByTestId('palette-icon-search'))
-      expect(await screen.findByTestId('palette-flyout-search')).toBeInTheDocument()
-
-      // Click outside to close
-      await user.click(document.body)
-      await waitFor(() => {
-        expect(screen.queryByTestId('palette-flyout-search')).not.toBeInTheDocument()
-      })
-    })
-
-    it('closes recent flyout when clicking outside', async () => {
-      const user = userEvent.setup()
-      const { PalettePanel } = await import('@/features/workbench/common/palette')
-      render(<PalettePanel defaultCollapsed={true} />, { wrapper: Wrapper })
-
-      await user.click(screen.getByTestId('palette-icon-recent'))
-      expect(await screen.findByTestId('palette-flyout-recent')).toBeInTheDocument()
-
-      // Click outside to close
-      await user.click(document.body)
-      await waitFor(() => {
-        expect(screen.queryByTestId('palette-flyout-recent')).not.toBeInTheDocument()
-      })
-    })
-
     it('shows empty recent flyout when no recent usage', async () => {
       const user = userEvent.setup()
       const { PalettePanel } = await import('@/features/workbench/common/palette')
@@ -397,36 +373,6 @@ describe('PalettePanel', () => {
 
       // Clean up mock
       vi.doUnmock('@/features/workbench/stores/palette-usage-store')
-    })
-
-    it('closes most-used flyout when clicking outside', async () => {
-      const user = userEvent.setup()
-      const { PalettePanel } = await import('@/features/workbench/common/palette')
-      render(<PalettePanel defaultCollapsed={true} />, { wrapper: Wrapper })
-
-      await user.click(screen.getByTestId('palette-icon-most-used'))
-      expect(await screen.findByTestId('palette-flyout-most-used')).toBeInTheDocument()
-
-      // Click outside to close
-      await user.click(document.body)
-      await waitFor(() => {
-        expect(screen.queryByTestId('palette-flyout-most-used')).not.toBeInTheDocument()
-      })
-    })
-
-    it('closes plugins flyout when clicking outside', async () => {
-      const user = userEvent.setup()
-      const { PalettePanel } = await import('@/features/workbench/common/palette')
-      render(<PalettePanel defaultCollapsed={true} />, { wrapper: Wrapper })
-
-      await user.click(screen.getByTestId('palette-icon-plugins'))
-      expect(await screen.findByTestId('palette-flyout-plugins')).toBeInTheDocument()
-
-      // Click outside to close
-      await user.click(document.body)
-      await waitFor(() => {
-        expect(screen.queryByTestId('palette-flyout-plugins')).not.toBeInTheDocument()
-      })
     })
 
     it('forwards the collapsed Library icon click to onOpenFunctionLibrary', async () => {

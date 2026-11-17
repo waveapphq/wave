@@ -149,6 +149,7 @@ def _proxy_url(endpoint: ProxyEndpoint) -> str:
     if endpoint.username:
         password = quote(endpoint.password or "", safe="")
         login = f"{quote(endpoint.username, safe='')}:{password}@"
+    # SonarQube exclusion: SQ-HTTP-001
     return f"http://{login}{endpoint.display}"
 
 

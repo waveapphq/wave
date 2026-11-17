@@ -129,18 +129,20 @@ class TestStringParameterTypes:
     )
     async def test_non_string_is_refused(self, operation: str, name: str) -> None:
         message = f"Parameter '{name}' must be a string, got int"
+        params = params_for(operation, **{name: 123})
 
         with pytest.raises(TypeError, match=exact(message)):
-            await FileIOPlugin().validate(params_for(operation, **{name: 123}))
+            await FileIOPlugin().validate(params)
 
     @pytest.mark.parametrize(
         ("value", "type_name"), [(None, "NoneType"), ([], "list"), ({}, "dict"), (1.5, "float")]
     )
     async def test_type_name_comes_from_the_value(self, value: Any, type_name: str) -> None:
         message = f"Parameter 'path' must be a string, got {type_name}"
+        params = params_for("read", path=value)
 
         with pytest.raises(TypeError, match=exact(message)):
-            await FileIOPlugin().validate(params_for("read", path=value))
+            await FileIOPlugin().validate(params)
 
 
 class TestBooleanParameterTypes:
@@ -157,16 +159,18 @@ class TestBooleanParameterTypes:
     )
     async def test_non_boolean_is_refused(self, operation: str, name: str) -> None:
         message = f"Parameter '{name}' must be a boolean, got str"
+        params = params_for(operation, **{name: "true"})
 
         with pytest.raises(TypeError, match=exact(message)):
-            await FileIOPlugin().validate(params_for(operation, **{name: "true"}))
+            await FileIOPlugin().validate(params)
 
     @pytest.mark.parametrize(("value", "type_name"), [(1, "int"), (None, "NoneType"), ("", "str")])
     async def test_type_name_comes_from_the_value(self, value: Any, type_name: str) -> None:
         message = f"Parameter 'missing_ok' must be a boolean, got {type_name}"
+        params = params_for("delete", missing_ok=value)
 
         with pytest.raises(TypeError, match=exact(message)):
-            await FileIOPlugin().validate(params_for("delete", missing_ok=value))
+            await FileIOPlugin().validate(params)
 
     @pytest.mark.parametrize(
         ("operation", "name"),
@@ -192,9 +196,10 @@ class TestIfExistsWrite:
     @pytest.mark.parametrize("value", ["replace", "OVERWRITE", "", 5])
     async def test_refused_values(self, value: Any) -> None:
         message = f"Invalid if_exists: {value!r}. Must be 'overwrite', 'append' or 'fail'."
+        params = params_for("write", if_exists=value)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await FileIOPlugin().validate(params_for("write", if_exists=value))
+            await FileIOPlugin().validate(params)
 
 
 class TestIfExistsCopyAndMove:
@@ -209,9 +214,10 @@ class TestIfExistsCopyAndMove:
     @pytest.mark.parametrize("value", ["append", "replace", "", 5])
     async def test_refused_values(self, operation: str, value: Any) -> None:
         message = f"Invalid if_exists: {value!r}. Must be 'overwrite' or 'fail'."
+        params = params_for(operation, if_exists=value)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await FileIOPlugin().validate(params_for(operation, if_exists=value))
+            await FileIOPlugin().validate(params)
 
 
 class TestChecksumParameter:
@@ -226,9 +232,10 @@ class TestChecksumParameter:
         message = (
             f"Invalid checksum: {value!r}. Must be 'none', 'md5', 'sha1', 'sha256' or 'sha512'."
         )
+        params = params_for("stats", checksum=value)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await FileIOPlugin().validate(params_for("stats", checksum=value))
+            await FileIOPlugin().validate(params)
 
 
 class TestOutputFormatParameter:
@@ -241,9 +248,10 @@ class TestOutputFormatParameter:
     @pytest.mark.parametrize("value", ["rows", "Individual", "", 0])
     async def test_refused_values(self, value: Any) -> None:
         message = f"Invalid output_format: {value!r}. Must be 'individual', 'map' or 'table'."
+        params = params_for("stats", output_format=value)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await FileIOPlugin().validate(params_for("stats", output_format=value))
+            await FileIOPlugin().validate(params)
 
 
 class TestPatternParameter:
@@ -256,9 +264,10 @@ class TestPatternParameter:
     @pytest.mark.parametrize("value", ["[", "(", "*", "a{2,1}"])
     async def test_pattern_that_does_not_compile(self, value: str) -> None:
         message = f"Invalid pattern: {compile_reason(value)}"
+        params = params_for("list", pattern=value)
 
         with pytest.raises(ValueError, match=exact(message)):
-            await FileIOPlugin().validate(params_for("list", pattern=value))
+            await FileIOPlugin().validate(params)
 
 
 class TestParentAndRelativePaths:

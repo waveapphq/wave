@@ -244,46 +244,62 @@ class TestExcelParserValidation:
             await ExcelParserPlugin().validate({"operation": "read", "workbook": 7})
 
     async def test_invalid_column_types(self) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(column_types="guess")
+
         with pytest.raises(
             ValueError,
             match=exact("Parameter 'column_types' must be one of: auto, string, schema"),
         ):
-            await ExcelParserPlugin().validate(
-                read_sample(column_types="guess"),
-            )
+            await plugin.validate(parameters)
 
     async def test_schema_mode_without_schema_source(self) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(column_types="schema")
+
         with pytest.raises(
             ValueError,
             match=exact("Column types 'schema' requires a schema table in 'schema_source'"),
         ):
-            await ExcelParserPlugin().validate(read_sample(column_types="schema"))
+            await plugin.validate(parameters)
 
     async def test_invalid_empty_cells(self) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(empty_cells="blank")
+
         with pytest.raises(
             ValueError, match=exact("Parameter 'empty_cells' must be one of: none, default")
         ):
-            await ExcelParserPlugin().validate(read_sample(empty_cells="blank"))
+            await plugin.validate(parameters)
 
     async def test_invalid_on_mismatch(self) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(on_mismatch="ignore")
+
         with pytest.raises(
             ValueError,
             match=exact("Parameter 'on_mismatch' must be one of: fail, skip_row, replace_default"),
         ):
-            await ExcelParserPlugin().validate(read_sample(on_mismatch="ignore"))
+            await plugin.validate(parameters)
 
     @pytest.mark.parametrize("header_row", [0, -1])
     async def test_header_row_below_one(self, header_row: int) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(header_row=header_row)
+
         with pytest.raises(ValueError, match=exact("Parameter 'header_row' must be 1 or greater")):
-            await ExcelParserPlugin().validate(read_sample(header_row=header_row))
+            await plugin.validate(parameters)
 
     @pytest.mark.parametrize("bad_range", ["A1", "1:5", "A1-F200", "hello", "A1:", ":F200"])
     async def test_invalid_range(self, bad_range: str) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(**{"range": bad_range})
+
         with pytest.raises(
             ValueError,
             match=exact("Parameter 'range' must be a cell range in A1 notation, e.g. A1:F200"),
         ):
-            await ExcelParserPlugin().validate(read_sample(**{"range": bad_range}))
+            await plugin.validate(parameters)
 
     @pytest.mark.parametrize("good_range", ["A1:F200", "a1:f200", "B3:D6", "AA10:AB20"])
     async def test_valid_range_accepted(self, good_range: str) -> None:
@@ -291,18 +307,19 @@ class TestExcelParserValidation:
 
     @pytest.mark.parametrize("bad_cell", ["A1:B2", "1A", "hello", "", "A"])
     async def test_invalid_start_cell(self, bad_cell: str) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = {
+            "operation": "write",
+            "workbook": str(SAMPLE),
+            "table": Table(),
+            "start_cell": bad_cell,
+        }
+
         with pytest.raises(
             ValueError,
             match=exact("Parameter 'start_cell' must be a single cell in A1 notation, e.g. A1"),
         ):
-            await ExcelParserPlugin().validate(
-                {
-                    "operation": "write",
-                    "workbook": str(SAMPLE),
-                    "table": Table(),
-                    "start_cell": bad_cell,
-                }
-            )
+            await plugin.validate(parameters)
 
     @pytest.mark.parametrize("good_cell", ["A1", "b3", "AA10"])
     async def test_valid_start_cell_accepted(self, good_cell: str) -> None:
@@ -316,18 +333,19 @@ class TestExcelParserValidation:
         )
 
     async def test_invalid_if_exists(self) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = {
+            "operation": "write",
+            "workbook": str(SAMPLE),
+            "table": Table(),
+            "if_exists": "append",
+        }
+
         with pytest.raises(
             ValueError,
             match=exact("Parameter 'if_exists' must be one of: keep_sheets, replace_file"),
         ):
-            await ExcelParserPlugin().validate(
-                {
-                    "operation": "write",
-                    "workbook": str(SAMPLE),
-                    "table": Table(),
-                    "if_exists": "append",
-                }
-            )
+            await plugin.validate(parameters)
 
     async def test_write_without_table(self) -> None:
         with pytest.raises(ValueError, match=exact("Missing required parameter: table")):
@@ -349,13 +367,14 @@ class TestExcelParserValidation:
         ("value", "type_name"), [("schema_tab", "str"), (7, "int"), (["a", "b"], "list")]
     )
     async def test_schema_source_not_table_shaped(self, value: Any, type_name: str) -> None:
+        plugin = ExcelParserPlugin()
+        parameters = read_sample(column_types="schema", schema_source=value)
+
         with pytest.raises(
             TypeError,
             match=exact(f"Parameter 'schema_source' must be a table, got {type_name}"),
         ):
-            await ExcelParserPlugin().validate(
-                read_sample(column_types="schema", schema_source=value)
-            )
+            await plugin.validate(parameters)
 
     async def test_read_accepts_a_stored_form_schema_source(self) -> None:
         """A schema table declared in the Variable Manager is table-shaped."""
@@ -656,6 +675,9 @@ class TestExcelParserSheetSelection:
         assert result["table"].col_names()[0] == "name"
 
     async def test_unknown_sheet_name_lists_the_available_sheets(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample(sheet="Ghost"))
+
         with pytest.raises(
             ValueError,
             match=exact(
@@ -663,21 +685,27 @@ class TestExcelParserSheetSelection:
                 "Dates, Empty"
             ),
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample(sheet="Ghost")))
+            await plugin.execute(context)
 
     async def test_position_beyond_the_last_sheet(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample(sheet="9"))
+
         with pytest.raises(
             ValueError,
             match=exact("Sheet position 9 is out of range - the workbook has 5 sheet(s)"),
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample(sheet="9")))
+            await plugin.execute(context)
 
     async def test_position_zero_is_out_of_range(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample(sheet="0"))
+
         with pytest.raises(
             ValueError,
             match=exact("Sheet position 0 is out of range - the workbook has 5 sheet(s)"),
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample(sheet="0")))
+            await plugin.execute(context)
 
     async def test_empty_sheet_yields_no_rows(self) -> None:
         result = await ExcelParserPlugin().execute(make_context(read_sample(sheet="Empty")))
@@ -761,11 +789,14 @@ class TestExcelParserRangeAndHeaderRow:
         assert rows_of(result) == [{"A": "Quarterly Report", "B": None, "C": None, "D": None}]
 
     async def test_range_outside_the_used_area(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample(**{"range": "Z90:AA95"}))
+
         with pytest.raises(
             ValueError,
             match=exact("Range Z90:AA95 is outside the sheet's data (used area A1:E4)"),
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample(**{"range": "Z90:AA95"})))
+            await plugin.execute(context)
 
     async def test_range_extending_past_the_used_area_reads_empty_cells(self) -> None:
         result = await ExcelParserPlugin().execute(make_context(read_sample(**{"range": "A1:G4"})))
@@ -782,10 +813,13 @@ class TestExcelParserRangeAndHeaderRow:
         assert result["table"].col("G") == [None, None, None]
 
     async def test_header_row_outside_the_sheet(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample(header_row=99))
+
         with pytest.raises(
             ValueError, match=exact("Header row 99 is outside the sheet (rows 1-4)")
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample(header_row=99)))
+            await plugin.execute(context)
 
 
 # =============================================================================
@@ -928,27 +962,27 @@ class TestExcelParserSchemaMode:
 
     async def test_mismatch_fail_aborts_with_the_exact_message(self) -> None:
         schema = self._schema(("name", "integer"))
+        plugin = ExcelParserPlugin()
+        context = make_context(
+            read_sample(column_types="schema", schema_source=schema, on_mismatch="fail")
+        )
 
         with pytest.raises(
             ValueError,
             match=exact("Type mismatch in column 'name': 'Ada' is not a valid integer"),
         ):
-            await ExcelParserPlugin().execute(
-                make_context(
-                    read_sample(column_types="schema", schema_source=schema, on_mismatch="fail")
-                )
-            )
+            await plugin.execute(context)
 
     async def test_mismatch_fail_is_the_default(self) -> None:
         schema = self._schema(("name", "integer"))
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample(column_types="schema", schema_source=schema))
 
         with pytest.raises(
             ValueError,
             match=exact("Type mismatch in column 'name': 'Ada' is not a valid integer"),
         ):
-            await ExcelParserPlugin().execute(
-                make_context(read_sample(column_types="schema", schema_source=schema))
-            )
+            await plugin.execute(context)
 
     async def test_mismatch_skip_row_drops_the_offending_rows(self) -> None:
         schema = self._schema(("name", "integer"))
@@ -1208,17 +1242,21 @@ class TestExcelParserPathResolution:
         assert not (tmp_path / "out.xlsx").exists()
 
     async def test_artifact_scheme_without_an_artifacts_directory(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context({"operation": "read", "workbook": "artifact://a.xlsx"})
+
         with pytest.raises(
             ValueError,
             match=exact(
                 "artifact:// scheme requires artifacts directory, but none configured in context"
             ),
         ):
-            await ExcelParserPlugin().execute(
-                make_context({"operation": "read", "workbook": "artifact://a.xlsx"})
-            )
+            await plugin.execute(context)
 
     async def test_testdata_scheme_without_test_data_directories(self) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context({"operation": "read", "workbook": "testdata://a.xlsx"})
+
         with pytest.raises(
             ValueError,
             match=exact(
@@ -1226,38 +1264,37 @@ class TestExcelParserPathResolution:
                 "but none configured in context"
             ),
         ):
-            await ExcelParserPlugin().execute(
-                make_context({"operation": "read", "workbook": "testdata://a.xlsx"})
-            )
+            await plugin.execute(context)
 
     async def test_missing_workbook_names_the_path_as_typed(self, tmp_path) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(
+            {"operation": "read", "workbook": "artifact://absent.xlsx"},
+            artifacts_dir=str(tmp_path),
+        )
+
         with pytest.raises(ValueError, match=exact("Workbook not found: artifact://absent.xlsx")):
-            await ExcelParserPlugin().execute(
-                make_context(
-                    {"operation": "read", "workbook": "artifact://absent.xlsx"},
-                    artifacts_dir=str(tmp_path),
-                )
-            )
+            await plugin.execute(context)
 
     async def test_missing_absolute_workbook(self, tmp_path) -> None:
         target = tmp_path / "absent.xlsx"
+        plugin = ExcelParserPlugin()
+        context = make_context({"operation": "read", "workbook": str(target)})
 
         with pytest.raises(ValueError, match=exact(f"Workbook not found: {target}")):
-            await ExcelParserPlugin().execute(
-                make_context({"operation": "read", "workbook": str(target)})
-            )
+            await plugin.execute(context)
 
     async def test_a_file_that_is_not_a_workbook(self, tmp_path) -> None:
         impostor = tmp_path / "notes.xlsx"
         impostor.write_text("this is not a workbook\n")
+        plugin = ExcelParserPlugin()
+        context = make_context({"operation": "read", "workbook": str(impostor)})
 
         with pytest.raises(
             ValueError,
             match=exact("Cannot read workbook: notes.xlsx is not a valid .xlsx/.xlsm file"),
         ):
-            await ExcelParserPlugin().execute(
-                make_context({"operation": "read", "workbook": str(impostor)})
-            )
+            await plugin.execute(context)
 
 
 # =============================================================================
@@ -1276,17 +1313,21 @@ class TestExcelParserResourceGuards:
     async def test_compressed_size_guard(self, monkeypatch) -> None:
         monkeypatch.setattr(excel_module, "_MAX_COMPRESSED_BYTES", 100)
         size = SAMPLE.stat().st_size
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample())
 
         with pytest.raises(
             ValueError,
             match=exact(f"Workbook too large: {size} bytes exceeds the 100 bytes limit"),
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample()))
+            await plugin.execute(context)
 
     async def test_uncompressed_size_guard(self, monkeypatch) -> None:
         monkeypatch.setattr(excel_module, "_MAX_UNCOMPRESSED_BYTES", 100)
         with zipfile.ZipFile(SAMPLE) as archive:
             expanded = sum(info.file_size for info in archive.infolist())
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample())
 
         with pytest.raises(
             ValueError,
@@ -1294,15 +1335,17 @@ class TestExcelParserResourceGuards:
                 f"Workbook content too large: {expanded} bytes exceeds the 100 bytes limit"
             ),
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample()))
+            await plugin.execute(context)
 
     async def test_cell_count_guard(self, monkeypatch) -> None:
         monkeypatch.setattr(excel_module, "_MAX_CELLS", 4)
+        plugin = ExcelParserPlugin()
+        context = make_context(read_sample())
 
         with pytest.raises(
             ValueError, match=exact("Workbook content too large: 20 cells exceed the 4 limit")
         ):
-            await ExcelParserPlugin().execute(make_context(read_sample()))
+            await plugin.execute(context)
 
     async def test_cell_count_guard_measures_the_range_not_the_sheet(self, monkeypatch) -> None:
         monkeypatch.setattr(excel_module, "_MAX_CELLS", 15)
@@ -1749,27 +1792,37 @@ class TestExcelParserWrite:
         assert result["file"] == str(tmp_path / "reports" / "out.xlsx")
 
     async def test_writing_to_testdata_is_refused(self, tmp_path) -> None:
+        plugin = ExcelParserPlugin()
+        context = make_context(
+            {
+                "operation": "write",
+                "workbook": "testdata://out.xlsx",
+                "table": _people_table(),
+            },
+            testdata_dirs=[str(tmp_path)],
+        )
+
         with pytest.raises(
             ValueError,
             match=exact(
                 "testdata:// paths are read-only. Cannot write, move, or delete testdata files."
             ),
         ):
-            await ExcelParserPlugin().execute(
-                make_context(
-                    {
-                        "operation": "write",
-                        "workbook": "testdata://out.xlsx",
-                        "table": _people_table(),
-                    },
-                    testdata_dirs=[str(tmp_path)],
-                )
-            )
+            await plugin.execute(context)
 
     async def test_an_absolute_target_inside_test_data_is_refused(self, tmp_path) -> None:
         """The refusal is about where the file lands, not about the scheme it was named with."""
         testdata = tmp_path / "testdata"
         testdata.mkdir()
+        plugin = ExcelParserPlugin()
+        context = make_context(
+            {
+                "operation": "write",
+                "workbook": str(testdata / "out.xlsx"),
+                "table": _people_table(),
+            },
+            testdata_dirs=[str(testdata)],
+        )
 
         with pytest.raises(
             ValueError,
@@ -1777,20 +1830,20 @@ class TestExcelParserWrite:
                 "testdata:// paths are read-only. Cannot write, move, or delete testdata files."
             ),
         ):
-            await ExcelParserPlugin().execute(
-                make_context(
-                    {
-                        "operation": "write",
-                        "workbook": str(testdata / "out.xlsx"),
-                        "table": _people_table(),
-                    },
-                    testdata_dirs=[str(testdata)],
-                )
-            )
+            await plugin.execute(context)
 
     async def test_a_nested_absolute_target_inside_test_data_is_refused(self, tmp_path) -> None:
         testdata = tmp_path / "testdata"
         (testdata / "sheets").mkdir(parents=True)
+        plugin = ExcelParserPlugin()
+        context = make_context(
+            {
+                "operation": "write",
+                "workbook": str(testdata / "sheets" / "out.xlsx"),
+                "table": _people_table(),
+            },
+            testdata_dirs=[str(testdata)],
+        )
 
         with pytest.raises(
             ValueError,
@@ -1798,16 +1851,7 @@ class TestExcelParserWrite:
                 "testdata:// paths are read-only. Cannot write, move, or delete testdata files."
             ),
         ):
-            await ExcelParserPlugin().execute(
-                make_context(
-                    {
-                        "operation": "write",
-                        "workbook": str(testdata / "sheets" / "out.xlsx"),
-                        "table": _people_table(),
-                    },
-                    testdata_dirs=[str(testdata)],
-                )
-            )
+            await plugin.execute(context)
 
     async def test_a_target_beside_the_test_data_folder_is_written(self, tmp_path) -> None:
         testdata = tmp_path / "testdata"
@@ -2062,8 +2106,10 @@ class TestExcelParserNullEntries:
         table = Table(columns=[("name", "string"), ("age", "integer")])
         table.add_row(["Ada", 36])
         params = {"operation": "write", "workbook": str(target), "table": table, setting: [None]}
+        plugin = ExcelParserPlugin()
+        context = make_context(params)
 
         with pytest.raises(NullValueError, match=exact(f"Row 1 in '{setting}' is null")):
-            await ExcelParserPlugin().execute(make_context(params))
+            await plugin.execute(context)
 
         assert not target.exists()

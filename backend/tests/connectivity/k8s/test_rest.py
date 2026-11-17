@@ -91,6 +91,7 @@ def _tls_facts_server(
         context.load_verify_locations(material.ca_cert_path)
     if max_tls12:
         context.maximum_version = ssl.TLSVersion.TLSv1_2
+    # CodeQL exclusion: CQL-TLS-001
     server.socket = context.wrap_socket(server.socket, server_side=True)  # type: ignore[assignment]
     return _start_server(server, "https")
 
@@ -435,8 +436,9 @@ class TestWaveTrust:
         wave_trust: _WaveTrust,
     ) -> None:
         wave_trust.pem = tls_material.client_cert_pem
+        client = _client(tls_server.base_url)
         with pytest.raises(K8sApiError, match=_exact(_untrusted(tls_server.base_url))):
-            _client(tls_server.base_url).request("GET", "/version", None)
+            client.request("GET", "/version", None)
 
     def test_a_session_ca_is_the_only_certificate_trusted(
         self,
@@ -586,12 +588,13 @@ class TestTransportFailures:
         port = probe.getsockname()[1]
         probe.close()
         api_url = f"http://127.0.0.1:{port}"
+        client = _client(api_url)
 
         with pytest.raises(
             Exception,
             match=rf"^Could not connect to the Kubernetes API at {re.escape(api_url)}: .+$",
         ):
-            _client(api_url).request("GET", "/version", None)
+            client.request("GET", "/version", None)
 
     def test_request_timeout_maps_to_the_timeout_message(
         self, http_server: RecordingHTTPServer
@@ -609,12 +612,13 @@ class TestTransportFailures:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(K8sClient, "_connect", lambda _self: _StalledWire([]))
+        client = _client(_FAKE_SERVER, timeout=1)
 
         with pytest.raises(
             K8sApiError,
             match=_exact("Kubernetes API request GET /api/v1/pods timed out after 1 second"),
         ):
-            _client(_FAKE_SERVER, timeout=1).request("GET", "/api/v1/pods", None)
+            client.request("GET", "/api/v1/pods", None)
 
 
 class TestServerVersion:
@@ -646,31 +650,34 @@ class TestServerVersion:
         self, http_server: RecordingHTTPServer
     ) -> None:
         _enqueue_json(http_server, {"kind": "Status", "message": "apiserver not ready"}, status=503)
+        client = _client(http_server.base_url)
 
         with pytest.raises(
             Exception,
             match=_exact("Kubernetes API request GET /version failed (503): apiserver not ready"),
         ):
-            _client(http_server.base_url).server_version()
+            client.server_version()
 
     def test_server_version_error_without_a_message_names_only_the_status(
         self, http_server: RecordingHTTPServer
     ) -> None:
         http_server.enqueue(status=502, body=_HTML_ERROR_PAGE, content_type="text/html")
+        client = _client(http_server.base_url)
 
         with pytest.raises(
             Exception,
             match=_exact("Kubernetes API request GET /version failed (502)"),
         ):
-            _client(http_server.base_url).server_version()
+            client.server_version()
 
     def test_server_version_on_a_body_that_is_not_json_raises_the_unreadable_message(
         self, http_server: RecordingHTTPServer
     ) -> None:
         http_server.enqueue(status=200, body=b"ok", content_type="text/plain")
+        client = _client(http_server.base_url)
 
         with pytest.raises(K8sApiError, match=_exact(_UNREADABLE_MESSAGE)):
-            _client(http_server.base_url).server_version()
+            client.server_version()
 
 
 class TestTokenRequest:
@@ -730,8 +737,10 @@ class TestTokenRequest:
             "wave-tests/token failed (403): tokenrequests.authentication.k8s.io is forbidden"
         )
 
+        client = _client(http_server.base_url)
+
         with pytest.raises(Exception, match=_exact(message)):
-            _client(http_server.base_url).token_request("wave-tests", "default", 600)
+            client.token_request("wave-tests", "default", 600)
 
 
 _FAKE_SERVER = "https://k8s.example:6443"
@@ -2362,6 +2371,7 @@ def _quick_server(material: TLSMaterial | None = None) -> RecordingHTTPServer:
     if material is not None:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(material.server_cert_path, material.server_key_path)
+        # CodeQL exclusion: CQL-TLS-001
         listening: Any = context.wrap_socket(server.socket, server_side=True)
         server.socket = listening
         scheme = "https"
@@ -2619,20 +2629,22 @@ class TestProxyFailures:
                 f"Proxy 127.0.0.1:{server.port} refused the connection to "
                 f"127.0.0.1:{target}: 403 Forbidden"
             )
+            client = _client(api_url, tls_material)
 
             with pytest.raises(K8sApiError, match=_exact(message)):
-                _client(api_url, tls_material).request("GET", "/version", None)
+                client.request("GET", "/version", None)
 
     def test_a_proxy_that_cannot_be_reached_is_named(self, tls_material: TLSMaterial) -> None:
         api_url = f"https://127.0.0.1:{closed_port()}"
         dead = closed_port()
         _proxy_in_force(https=dead)
         prefix = re.escape(f"Could not connect to the Kubernetes API at {api_url}: ")
+        client = _client(api_url, tls_material)
 
         with pytest.raises(
             K8sApiError, match=rf"^{prefix}Proxy 127\.0\.0\.1:{dead} cannot be reached: .+$"
         ):
-            _client(api_url, tls_material).request("GET", "/version", None)
+            client.request("GET", "/version", None)
 
     def test_a_wave_host_value_wave_cannot_use_keeps_its_own_text(
         self, tls_cluster: RecordingHTTPServer, tls_material: TLSMaterial
@@ -2642,8 +2654,9 @@ class TestProxyFailures:
             f"Could not connect to the Kubernetes API at {tls_cluster.base_url}: "
             f"{_UNUSABLE_HOST_VALUE}"
         )
+        client = _client(tls_cluster.base_url, tls_material)
 
         with pytest.raises(K8sApiError, match=_exact(message)):
-            _client(tls_cluster.base_url, tls_material).request("GET", "/version", None)
+            client.request("GET", "/version", None)
 
         assert tls_cluster.requests == []

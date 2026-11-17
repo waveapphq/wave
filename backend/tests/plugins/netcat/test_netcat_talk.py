@@ -52,7 +52,8 @@ def exact(message: str) -> str:
 
 
 def outputs(envelope: dict[str, Any]) -> dict[str, Any]:
-    assert envelope["__wave_type"] == "result" and envelope["secrets"] == []
+    assert envelope["__wave_type"] == "result"
+    assert envelope["secrets"] == []
     return envelope["outputs"]
 
 
@@ -538,7 +539,8 @@ class TestReplyEnd:
         echo = await listen("tcp-echo")
         out, row = await talk_once(talk(echo.port, text="hello", close_after_send=True), log)
         assert out["reply"] == "hello"
-        assert is_ms(row["time_ms"]) and 0 <= row["time_ms"] < 500
+        assert is_ms(row["time_ms"])
+        assert 0 <= row["time_ms"] < 500
 
     async def test_silence_ends_the_reply(
         self, listen: Listen, log: LogRecorder, monkeypatch: pytest.MonkeyPatch
@@ -547,7 +549,8 @@ class TestReplyEnd:
         resolve_to(monkeypatch, "127.0.0.1")
         out, row = await talk_once(talk(silent.port, text="hello", timeout=FAST), log)
         assert (out["reply"], row["state"]) == ("", "open")
-        assert is_ms(row["time_ms"]) and row["time_ms"] >= 40
+        assert is_ms(row["time_ms"])
+        assert row["time_ms"] >= 40
 
     async def test_time_spans_to_the_end_of_reading(
         self, listen: Listen, log: LogRecorder, monkeypatch: pytest.MonkeyPatch
@@ -556,7 +559,8 @@ class TestReplyEnd:
         resolve_to(monkeypatch, "127.0.0.1")
         out, row = await talk_once(talk(echo.port, text="hello", timeout=FAST), log)
         assert out["reply"] == "hello"
-        assert is_ms(row["time_ms"]) and row["time_ms"] >= 40
+        assert is_ms(row["time_ms"])
+        assert row["time_ms"] >= 40
 
     @pytest.mark.parametrize(
         ("kind", "overrides"),
@@ -742,7 +746,8 @@ class TestConsoleLines:
         )
         out = await core(log)(params)
         assert [row["reply"] for row in rows(out)] == [DISTINCT]
-        assert log and not [line for line in log if DISTINCT in line[1]]
+        assert log
+        assert not [line for line in log if DISTINCT in line[1]]
 
 
 class TestRangeTalk:
@@ -852,7 +857,8 @@ class TestSendWhileReading:
         params = talk(deaf.port, send="file", file="big.bin", timeout=0.1, close_after_send=True)
         out, row = await talk_once(params, log, payload=b"x" * BIG)
         sent, received = traffic(log)
-        assert 0 < sent < BIG and received == 0
+        assert 0 < sent < BIG
+        assert received == 0
         assert (row["state"], out["success"], out["reply"]) == ("open", True, "")
         assert row["time_ms"] >= 180
 
@@ -864,7 +870,8 @@ class TestSendWhileReading:
         params = talk(echo.port, send="file", file="big.bin", timeout=0.3, close_after_send=True)
         out, row = await talk_once(params, log, payload=payload, opener=narrow_client)
         assert traffic(log) == (BIG, BIG)
-        assert len(out["reply"]) == BIG and row["time_ms"] >= 4 * PAUSE * 1000 * 0.9
+        assert len(out["reply"]) == BIG
+        assert row["time_ms"] >= 4 * PAUSE * 1000 * 0.9
         assert await echo.settled(1) == [payload]
 
     async def test_a_reply_reaching_max_reply_size_ends_the_send_at_once(
@@ -875,7 +882,8 @@ class TestSendWhileReading:
         out, row = await talk_once(params, log, payload=b"z" * BIG)
         sent, received = traffic(log)
         assert (out["reply"], received) == ("z" * 1000, 1000)
-        assert sent < BIG and row["time_ms"] < WAIT * 1000 / 2
+        assert sent < BIG
+        assert row["time_ms"] < WAIT * 1000 / 2
         assert log[-1] == ("WARN", f"Reply from port {echo.port} stopped at 1000 bytes")
         assert len((await echo.settled(1))[0]) < BIG
 

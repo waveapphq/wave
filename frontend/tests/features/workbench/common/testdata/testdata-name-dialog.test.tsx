@@ -135,38 +135,16 @@ describe('TestDataNameDialog - validation', () => {
     expect(saveButton()).toBeDisabled()
   })
 
-  it('refuses a name holding a forward slash', async () => {
+  it.each([
+    ['refuses a name holding a forward slash', 'nested/deep'],
+    ['refuses a name holding a backslash', 'nested\\deep'],
+    ['refuses a single dot', '.'],
+    ['refuses two dots', '..'],
+  ])('%s', async (_title, name) => {
     const user = userEvent.setup()
     renderDialog()
 
-    await typeName(user, 'nested/deep')
-
-    expect(saveButton()).toBeDisabled()
-  })
-
-  it('refuses a name holding a backslash', async () => {
-    const user = userEvent.setup()
-    renderDialog()
-
-    await typeName(user, 'nested\\deep')
-
-    expect(saveButton()).toBeDisabled()
-  })
-
-  it('refuses a single dot', async () => {
-    const user = userEvent.setup()
-    renderDialog()
-
-    await typeName(user, '.')
-
-    expect(saveButton()).toBeDisabled()
-  })
-
-  it('refuses two dots', async () => {
-    const user = userEvent.setup()
-    renderDialog()
-
-    await typeName(user, '..')
+    await typeName(user, name)
 
     expect(saveButton()).toBeDisabled()
   })

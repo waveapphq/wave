@@ -47,7 +47,7 @@ export function GhostEdge({ sourceNodeId, sourceHandleId, targetPos, testId = 'p
   const path = `M ${sx} ${sy} C ${sx} ${midY}, ${tx} ${midY}, ${tx} ${ty}`
 
   return (
-    <svg data-testid={testId} className="pointer-events-none fixed inset-0 z-50 overflow-visible" style={{ width: '100vw', height: '100vh' }}>
+    <svg data-testid={testId} aria-hidden="true" className="pointer-events-none fixed inset-0 z-50 overflow-visible" style={{ width: '100vw', height: '100vh' }}>
       <path d={path} fill="none" stroke="#A1A1AA" strokeWidth={2} strokeDasharray="6 4" opacity={0.6} />
     </svg>
   )

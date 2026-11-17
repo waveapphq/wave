@@ -353,10 +353,13 @@ class TestGuardOnTheWire:
         async def handler(_scope: Any, _receive: Any, _send: Any) -> None:
             raise AssertionError("a refused upload never reaches the handler")
 
+        guard = Utf8Guard(handler)
+        scope = _post_scope(content_type)
+
         with pytest.raises(
             UnencodableTextException, match=f"^{re.escape(_other_charset(charset))}$"
         ):
-            await Utf8Guard(handler)(_post_scope(content_type), receive, self._send)
+            await guard(scope, receive, self._send)
 
     @pytest.mark.parametrize(
         "content_type",
@@ -384,9 +387,10 @@ class TestGuardOnTheWire:
     ) -> None:
         body = [{"type": "http.request", "body": rb'{"command": "cafe\udce9"}', "more_body": False}]
         scope = {"type": "http", "method": "POST", "headers": []}
+        receive = self._receive(body)
 
         with pytest.raises(UnencodableTextException, match=f"^{re.escape(_refused('command'))}$"):
-            await guard(scope, self._receive(body), self._send)
+            await guard(scope, receive, self._send)
 
         assert reached == []
 
@@ -424,9 +428,11 @@ class TestGuardOnTheWire:
             {"type": "http.request", "body": rb'{"command": "ls cafe\ud', "more_body": True},
             {"type": "http.request", "body": rb'ce9"}', "more_body": False},
         ]
+        scope = _post_scope(b"application/json")
+        receive = self._receive(pieces)
 
         with pytest.raises(UnencodableTextException, match=f"^{re.escape(_refused('command'))}$"):
-            await guard(_post_scope(b"application/json"), self._receive(pieces), self._send)
+            await guard(scope, receive, self._send)
 
         assert reached == []
 

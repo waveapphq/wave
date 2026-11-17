@@ -24,48 +24,54 @@ class TestDelayControlDurationValidation:
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({})
         with pytest.raises(ValueError, match="^duration parameter is required$"):
-            asyncio.run(control.validate({}))
+            asyncio.run(validation)
 
     def test_validate_requires_duration_as_positive_integer(self):
         """Verify duration must be a positive integer (milliseconds)."""
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({"duration": -100})
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.validate({"duration": -100}))
+            asyncio.run(validation)
 
     def test_validate_rejects_zero_duration(self):
         """Verify zero duration is rejected."""
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({"duration": 0})
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.validate({"duration": 0}))
+            asyncio.run(validation)
 
     def test_validate_rejects_negative_duration(self):
         """Verify negative duration is rejected."""
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({"duration": -1})
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.validate({"duration": -1}))
+            asyncio.run(validation)
 
     def test_validate_rejects_float_duration(self):
         """Verify float duration is rejected (must be integer)."""
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({"duration": 100.5})
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.validate({"duration": 100.5}))
+            asyncio.run(validation)
 
     def test_validate_rejects_string_duration(self):
         """Verify string duration is rejected (frontend converts to ms before sending)."""
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({"duration": "100ms"})
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.validate({"duration": "100ms"}))
+            asyncio.run(validation)
 
     def test_validate_accepts_positive_integer_duration(self):
         """Verify positive integer duration is accepted."""
@@ -88,8 +94,9 @@ class TestDelayControlDurationValidation:
         from wavecore.controls.timing import DelayControl
 
         control = DelayControl()
+        validation = control.validate({"duration": None})
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.validate({"duration": None}))
+            asyncio.run(validation)
 
     def test_validate_returns_none_on_success(self):
         """Verify validate returns None on successful validation."""
@@ -250,8 +257,10 @@ class TestDelayControlCancellation:
             task.cancel()
             await task
 
+        canceled_run = run_with_cancellation()
+
         with pytest.raises(asyncio.CancelledError):
-            asyncio.run(run_with_cancellation())
+            asyncio.run(canceled_run)
 
     def test_execute_terminates_on_timeout(self):
         """Verify timeout context terminates delay immediately."""
@@ -335,9 +344,10 @@ class TestDelayControlPreResolvedValues:
 
         control = DelayControl()
         context = {"parameters": {"duration": 2.5}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
 
 # =============================================================================
@@ -442,9 +452,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {}  # No parameters key
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^parameters key is required in context$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_empty_parameters(self):
         """Verify error when duration not in parameters."""
@@ -452,9 +463,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration parameter is required$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_multiple_sequential_delays(self):
         """Verify multiple sequential delays execute correctly."""
@@ -500,9 +512,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {"duration": -100}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_direct_zero_integer(self):
         """Verify direct zero integer in execute raises error."""
@@ -510,9 +523,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {"duration": 0}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_list_duration(self):
         """Verify list passed as duration raises error."""
@@ -520,9 +534,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {"duration": [100]}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_dict_duration(self):
         """Verify dict passed as duration raises error."""
@@ -530,9 +545,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {"duration": {"ms": 100}}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_malformed_expression_syntax_error(self):
         """Verify malformed expression with syntax error raises error."""
@@ -541,9 +557,10 @@ class TestDelayControlEdgeCases:
         control = DelayControl()
         # Incomplete expression causes SyntaxError in eval
         context = {"parameters": {"duration": "100 *"}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_undefined_name_expression(self):
         """Verify expression with undefined name raises error."""
@@ -552,9 +569,10 @@ class TestDelayControlEdgeCases:
         control = DelayControl()
         # Undefined name causes NameError in eval
         context = {"parameters": {"duration": "abc"}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_boolean_true_duration(self):
         """Verify boolean True passed as duration raises error."""
@@ -562,9 +580,10 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {"duration": True}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)
 
     def test_execute_with_boolean_false_duration(self):
         """Verify boolean False passed as duration raises error."""
@@ -572,6 +591,7 @@ class TestDelayControlEdgeCases:
 
         control = DelayControl()
         context = {"parameters": {"duration": False}}
+        execution = control.execute(context)
 
         with pytest.raises(ValueError, match="^duration must be a positive integer$"):
-            asyncio.run(control.execute(context))
+            asyncio.run(execution)

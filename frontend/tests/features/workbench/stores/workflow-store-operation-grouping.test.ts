@@ -85,7 +85,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       vi.advanceTimersByTime(500)
 
       // Should only have ONE history entry for all the typing
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
       expect(useWorkflowStore.getState().nodes[0].data.label).toBe('chart')
     })
 
@@ -113,7 +113,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       vi.advanceTimersByTime(500) // Wait for debounce
 
       // Should have TWO history entries
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
     })
 
     it('text input debounce uses 500ms interval per design', async () => {
@@ -134,11 +134,11 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
 
       // At 499ms, history should not be pushed yet
       vi.advanceTimersByTime(499)
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
 
       // At 500ms, history should be pushed
       vi.advanceTimersByTime(1)
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
     })
 
     it('updateNodeWithGrouping does nothing for non-existent node', async () => {
@@ -191,7 +191,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().commitHistory('Manual push during drag')
 
       // No history should be added during drag
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
     })
   })
 
@@ -226,7 +226,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().endDragOperation()
 
       // Should only have ONE history entry for entire drag
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
       expect(useWorkflowStore.getState().nodes[0].position).toEqual({ x: 50, y: 50 })
     })
 
@@ -251,12 +251,12 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().updateNode('node-1', { position: { x: 200, y: 200 } })
 
       // History should still be empty during drag
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
 
       useWorkflowStore.getState().endDragOperation()
 
       // Now history should have one entry
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
     })
 
     it('undoing drag reverts to position before drag started', async () => {
@@ -320,8 +320,8 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().deleteSelected()
 
       // Should only have ONE history entry for batch delete
-      expect(useWorkflowStore.getState().history.length).toBe(1)
-      expect(useWorkflowStore.getState().nodes.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(0)
     })
 
     it('undoing batch deletion restores all nodes at once', async () => {
@@ -345,13 +345,13 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       })
 
       useWorkflowStore.getState().deleteSelected()
-      expect(useWorkflowStore.getState().nodes.length).toBe(0)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(0)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
 
       // Undo should restore all nodes
       useWorkflowStore.getState().undo()
       expect(useWorkflowStore.getState().historyIndex).toBe(0)
-      expect(useWorkflowStore.getState().nodes.length).toBe(3)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(3)
     })
 
     it('groups multi-node move into single history entry', async () => {
@@ -374,7 +374,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().moveSelectedNodes({ x: 50, y: 50 })
 
       // Should only have ONE history entry
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
     })
 
     it('moveSelectedNodes only moves selected nodes, unselected remain in place', async () => {
@@ -427,8 +427,8 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().duplicate()
 
       // Should only have ONE history entry
-      expect(useWorkflowStore.getState().history.length).toBe(1)
-      expect(useWorkflowStore.getState().nodes.length).toBe(4)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(4)
     })
   })
 
@@ -470,9 +470,9 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       })
 
       // Should only have ONE history entry for entire transaction
-      expect(useWorkflowStore.getState().history.length).toBe(1)
-      expect(useWorkflowStore.getState().nodes.length).toBe(2)
-      expect(useWorkflowStore.getState().edges.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(2)
+      expect(useWorkflowStore.getState().edges).toHaveLength(1)
     })
 
     it('undoing transaction reverts all operations', async () => {
@@ -508,16 +508,16 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
         })
       })
 
-      expect(useWorkflowStore.getState().nodes.length).toBe(2)
-      expect(useWorkflowStore.getState().edges.length).toBe(1)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(2)
+      expect(useWorkflowStore.getState().edges).toHaveLength(1)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
 
       // Undo should revert everything to the baseline
       useWorkflowStore.getState().undo()
 
       expect(useWorkflowStore.getState().historyIndex).toBe(0)
-      expect(useWorkflowStore.getState().nodes.length).toBe(0)
-      expect(useWorkflowStore.getState().edges.length).toBe(0)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(0)
+      expect(useWorkflowStore.getState().edges).toHaveLength(0)
     })
 
     it('nested transactions are flattened', async () => {
@@ -552,7 +552,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       })
 
       // Should still only have ONE history entry
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
     })
   })
 
@@ -615,7 +615,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
 
       // Should revert to original position and not create history
       expect(useWorkflowStore.getState().nodes[0].position).toEqual({ x: 0, y: 0 })
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
     })
 
     it('cancelDragOperation does nothing when not dragging', async () => {
@@ -664,7 +664,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().endDragOperation()
 
       // State should remain unchanged (no history added)
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
       expect(useWorkflowStore.getState().isDragging).toBe(false)
     })
 
@@ -686,8 +686,8 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().deleteSelected()
 
       // Nothing should be deleted, no history added
-      expect(useWorkflowStore.getState().nodes.length).toBe(1)
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
     })
 
     it('moveSelectedNodes does nothing when no nodes are selected', async () => {
@@ -709,7 +709,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
 
       // Nothing should move, no history added
       expect(useWorkflowStore.getState().nodes[0].position).toEqual({ x: 0, y: 0 })
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
     })
 
     it('transaction error rolls back all changes', async () => {
@@ -739,8 +739,8 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       }
 
       // Should roll back to empty state
-      expect(useWorkflowStore.getState().nodes.length).toBe(0)
-      expect(useWorkflowStore.getState().history.length).toBe(0)
+      expect(useWorkflowStore.getState().nodes).toHaveLength(0)
+      expect(useWorkflowStore.getState().history).toHaveLength(0)
     })
 
     it('transaction error with null transactionStartState falls back to empty arrays', async () => {
@@ -809,7 +809,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       useWorkflowStore.getState().endDragOperation()
 
       // History should still be at max (50), oldest entry removed
-      expect(useWorkflowStore.getState().history.length).toBe(50)
+      expect(useWorkflowStore.getState().history).toHaveLength(50)
     })
 
     it('endDragOperation removes oldest entries when exceeding max depth', async () => {
@@ -854,7 +854,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
 
       // First entry should be removed (oldest)
       expect(useWorkflowStore.getState().history[0].nodes[0]?.id).not.toBe('first')
-      expect(useWorkflowStore.getState().history.length).toBe(50)
+      expect(useWorkflowStore.getState().history).toHaveLength(50)
     })
 
     it('transaction respects max history length', async () => {
@@ -889,7 +889,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
       })
 
       // History should still be at max (50), oldest entry removed
-      expect(useWorkflowStore.getState().history.length).toBe(50)
+      expect(useWorkflowStore.getState().history).toHaveLength(50)
     })
 
     it('transaction removes oldest entries when exceeding max depth', async () => {
@@ -937,7 +937,7 @@ describe('REQ-5.2.1.24 Operation Grouping', () => {
 
       // First entry should be removed (oldest)
       expect(useWorkflowStore.getState().history[0].nodes[0]?.id).not.toBe('first')
-      expect(useWorkflowStore.getState().history.length).toBe(50)
+      expect(useWorkflowStore.getState().history).toHaveLength(50)
     })
   })
 })

@@ -1002,17 +1002,16 @@ class TestFileSourceErrors:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "PUT",
+                    "url": "http://example.com/upload",
+                    "body_mode": "file",
+                    "file_source": missing,
+                }
+            )
             with pytest.raises(FileNotFoundError, match=f"^File not found: {missing}$"):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "PUT",
-                            "url": "http://example.com/upload",
-                            "body_mode": "file",
-                            "file_source": missing,
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_missing_artifact_source_fails_with_source_as_typed(self, tmp_path):
@@ -1022,20 +1021,19 @@ class TestFileSourceErrors:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "PUT",
+                    "url": "http://example.com/upload",
+                    "body_mode": "file",
+                    "file_source": "artifact://missing.bin",
+                },
+                artifacts_dir=str(tmp_path),
+            )
             with pytest.raises(
                 FileNotFoundError, match=r"^File not found: artifact://missing\.bin$"
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "PUT",
-                            "url": "http://example.com/upload",
-                            "body_mode": "file",
-                            "file_source": "artifact://missing.bin",
-                        },
-                        artifacts_dir=str(tmp_path),
-                    )
-                )
+                await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_artifact_source_without_an_artifacts_dir_reads_as_not_found(self):
@@ -1045,19 +1043,18 @@ class TestFileSourceErrors:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "PUT",
+                    "url": "http://example.com/upload",
+                    "body_mode": "file",
+                    "file_source": "artifact://report.bin",
+                }
+            )
             with pytest.raises(
                 FileNotFoundError, match=r"^File not found: artifact://report\.bin$"
             ):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "PUT",
-                            "url": "http://example.com/upload",
-                            "body_mode": "file",
-                            "file_source": "artifact://report.bin",
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
     @pytest.mark.asyncio
     async def test_missing_multipart_file_part_fails_with_exact_message(self, tmp_path):
@@ -1068,17 +1065,16 @@ class TestFileSourceErrors:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            context = _context(
+                {
+                    "method": "POST",
+                    "url": "http://example.com/upload",
+                    "body_mode": "multipart",
+                    "parts": [{"kind": "file", "name": "up", "source": missing}],
+                }
+            )
             with pytest.raises(FileNotFoundError, match=f"^File not found: {missing}$"):
-                await plugin.execute(
-                    _context(
-                        {
-                            "method": "POST",
-                            "url": "http://example.com/upload",
-                            "body_mode": "multipart",
-                            "parts": [{"kind": "file", "name": "up", "source": missing}],
-                        }
-                    )
-                )
+                await plugin.execute(context)
 
 
 class TestFileSourceParentSegments:
@@ -1147,20 +1143,20 @@ class TestFileSourceParentSegments:
         client, _ = make_mock_client(text="OK")
 
         with patch_async_client(client):
+            plugin = HTTPClientPlugin()
+            context = _context(
+                {
+                    "method": "PUT",
+                    "url": "http://example.com/upload",
+                    "body_mode": "file",
+                    "file_source": "artifact://../gone.bin",
+                },
+                artifacts_dir=str(artifacts),
+            )
             with pytest.raises(
                 FileNotFoundError, match=r"^File not found: artifact://\.\./gone\.bin$"
             ):
-                await HTTPClientPlugin().execute(
-                    _context(
-                        {
-                            "method": "PUT",
-                            "url": "http://example.com/upload",
-                            "body_mode": "file",
-                            "file_source": "artifact://../gone.bin",
-                        },
-                        artifacts_dir=str(artifacts),
-                    )
-                )
+                await plugin.execute(context)
 
         assert client.request.call_count == 0
 

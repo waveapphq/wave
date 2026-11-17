@@ -245,17 +245,19 @@ class TestRunAppliesTheDefaults:
         destination = tmp_path / "target.txt"
         destination.write_text("old", encoding="utf-8")
 
+        request = {
+            "operation": "copy",
+            "source": str(source),
+            "destination": str(destination),
+            "if_exists": "fail",
+        }
+        recorder = _Recorder()
         with pytest.raises(
             OSError, match=_exact(f"Destination exists and if_exists=fail: {destination}")
         ):
             _file_ops.run(
-                {
-                    "operation": "copy",
-                    "source": str(source),
-                    "destination": str(destination),
-                    "if_exists": "fail",
-                },
-                _Recorder(),
+                request,
+                recorder,
             )
 
     def test_move_defaults_to_replacing_the_destination(self, tmp_path: Path) -> None:
@@ -274,8 +276,10 @@ class TestRunAppliesTheDefaults:
     def test_delete_defaults_to_refusing_a_missing_path(self, tmp_path: Path) -> None:
         target = tmp_path / "absent.txt"
 
+        request = {"operation": "delete", "path": str(target)}
+        recorder = _Recorder()
         with pytest.raises(OSError, match=_exact(f"Nothing to delete: {target}")):
-            _file_ops.run({"operation": "delete", "path": str(target)}, _Recorder())
+            _file_ops.run(request, recorder)
 
     def test_delete_honors_ignore_missing(self, tmp_path: Path) -> None:
         target = tmp_path / "absent.txt"
@@ -473,8 +477,9 @@ class TestRunRefusesWaveSchemesOnTheRemoteHost:
         (tmp_path / "in.txt").write_text("payload", encoding="utf-8")
         request = _with_reference(request_shape, f"{scheme}data/orders.csv")
 
+        recorder = _Recorder()
         with pytest.raises(ValueError, match=_exact(_remote_host_refusal(scheme))):
-            _file_ops.run(request, _Recorder())
+            _file_ops.run(request, recorder)
 
         assert sorted(p.name for p in tmp_path.iterdir()) == ["in.txt"], case
 
@@ -643,5 +648,6 @@ class TestRunNormalizesAPathBeforeUsingIt:
         assert log.entries == [("INFO", f"Wrote 1 characters to {start / 'out.txt'}")]
 
     def test_a_missing_file_is_named_by_its_normalized_path(self, start: Path) -> None:
+        recorder = _Recorder()
         with pytest.raises(FileNotFoundError, match=_exact(f"File not found: {start / 'no.txt'}")):
-            _file_ops.run({"operation": "read", "path": "made/../no.txt"}, _Recorder())
+            _file_ops.run({"operation": "read", "path": "made/../no.txt"}, recorder)

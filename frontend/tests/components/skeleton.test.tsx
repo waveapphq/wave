@@ -54,47 +54,27 @@ describe('Skeleton Component', () => {
   })
 
   describe('Visual Styling', () => {
-    it('applies bg-muted background color', () => {
+    it.each([
+      ['applies bg-muted background color', 'bg-muted'],
+      ['applies rounded border radius by default (4px)', 'rounded'],
+      ['applies overflow-hidden for shimmer containment', 'overflow-hidden'],
+      ['has relative positioning for shimmer overlay', 'relative'],
+    ])('%s', (_title, className) => {
       render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('bg-muted')
-    })
-
-    it('applies rounded border radius by default (4px)', () => {
-      render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('rounded')
-    })
-
-    it('applies overflow-hidden for shimmer containment', () => {
-      render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('overflow-hidden')
-    })
-
-    it('has relative positioning for shimmer overlay', () => {
-      render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('relative')
+      expect(screen.getByTestId('skeleton')).toHaveClass(className)
     })
   })
 
   describe('Shimmer Animation', () => {
-    it('applies shimmer animation class', () => {
-      render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('animate-shimmer')
-    })
-
-    it('has animation duration of 1500ms', () => {
-      render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('duration-1500')
-    })
-
-    it('has ease-in-out timing function', () => {
-      render(<Skeleton data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('ease-in-out')
-    })
-
-    it('indicates infinite animation via animate-shimmer class', () => {
-      render(<Skeleton data-testid="skeleton" />)
+    it.each([
+      ['applies shimmer animation class', 'animate-shimmer'],
+      ['has animation duration of 1500ms', 'duration-1500'],
+      ['has ease-in-out timing function', 'ease-in-out'],
       // animate-shimmer implies infinite animation
-      expect(screen.getByTestId('skeleton')).toHaveClass('animate-shimmer')
+      ['indicates infinite animation via animate-shimmer class', 'animate-shimmer'],
+    ])('%s', (_title, className) => {
+      render(<Skeleton data-testid="skeleton" />)
+      expect(screen.getByTestId('skeleton')).toHaveClass(className)
     })
 
     it('has shimmer gradient overlay element', () => {
@@ -292,11 +272,15 @@ describe('SkeletonCircle Component', () => {
   })
 
   describe('Size Presets', () => {
-    it('applies small size (32px)', () => {
-      render(<SkeletonCircle size="sm" data-testid="skeleton-circle" />)
+    it.each([
+      ['applies small size (32px)', 'sm', 'w-8', 'h-8'],
+      ['applies large size (48px)', 'lg', 'w-12', 'h-12'],
+      ['applies extra-large size (64px)', 'xl', 'w-16', 'h-16'],
+    ] as const)('%s', (_title, size, widthClass, heightClass) => {
+      render(<SkeletonCircle size={size} data-testid="skeleton-circle" />)
       const circle = screen.getByTestId('skeleton-circle')
-      expect(circle).toHaveClass('w-8')
-      expect(circle).toHaveClass('h-8')
+      expect(circle).toHaveClass(widthClass)
+      expect(circle).toHaveClass(heightClass)
     })
 
     it('applies medium size (40px) by default', () => {
@@ -304,20 +288,6 @@ describe('SkeletonCircle Component', () => {
       const circle = screen.getByTestId('skeleton-circle')
       expect(circle).toHaveClass('w-10')
       expect(circle).toHaveClass('h-10')
-    })
-
-    it('applies large size (48px)', () => {
-      render(<SkeletonCircle size="lg" data-testid="skeleton-circle" />)
-      const circle = screen.getByTestId('skeleton-circle')
-      expect(circle).toHaveClass('w-12')
-      expect(circle).toHaveClass('h-12')
-    })
-
-    it('applies extra-large size (64px)', () => {
-      render(<SkeletonCircle size="xl" data-testid="skeleton-circle" />)
-      const circle = screen.getByTestId('skeleton-circle')
-      expect(circle).toHaveClass('w-16')
-      expect(circle).toHaveClass('h-16')
     })
 
     it('supports custom size via diameter prop', () => {
@@ -419,21 +389,21 @@ describe('SkeletonParagraph Component', () => {
       render(<SkeletonParagraph data-testid="skeleton-paragraph" />)
       const container = screen.getByTestId('skeleton-paragraph')
       const lines = container.querySelectorAll('.skeleton-text')
-      expect(lines.length).toBe(3)
+      expect(lines).toHaveLength(3)
     })
 
     it('supports custom line count', () => {
       render(<SkeletonParagraph lines={5} data-testid="skeleton-paragraph" />)
       const container = screen.getByTestId('skeleton-paragraph')
       const lines = container.querySelectorAll('.skeleton-text')
-      expect(lines.length).toBe(5)
+      expect(lines).toHaveLength(5)
     })
 
     it('renders single line when lines=1', () => {
       render(<SkeletonParagraph lines={1} data-testid="skeleton-paragraph" />)
       const container = screen.getByTestId('skeleton-paragraph')
       const lines = container.querySelectorAll('.skeleton-text')
-      expect(lines.length).toBe(1)
+      expect(lines).toHaveLength(1)
     })
   })
 
@@ -480,30 +450,20 @@ describe('Loading State Transitions', () => {
       expect(screen.getByTestId('skeleton')).toHaveAttribute('data-error', 'true')
     })
 
-    it('applies error styling when isError is true', () => {
+    it.each([
+      ['applies error styling when isError is true', 'skeleton-error'],
+      ['applies error background color in error state', 'bg-error-bg'],
+      ['applies error border in error state', 'border-error-border'],
+      // Should still have transition classes for smooth visual change
+      ['transitions smoothly to error state', 'transition-colors'],
+    ])('%s', (_title, className) => {
       render(<Skeleton isError data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('skeleton-error')
+      expect(screen.getByTestId('skeleton')).toHaveClass(className)
     })
 
     it('stops shimmer animation in error state', () => {
       render(<Skeleton isError data-testid="skeleton" />)
       expect(screen.getByTestId('skeleton')).not.toHaveClass('animate-shimmer')
-    })
-
-    it('applies error background color in error state', () => {
-      render(<Skeleton isError data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('bg-error-bg')
-    })
-
-    it('applies error border in error state', () => {
-      render(<Skeleton isError data-testid="skeleton" />)
-      expect(screen.getByTestId('skeleton')).toHaveClass('border-error-border')
-    })
-
-    it('transitions smoothly to error state', () => {
-      render(<Skeleton isError data-testid="skeleton" />)
-      // Should still have transition classes for smooth visual change
-      expect(screen.getByTestId('skeleton')).toHaveClass('transition-colors')
     })
 
     it('SkeletonText supports error state', () => {
@@ -603,7 +563,7 @@ describe('Composite Skeleton Layouts', () => {
       render(<SkeletonTableRow columns={4} data-testid="skeleton-table-row" />)
       const container = screen.getByTestId('skeleton-table-row')
       const cells = container.querySelectorAll('.skeleton-text')
-      expect(cells.length).toBe(4)
+      expect(cells).toHaveLength(4)
     })
 
     it('has grid layout for cells', async () => {

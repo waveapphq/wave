@@ -784,7 +784,7 @@ describe('RegressionDetailPage', () => {
     const details = screen.getByTestId('collision-details')
     expect(details).toHaveTextContent('timeout')
     const timeoutMatches = details.textContent?.match(/timeout/g) ?? []
-    expect(timeoutMatches.length).toBe(1)
+    expect(timeoutMatches).toHaveLength(1)
   })
 
   // =========================================================================

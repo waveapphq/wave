@@ -520,7 +520,8 @@ class TestSharedDraftLifecycle:
             ownership.request_takeover("h2", "H2")  # person holder -> pending
             ownership.release("h1")  # release grants the slot to h2
         holder = ownership.get_holder()
-        assert holder is not None and holder["id"] == "h2"
+        assert holder is not None
+        assert holder["id"] == "h2"
         assert ownership.get_shared_draft() is not None
 
 

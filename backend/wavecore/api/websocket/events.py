@@ -45,4 +45,5 @@ async def broadcast(topic: str, event: dict[str, Any]) -> None:
             }
             await ws_manager.broadcast_to_topic(topic, envelope)
     except Exception as e:
+        # CodeQL exclusion: CQL-LOG-001
         logger.warning("Failed to broadcast %s event: %s", log_safe(topic), e)

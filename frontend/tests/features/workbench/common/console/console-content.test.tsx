@@ -638,9 +638,16 @@ describe('ConsoleContent Component', () => {
   })
 
   describe('Keyboard Navigation', () => {
-    it('supports keyboard navigation with arrow keys', async () => {
+    it.each([
+      // First entry should be focused
+      ['supports keyboard navigation with arrow keys', 10, 'ArrowDown'],
+      // Should jump multiple entries forward
+      ['supports PageDown for faster navigation forward', 100, 'PageDown'],
+      // Should jump to last entry
+      ['supports End for jumping to end', 100, 'End'],
+    ])('%s', async (_title, entryCount, key) => {
       const { ConsoleContent } = await import('../../../../../src/components/shared/console/content')
-      const entries = createEntries(10)
+      const entries = createEntries(entryCount)
 
       render(
         <ConsoleContent
@@ -654,14 +661,20 @@ describe('ConsoleContent Component', () => {
       const wrapper = screen.getByRole('log').parentElement!
       wrapper.focus()
 
-      fireEvent.keyDown(wrapper, { key: 'ArrowDown' })
-      // First entry should be focused
+      fireEvent.keyDown(wrapper, { key })
       expect(wrapper).toBeInTheDocument()
     })
 
-    it('supports PageDown for faster navigation forward', async () => {
+    it.each([
+      // First scroll down, then use PageUp; should jump multiple entries backward
+      ['supports PageUp for faster navigation backward', 100, 'End', 'PageUp'],
+      // First scroll to end, then use Home; should jump to first entry
+      ['supports Home for jumping to start', 100, 'End', 'Home'],
+      // First scroll down, then use ArrowUp; should scroll up by one item height
+      ['supports ArrowUp for scrolling up', 10, 'ArrowDown', 'ArrowUp'],
+    ])('%s', async (_title, entryCount, firstKey, secondKey) => {
       const { ConsoleContent } = await import('../../../../../src/components/shared/console/content')
-      const entries = createEntries(100)
+      const entries = createEntries(entryCount)
 
       render(
         <ConsoleContent
@@ -674,94 +687,8 @@ describe('ConsoleContent Component', () => {
       const wrapper = screen.getByRole('log').parentElement!
       wrapper.focus()
 
-      fireEvent.keyDown(wrapper, { key: 'PageDown' })
-      // Should jump multiple entries forward
-      expect(wrapper).toBeInTheDocument()
-    })
-
-    it('supports PageUp for faster navigation backward', async () => {
-      const { ConsoleContent } = await import('../../../../../src/components/shared/console/content')
-      const entries = createEntries(100)
-
-      render(
-        <ConsoleContent
-          entries={entries}
-          displaySettings={defaultSettings}
-          containerHeight={200}
-        />
-      )
-
-      const wrapper = screen.getByRole('log').parentElement!
-      wrapper.focus()
-
-      // First scroll down, then use PageUp
-      fireEvent.keyDown(wrapper, { key: 'End' })
-      fireEvent.keyDown(wrapper, { key: 'PageUp' })
-      // Should jump multiple entries backward
-      expect(wrapper).toBeInTheDocument()
-    })
-
-    it('supports End for jumping to end', async () => {
-      const { ConsoleContent } = await import('../../../../../src/components/shared/console/content')
-      const entries = createEntries(100)
-
-      render(
-        <ConsoleContent
-          entries={entries}
-          displaySettings={defaultSettings}
-          containerHeight={200}
-        />
-      )
-
-      const wrapper = screen.getByRole('log').parentElement!
-      wrapper.focus()
-
-      fireEvent.keyDown(wrapper, { key: 'End' })
-      // Should jump to last entry
-      expect(wrapper).toBeInTheDocument()
-    })
-
-    it('supports Home for jumping to start', async () => {
-      const { ConsoleContent } = await import('../../../../../src/components/shared/console/content')
-      const entries = createEntries(100)
-
-      render(
-        <ConsoleContent
-          entries={entries}
-          displaySettings={defaultSettings}
-          containerHeight={200}
-        />
-      )
-
-      const wrapper = screen.getByRole('log').parentElement!
-      wrapper.focus()
-
-      // First scroll to end, then use Home
-      fireEvent.keyDown(wrapper, { key: 'End' })
-      fireEvent.keyDown(wrapper, { key: 'Home' })
-      // Should jump to first entry
-      expect(wrapper).toBeInTheDocument()
-    })
-
-    it('supports ArrowUp for scrolling up', async () => {
-      const { ConsoleContent } = await import('../../../../../src/components/shared/console/content')
-      const entries = createEntries(10)
-
-      render(
-        <ConsoleContent
-          entries={entries}
-          displaySettings={defaultSettings}
-          containerHeight={200}
-        />
-      )
-
-      const wrapper = screen.getByRole('log').parentElement!
-      wrapper.focus()
-
-      // First scroll down, then use ArrowUp
-      fireEvent.keyDown(wrapper, { key: 'ArrowDown' })
-      fireEvent.keyDown(wrapper, { key: 'ArrowUp' })
-      // Should scroll up by one item height
+      fireEvent.keyDown(wrapper, { key: firstKey })
+      fireEvent.keyDown(wrapper, { key: secondKey })
       expect(wrapper).toBeInTheDocument()
     })
   })

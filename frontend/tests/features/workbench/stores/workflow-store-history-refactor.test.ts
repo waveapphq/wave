@@ -162,7 +162,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       }, 'Edit configuration')
 
       // Baseline + 4 commits = 5 entries
-      expect(useWorkflowStore.getState().history.length).toBe(5)
+      expect(useWorkflowStore.getState().history).toHaveLength(5)
       expect(useWorkflowStore.getState().historyIndex).toBe(4)
 
       const valuesAt = (i: number) =>
@@ -249,7 +249,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().endDragOperation()
 
       // Baseline + 1 drag commit
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(useWorkflowStore.getState().nodes[0].position).toEqual({ x: 100, y: 100 })
       // Post-state baseline model: history[1] IS the post-drag snapshot.
@@ -286,7 +286,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().addNode(node)
 
       // baseline + 1 op
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(useWorkflowStore.getState().nodes).toHaveLength(1)
 
@@ -371,7 +371,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
         })
       }, 'Edit configuration')
 
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(useWorkflowStore.getState().nodes[0].data.label).toBe('Edited')
       // Post-state baseline model: history[1] IS the post-edit snapshot.
@@ -414,7 +414,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
 
       useWorkflowStore.getState().enableAll()
 
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(
         useWorkflowStore.getState().nodes.find((n) => n.id === 'n1')?.data.disabled,
@@ -453,7 +453,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
 
       useWorkflowStore.getState().updateVariable('var-1', { value: 99 })
 
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(useWorkflowStore.getState().variables[0].value).toBe(99)
 
@@ -507,7 +507,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       }, 'Delete variable')
 
       // Baseline + 1 transaction
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(useWorkflowStore.getState().variables).toHaveLength(0)
       const afterConfig = useWorkflowStore.getState().nodes[0].data.config as {
@@ -552,7 +552,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().endDragOperation()
 
       // Baseline only
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
       expect(useWorkflowStore.getState().historyIndex).toBe(0)
     })
   })
@@ -584,7 +584,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       })
       useWorkflowStore.getState().commitHistory('Edit note text')
 
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(noteValues(useWorkflowStore.getState().nodes[0]).text).toBe('Edited note')
 
@@ -616,7 +616,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       })
       useWorkflowStore.getState().commitHistory('Change note color')
 
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
       expect(useWorkflowStore.getState().historyIndex).toBe(1)
       expect(noteValues(useWorkflowStore.getState().nodes[0]).color).toBe('pink')
 
@@ -651,14 +651,14 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().addNode(makeBlock('c'))
 
       // 3 ops above baseline = 4 entries
-      expect(useWorkflowStore.getState().history.length).toBe(4)
+      expect(useWorkflowStore.getState().history).toHaveLength(4)
       expect(useWorkflowStore.getState().historyIndex).toBe(3)
       expect(useWorkflowStore.getState().canUndo()).toBe(true)
 
       useWorkflowStore.getState().markSaved()
 
       // Save floors to a single baseline entry seeded from current state
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
       expect(useWorkflowStore.getState().historyIndex).toBe(0)
       expect(useWorkflowStore.getState().history[0].isInitialState).toBe(true)
       expect(useWorkflowStore.getState().canUndo()).toBe(false)
@@ -754,7 +754,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       expect(useWorkflowStore.getState().nodes).toEqual([])
       expect(useWorkflowStore.getState().edges).toEqual([])
       expect(useWorkflowStore.getState().variables).toEqual([])
-      expect(useWorkflowStore.getState().history.length).toBe(1)
+      expect(useWorkflowStore.getState().history).toHaveLength(1)
       expect(useWorkflowStore.getState().history[0].isInitialState).toBe(true)
       expect(useWorkflowStore.getState().historyIndex).toBe(0)
       expect(useWorkflowStore.getState().canUndo()).toBe(false)
@@ -860,7 +860,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().addEdge(autoEdge)
 
       // Baseline + add-node + add-edge = 3 entries
-      expect(useWorkflowStore.getState().history.length).toBe(3)
+      expect(useWorkflowStore.getState().history).toHaveLength(3)
       expect(useWorkflowStore.getState().historyIndex).toBe(2)
       expect(useWorkflowStore.getState().nodes).toHaveLength(2)
       expect(useWorkflowStore.getState().edges).toHaveLength(1)
@@ -904,7 +904,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().addNode(makeBlock('c'))
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(3)
+      expect(state.history).toHaveLength(3)
       expect(state.history[0].isInitialState).toBe(true)
       expect(state.historyIndex).toBe(2)
     })
@@ -926,7 +926,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().addNode(makeBlock('a'))
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(1)
+      expect(state.history).toHaveLength(1)
       expect(state.history[0].isInitialState).toBe(true)
       expect(state.historyIndex).toBe(0)
     })
@@ -947,7 +947,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       })
 
       useWorkflowStore.getState().addNode(makeBlock('filler'))
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
 
       useWorkflowStore.getState().startDragOperation()
       useWorkflowStore.getState().setNodes(
@@ -958,7 +958,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       useWorkflowStore.getState().endDragOperation()
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(2)
+      expect(state.history).toHaveLength(2)
       expect(state.history[0].isInitialState).toBe(true)
     })
 
@@ -977,7 +977,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       })
 
       useWorkflowStore.getState().addNode(makeBlock('a'))
-      expect(useWorkflowStore.getState().history.length).toBe(2)
+      expect(useWorkflowStore.getState().history).toHaveLength(2)
 
       useWorkflowStore.getState().transaction(() => {
         useWorkflowStore.getState().setNodes([
@@ -987,7 +987,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       }, 'Batch add')
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(2)
+      expect(state.history).toHaveLength(2)
       expect(state.history[0].isInitialState).toBe(true)
     })
   })
@@ -1023,14 +1023,14 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       // canvas shows the pre-edit label, the edit stays redoable.
       let state = useWorkflowStore.getState()
       expect(state.nodes[0]?.data.label).toBe('Block n1')
-      expect(state.history.length).toBe(3)
+      expect(state.history).toHaveLength(3)
       expect(state.historyIndex).toBe(1)
       expect(state.canRedo()).toBe(true)
 
       // The grouping timer must not fire a second commit afterwards.
       vi.advanceTimersByTime(600)
       state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(3)
+      expect(state.history).toHaveLength(3)
       expect(state.historyIndex).toBe(1)
       expect(state.nodes[0]?.data.label).toBe('Block n1')
 
@@ -1069,7 +1069,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       expect(state.canRedo()).toBe(false)
 
       vi.advanceTimersByTime(600)
-      expect(useWorkflowStore.getState().history.length).toBe(state.history.length)
+      expect(useWorkflowStore.getState().history).toHaveLength(state.history.length)
     })
 
     it('markSaved absorbs the pending edit into the baseline (no entry after save)', async () => {
@@ -1095,7 +1095,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       vi.advanceTimersByTime(600)
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(1)
+      expect(state.history).toHaveLength(1)
       expect(state.historyIndex).toBe(0)
       expect(state.history[0].isInitialState).toBe(true)
       expect(state.canUndo()).toBe(false)
@@ -1125,7 +1125,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
       vi.advanceTimersByTime(600)
 
       const state = useWorkflowStore.getState()
-      expect(state.history.length).toBe(1)
+      expect(state.history).toHaveLength(1)
       expect(state.history[0].isInitialState).toBe(true)
       expect(state.nodes).toEqual([])
       expect(state.canUndo()).toBe(false)

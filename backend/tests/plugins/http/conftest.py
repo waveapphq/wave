@@ -232,6 +232,7 @@ def _tls_server(
     if legacy:
         context.minimum_version = ssl.TLSVersion.TLSv1
         context.set_ciphers("ALL:@SECLEVEL=0")
+    # CodeQL exclusion: CQL-TLS-001
     server.socket = context.wrap_socket(server.socket, server_side=True)  # type: ignore[assignment]
     return _start_server(server, "https")
 

@@ -193,7 +193,8 @@ class TestJobStates:
         started = begin(pulls())
 
         assert started == {"job_id": started["job_id"], "cached": False}
-        assert isinstance(started["job_id"], str) and started["job_id"]
+        assert isinstance(started["job_id"], str)
+        assert started["job_id"]
 
     def test_the_job_steps_through_connecting_and_reading_to_done(
         self, pulls: Callable[..., SteppedPull]

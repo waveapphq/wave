@@ -77,15 +77,19 @@ describe('useEnrichedVariables', () => {
     expect(dottedTimeout!.type).toBe('integer')
   })
 
-  it('does not add namespace entries when no system variables exist', () => {
+  it.each([
+    ['does not add namespace entries when no system variables exist', 'system'],
+    ['does not add suite namespace entries when no suite variables exist', 'suite'],
+    ['does not add regression namespace entries when no regression variables exist', 'regression'],
+  ])('%s', (_title, namespace) => {
     useWorkflowStore.getState().setVariables([
       { id: 'v1', name: 'my_var', value: 'test', type: 'string' },
     ])
 
     const { result } = renderHook(() => useEnrichedVariables([]))
 
-    expect(result.current.some((v) => v.name === 'system')).toBe(false)
-    expect(result.current.some((v) => v.name.startsWith('system.'))).toBe(false)
+    expect(result.current.some((v) => v.name === namespace)).toBe(false)
+    expect(result.current.some((v) => v.name.startsWith(`${namespace}.`))).toBe(false)
   })
 
   it('includes namespace dotted entries for suite-scope variables from namespace store', () => {
@@ -119,17 +123,6 @@ describe('useEnrichedVariables', () => {
     expect(dottedTimeout!.source).toBe('Suite')
   })
 
-  it('does not add suite namespace entries when no suite variables exist', () => {
-    useWorkflowStore.getState().setVariables([
-      { id: 'v1', name: 'my_var', value: 'test', type: 'string' },
-    ])
-
-    const { result } = renderHook(() => useEnrichedVariables([]))
-
-    expect(result.current.some((v) => v.name === 'suite')).toBe(false)
-    expect(result.current.some((v) => v.name.startsWith('suite.'))).toBe(false)
-  })
-
   it('includes namespace dotted entries for regression-scope variables from namespace store', () => {
     useWorkflowStore.getState().setVariables([
       { id: 'v1', name: 'my_var', value: 'test', type: 'string' },
@@ -159,17 +152,6 @@ describe('useEnrichedVariables', () => {
     expect(dottedParallel).toBeDefined()
     expect(dottedParallel!.type).toBe('integer')
     expect(dottedParallel!.source).toBe('Regression')
-  })
-
-  it('does not add regression namespace entries when no regression variables exist', () => {
-    useWorkflowStore.getState().setVariables([
-      { id: 'v1', name: 'my_var', value: 'test', type: 'string' },
-    ])
-
-    const { result } = renderHook(() => useEnrichedVariables([]))
-
-    expect(result.current.some((v) => v.name === 'regression')).toBe(false)
-    expect(result.current.some((v) => v.name.startsWith('regression.'))).toBe(false)
   })
 
   it('merges profile bindings with namespace entries', () => {
