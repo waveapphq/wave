@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SonarQube settings shared by the scan, results and CI scripts. Source it, do not run it.
-# Exports SONAR_URL (default SonarQube Cloud) and SONAR_BRANCH (the branch of a local Cloud scan, else empty).
+# Exports SONAR_URL (default SonarQube Cloud), SONAR_BRANCH (the branch of a local Cloud scan, else empty)
+# and SONAR_BRANCH_TARGET (the release branch a fix or feature branch is compared with, else empty).
 
 SONAR_CLOUD_URL="https://sonarcloud.io"
 
@@ -24,3 +25,10 @@ if [ "${GITHUB_ACTIONS:-}" != "true" ] && [ "$SONAR_URL" = "$SONAR_CLOUD_URL" ];
   fi
 fi
 export SONAR_BRANCH
+
+# A fix or feature branch is compared with its release branch, the same rule as the local CodeQL scan.
+SONAR_BRANCH_TARGET=""
+if [[ "$SONAR_BRANCH" =~ ^(fix|feature)/([0-9]+\.[0-9]+\.[0-9]+(-[a-z]+[0-9]+)?)- ]]; then
+  SONAR_BRANCH_TARGET="release/${BASH_REMATCH[2]}"
+fi
+export SONAR_BRANCH_TARGET

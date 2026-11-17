@@ -19,6 +19,7 @@ import type {
 import { handleSaveError, sanitizeEdgesForSave, sanitizeNodesForSave } from './save-utils'
 import { canvasLocalFunctionBodies } from '@/features/workbench/lib/canonical-workflow'
 import { alreadyReported } from '@/features/workbench/lib/already-reported'
+import { getSessionId } from '@/lib/session-identity'
 
 const SAVED_TEST_LABEL = 'saved test'
 
@@ -172,7 +173,7 @@ export function useTestClose(params: UseTestCloseParams): TestCloseResult {
         await updateTest(editingTestId, {
           name: editingTestName,
           workflow,
-        })
+        }, getSessionId())
         markSaved()
         setPulseValidationNodeIds([])
         clearDraft()

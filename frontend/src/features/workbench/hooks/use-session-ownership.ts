@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ownershipApi,
   isHeldByAnother,
+  type HolderKind,
   type MirroredRun,
   type MirroredRunWire,
   type Ownership,
@@ -27,8 +28,10 @@ import {
   type NodeType,
   type EdgeType,
   type WorkflowVariable,
+  type Rect,
 } from '@/features/workbench/stores/workflow-store'
-import { changedMirrorNode } from '@/features/workbench/lib/mirror-change'
+import { mirrorChangeTarget } from '@/features/workbench/lib/mirror-change'
+import { glidesFrame } from '@/features/workbench/lib/mirror-glide'
 import { convertBackendVariables } from '@/features/workbench/live/variable-helpers'
 import { canvasLocalFunctionBodies } from '@/features/workbench/lib/canonical-workflow'
 import {
@@ -71,10 +74,17 @@ export interface DraftSnapshot {
   dirty: boolean
 }
 
+/** What an assistant streams into the session: a watched build or a watched change. */
+export type WatchKind = 'build' | 'change'
+
 type DraftSnapshotEvent = {
   event: 'draft_snapshot'
   from_holder_id: string
   active_node_id?: string | null
+  /** Where a watched build or change in progress ends up; absent on every other surface. */
+  final_bounds?: Rect | null
+  /** Null on a person's frame and on the saved last frame of a stream. */
+  watch_kind?: WatchKind | null
 } & DraftSnapshot
 
 type DraftTopicEvent =
@@ -97,11 +107,13 @@ export interface SessionOwnership {
   isHolder: boolean
   isMirroring: boolean
   holderLabel: string | null
-  holderKind: 'person' | 'mcp' | null
+  holderKind: HolderKind | null
   mcpSessionId: string | null
   browserSessionId: string | null
   /** The holder's announced live run, if any (watchers attach to it). */
   mirroredRun: MirroredRun | null
+  /** What the assistant holding the session streams, or null when it streams nothing. */
+  watchKind: WatchKind | null
   /** True while this watcher tracks nothing: browsed away, or the slot went free. */
   browsingAway: boolean
   /** Watcher-initiated navigation: stop tracking the holder, browse free. */
@@ -114,7 +126,7 @@ export interface SessionOwnership {
   pendingTakeover: { requesterLabel: string } | null
   isRequestingTakeover: boolean
   /** Outcome to surface as a modal: a resolved request, or being forced out. */
-  takeoverResult: 'granted' | 'denied' | 'forced' | null
+  takeoverResult: 'granted' | 'inherited' | 'denied' | 'forced' | null
   dismissTakeoverResult: () => void
   takeOver: () => void
   forceTakeOver: () => void
@@ -132,19 +144,23 @@ export function useSessionOwnership(): SessionOwnership {
   const [isHolder, setIsHolder] = useState(false)
   const [isMirroring, setIsMirroring] = useState(false)
   const [holderLabel, setHolderLabel] = useState<string | null>(null)
-  const [holderKind, setHolderKind] = useState<'person' | 'mcp' | null>(null)
+  const [holderKind, setHolderKind] = useState<HolderKind | null>(null)
   const [mcpSessionId, setMcpSessionId] = useState<string | null>(null)
   const [browserSessionId, setBrowserSessionId] = useState<string | null>(null)
   const [mirroredRun, setMirroredRun] = useState<MirroredRun | null>(null)
+  const [watchKind, setWatchKind] = useState<WatchKind | null>(null)
   const [browsingAway, setBrowsingAway] = useState(false)
   const [inheritRefreshTick, setInheritRefreshTick] = useState(0)
   const [watchers, setWatchers] = useState(0)
   const [pendingTakeover, setPendingTakeover] = useState<{ requesterLabel: string } | null>(null)
   const [isRequestingTakeover, setIsRequestingTakeover] = useState(false)
-  const [takeoverResult, setTakeoverResult] = useState<'granted' | 'denied' | 'forced' | null>(null)
+  const [takeoverResult, setTakeoverResult] = useState<
+    'granted' | 'inherited' | 'denied' | 'forced' | null
+  >(null)
 
   const isHolderRef = useRef(false)
   isHolderRef.current = isHolder
+  const holderKindRef = useRef<HolderKind | null>(null)
   const isRequestingTakeoverRef = useRef(false)
   isRequestingTakeoverRef.current = isRequestingTakeover
   // The server retracts a request with the same event it denies one with, so
@@ -155,9 +171,11 @@ export function useSessionOwnership(): SessionOwnership {
   // Previous mirrored node tree, to diff for the Follow Changes target.
   const prevMirrorNodesRef = useRef<NodeType[]>([])
   const browsingAwayRef = useRef(false)
-  // What this tab actually received while yielded: streamed build frames make
-  // the inherited draft unsaved work; a run keeps its paint; a write-only
-  // borrow (create/amend) means the open test may have moved in storage.
+  // Detached by an unexpected holder loss with that holder's surface still on screen, and nobody continued it since.
+  const showsLostHolderSurfaceRef = useRef(false)
+  // What this tab actually received while yielded: streamed build or change
+  // frames make the inherited draft unsaved work; a run keeps its paint; a
+  // write-only borrow (create/amend) means the open test may have moved in storage.
   const sawSnapshotsRef = useRef(false)
   const sawRunRef = useRef(false)
   // Saved-state of the last streamed frame: a completed build hands back clean.
@@ -166,22 +184,28 @@ export function useSessionOwnership(): SessionOwnership {
   const lastSnapshotRef = useRef<DraftSnapshotEvent | null>(null)
   const preBrowseIdentityRef = useRef<{ testId: string | null; testName: string | null } | null>(null)
   const mirroredRunRef = useRef<MirroredRun | null>(null)
+  // The assistant's run whose mirror ended when a person took the session over; it stays ended until that run does.
+  const leftRunSessionIdRef = useRef<string | null>(null)
   const subscriptionRef = useRef<Subscription | null>(null)
   const subscribeRef = useRef(subscribe)
   subscribeRef.current = subscribe
   const connectRef = useRef(connect)
   connectRef.current = connect
 
-  // Stop watching: drop the remote build's active-block border + Follow target,
-  // and (when inheriting a live draft) mark it dirty so it reads as unsaved work
-  // (WATCH-5), autosaving and showing the Save affordance.
+  // Stop watching: drop the remote stream's active-block border, Follow target,
+  // framing and kind of work, and (when inheriting a live draft) mark it dirty so
+  // it reads as unsaved work (WATCH-5), autosaving and showing the Save affordance.
   const dropMirrorState = useCallback((markDirty: boolean) => {
     const store = useWorkflowStore.getState()
+    store.finishMirrorGlide()
     store.setMirrorActiveNodeId(null)
     store.signalMirrorChange(null)
+    store.setMirrorBuildBounds(null)
     prevMirrorNodesRef.current = []
+    setWatchKind(null)
     if (markDirty) {
-      store.setDirty(true)
+      // Undo stops at the inherited surface, and it stays unsaved work until a save.
+      store.markUnsaved()
     }
   }, [])
 
@@ -190,53 +214,97 @@ export function useSessionOwnership(): SessionOwnership {
     setBrowsingAway(value)
   }, [])
 
-  const setAnnouncedRun = useCallback((run: MirroredRun | null) => {
+  // The role holds from the event that set it: the next draft frame can land before a render.
+  const applyIsHolder = useCallback((value: boolean) => {
+    isHolderRef.current = value
+    setIsHolder(value)
+  }, [])
+
+  const applyIsMirroring = useCallback((value: boolean) => {
+    isMirroringRef.current = value
+    setIsMirroring(value)
+  }, [])
+
+  const applyHolderKind = useCallback((kind: HolderKind | null) => {
+    // The mirror carries the holder's run: a person taking the session from an assistant ends it in every tab.
+    const run = mirroredRunRef.current
+    if (holderKindRef.current === 'mcp' && kind === 'person' && run !== null) {
+      leftRunSessionIdRef.current = run.sessionId
+      mirroredRunRef.current = null
+      setMirroredRun(null)
+    }
+    holderKindRef.current = kind
+    setHolderKind(kind)
+  }, [])
+
+  const setAnnouncedRun = useCallback((announced: MirroredRun | null) => {
+    if (announced?.sessionId !== leftRunSessionIdRef.current) leftRunSessionIdRef.current = null
+    const run = leftRunSessionIdRef.current === null ? announced : null
     mirroredRunRef.current = run
-    if (run !== null) sawRunRef.current = true
+    // Only a run watched while yielded keeps its paint; this tab's own run says nothing about a later borrow.
+    if (run !== null && !isHolderRef.current) sawRunRef.current = true
     setMirroredRun(run)
   }, [])
 
   // Regaining the slot: only a streamed UNSAVED surface reads as inherited
-  // unsaved work (a completed build streams its saved state and stays clean).
-  // A write-only borrow instead flags the open test for a storage refresh.
+  // unsaved work; a completed build or change streams its saved state, stays
+  // clean and becomes what this tab has saved. A write-only borrow instead
+  // flags the open test for a storage refresh.
   const settleInherit = useCallback(
-    (wasMirroring: boolean, wasBrowsing: boolean) => {
+    (wasMirroring: boolean, wasBrowsing: boolean, handedBack = false) => {
       const sawSnapshots = sawSnapshotsRef.current
       const sawRun = sawRunRef.current
       const streamDirty = streamDirtyRef.current
+      const showsLostHolderSurface = showsLostHolderSurfaceRef.current
       sawSnapshotsRef.current = false
       sawRunRef.current = false
       streamDirtyRef.current = false
-      const inherited = wasMirroring && !wasBrowsing
+      showsLostHolderSurfaceRef.current = false
+      const inherited = wasMirroring && (!wasBrowsing || showsLostHolderSurface)
       dropMirrorState(inherited && sawSnapshots && streamDirty)
-      if (inherited && !sawSnapshots && !sawRun) {
+      if (inherited && showsLostHolderSurface) {
+        // Inheritance after an unexpected holder loss is announced; every other one is silent.
+        setTakeoverResult('inherited')
+      }
+      if (inherited && sawSnapshots && !streamDirty) {
+        // Undo and the unsaved checks compare with the saved test, never with the one before the stream.
+        useWorkflowStore.getState().markSaved()
+      }
+      // A browsing tab never showed the holder's work: to it, a hand back follows a write to storage.
+      const wroteUnseen = inherited ? !sawSnapshots && !sawRun : wasBrowsing && handedBack
+      if (wroteUnseen) {
         setInheritRefreshTick((tick) => tick + 1)
       }
     },
     [dropMirrorState],
   )
 
-  const becomeHolder = useCallback(() => {
-    const wasMirroring = isMirroringRef.current
-    const wasBrowsing = browsingAwayRef.current
-    applyBrowsingAway(false)
-    setIsHolder(true)
-    setIsMirroring(false)
-    setHolderLabel(TAB_LABEL)
-    setHolderKind('person')
-    setMcpSessionId(null)
-    setBrowserSessionId(TAB_ID)
-    setTakeoverResult(null)
-    settleInherit(wasMirroring, wasBrowsing)
-  }, [applyBrowsingAway, settleInherit])
+  const becomeHolder = useCallback(
+    ({ handedBack = false }: { handedBack?: boolean } = {}) => {
+      const wasHolder = isHolderRef.current
+      const wasMirroring = isMirroringRef.current
+      const wasBrowsing = browsingAwayRef.current
+      applyBrowsingAway(false)
+      applyIsHolder(true)
+      applyIsMirroring(false)
+      setHolderLabel(TAB_LABEL)
+      applyHolderKind('person')
+      setMcpSessionId(null)
+      setBrowserSessionId(TAB_ID)
+      // A claim's answer after its own event keeps the notice that event raised.
+      if (!wasHolder) setTakeoverResult(null)
+      settleInherit(wasMirroring, wasBrowsing, handedBack)
+    },
+    [applyBrowsingAway, applyIsHolder, applyIsMirroring, applyHolderKind, settleInherit],
+  )
 
   const applyHolder = useCallback(
     (holder: OwnershipHolder | null) => {
       if (holder === null) {
-        setIsHolder(false)
-        setIsMirroring(false)
+        applyIsHolder(false)
+        applyIsMirroring(false)
         setHolderLabel(null)
-        setHolderKind(null)
+        applyHolderKind(null)
         setMcpSessionId(null)
         setBrowserSessionId(null)
         return
@@ -244,10 +312,12 @@ export function useSessionOwnership(): SessionOwnership {
       const mine = holder.id === TAB_ID
       const wasMirroring = isMirroringRef.current
       const wasBrowsing = browsingAwayRef.current
-      setIsHolder(mine)
-      setIsMirroring(!mine)
+      // Another holder continues the lost holder's work: this tab's copy of it is no longer the live draft.
+      if (!mine) showsLostHolderSurfaceRef.current = false
+      applyIsHolder(mine)
+      applyIsMirroring(!mine)
       setHolderLabel(holder.label)
-      setHolderKind(holder.kind)
+      applyHolderKind(holder.kind)
       setMcpSessionId(holder.kind === 'mcp' ? holder.id : null)
       setBrowserSessionId(holder.kind === 'person' ? holder.id : null)
       if (mine && wasMirroring) {
@@ -255,13 +325,14 @@ export function useSessionOwnership(): SessionOwnership {
         settleInherit(wasMirroring, wasBrowsing)
       }
     },
-    [applyBrowsingAway, settleInherit],
+    [applyBrowsingAway, applyIsHolder, applyIsMirroring, applyHolderKind, settleInherit],
   )
 
+  // Reclaims a slot freed by a hand back that names nobody.
   const claimOrMirror = useCallback(async () => {
     try {
       const claimed = await ownershipApi.claim(TAB_ID, TAB_LABEL)
-      becomeHolder()
+      becomeHolder({ handedBack: true })
       setWatchers(claimed.watchers)
     } catch (error_) {
       if (!isHeldByAnother(error_)) throw error_
@@ -285,6 +356,7 @@ export function useSessionOwnership(): SessionOwnership {
   )
 
   const browseAway = useCallback(() => {
+    showsLostHolderSurfaceRef.current = false
     if (isHolderRef.current || browsingAwayRef.current) return
     const store = useWorkflowStore.getState()
     preBrowseIdentityRef.current = {
@@ -298,18 +370,31 @@ export function useSessionOwnership(): SessionOwnership {
   // The slot went free: keep the canvas read-only but follow nothing, and stay
   // that way until the viewer asks to watch again.
   const detachFromHolder = useCallback(() => {
+    const wasWatching = !browsingAwayRef.current
     setHolderLabel(null)
-    setHolderKind(null)
+    applyHolderKind(null)
     setMcpSessionId(null)
     setBrowserSessionId(null)
     browseAway()
-  }, [browseAway])
+    // A watching tab keeps the lost holder's surface for whoever continues it.
+    showsLostHolderSurfaceRef.current = wasWatching
+  }, [applyHolderKind, browseAway])
 
   const handleHolderChanged = useCallback(
     (holder: OwnershipHolder | null, reason?: 'handoff' | 'auto_yield') => {
+      // Whoever holds next starts from the Blocks on their new places.
+      useWorkflowStore.getState().finishMirrorGlide()
+      // The kind of watched work belongs to the holding that streamed it.
+      setWatchKind(null)
+      if (reason === 'handoff' && holder?.id === TAB_ID) {
+        // The assistant handed the session back to this tab, the one that gave
+        // way: it holds again exactly as if it had won the freed slot.
+        becomeHolder({ handedBack: true })
+        return
+      }
       if (holder === null && isMirroringRef.current) {
-        // A graceful hand-back returns the slot to this tab; an unexpected loss
-        // promotes nobody, so this tab detaches instead of racing to claim.
+        // A hand-back that names nobody frees the slot for a watcher to claim; an
+        // unexpected loss promotes nobody, so this tab detaches instead of racing to claim.
         if (reason === 'handoff') {
           startBlockingRead({ label: SESSION_LABEL, run: claimOrMirror }, blockPage)
         } else {
@@ -333,18 +418,21 @@ export function useSessionOwnership(): SessionOwnership {
       }
       applyHolder(holder)
     },
-    [claimOrMirror, applyHolder, detachFromHolder, blockPage],
+    [becomeHolder, claimOrMirror, applyHolder, detachFromHolder, blockPage],
   )
 
   const handleTakeoverResolved = useCallback(
     (payload: Extract<DraftTopicEvent, { event: 'takeover_resolved' }>) => {
+      useWorkflowStore.getState().finishMirrorGlide()
       setPendingTakeover(null)
       // A cancel in flight suppresses only its own denied echo; a granted outcome won the race.
       if (
         isRequestingTakeoverRef.current &&
         (payload.outcome === 'granted' || !isCancelingRequestRef.current)
       ) {
-        setTakeoverResult(payload.outcome)
+        // An assistant grants a request only by letting go of the slot: it is not watching.
+        const leftByAssistant = payload.outcome === 'granted' && holderKindRef.current === 'mcp'
+        setTakeoverResult(leftByAssistant ? 'inherited' : payload.outcome)
       }
       isCancelingRequestRef.current = false
       setIsRequestingTakeover(false)
@@ -365,7 +453,13 @@ export function useSessionOwnership(): SessionOwnership {
         )
       : rawVars
     const nodes = stored ? canvasLocalFunctionBodies(payload.nodes, (name) => `mirror-local-${name}`) : payload.nodes
-    store.applyMirroredGraph({ nodes, edges: payload.edges, variables })
+    const graph = { nodes, edges: payload.edges, variables }
+    // A watched change first makes room: the shown Blocks it moves glide there.
+    if (live && glidesFrame(payload, store.editingTestId)) {
+      store.glideMirroredGraph(graph)
+    } else {
+      store.applyMirroredGraph(graph)
+    }
     // Converge on WHOSE surface this is, so a mirrored build can never sit
     // under the name of a test this tab merely had open.
     const testId = payload.test_id ?? null
@@ -374,14 +468,16 @@ export function useSessionOwnership(): SessionOwnership {
       store.setEditingTest(testId, testName)
     }
     store.setMirrorActiveNodeId(payload.active_node_id ?? null)
-    // Change target for the pulse + Follow: the build's active node (MCP)
-    // or the diffed change (person holder, who sends no active_node_id), at
-    // any nesting depth. Bumps the tick so a repeated change re-fires.
+    // Before the change signal, so a starting build or change is framed rather than chased (WATCH-8).
+    store.setMirrorBuildBounds(payload.final_bounds ?? null)
+    // A frame with no kind (a person's, or a stream's saved last frame) keeps the kind until the holder changes.
+    if (payload.watch_kind) setWatchKind(payload.watch_kind)
+    // Change target for the pulse + Follow: a watched stream names its own
+    // (none in a change's first step); a person's frame is diffed, at any
+    // nesting depth. Bumps the tick so a repeated change re-fires.
     // A rejoin apply moves the whole viewport instead, so it never signals.
     if (live) {
-      store.signalMirrorChange(
-        payload.active_node_id ?? changedMirrorNode(prevMirrorNodesRef.current, nodes),
-      )
+      store.signalMirrorChange(mirrorChangeTarget(payload, prevMirrorNodesRef.current, nodes))
     }
     prevMirrorNodesRef.current = nodes
   }, [])
@@ -615,6 +711,7 @@ export function useSessionOwnership(): SessionOwnership {
     mcpSessionId,
     browserSessionId,
     mirroredRun,
+    watchKind,
     browsingAway,
     browseAway,
     rejoinMirror,

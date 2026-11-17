@@ -110,8 +110,8 @@ Every change must follow this process:
 - **Frontend functions read lower** - The frontend's function coverage shows less than 100%, and its gate is 96%, because `v8 ignore` blocks hide their lines, branches and statements from the report but not the functions defined inside them. Aim for 100% there too.
 - **If 100% seems hard, the code design may be wrong** - Question the architecture, not the requirement.
 
-### Coverage Exclusions Registry (do not modify)
-- **Registry**: `tests/exclusions/frontend-coverage.md` - no modifications without a maintainer's approval
+### Coverage Exclusions Registry
+- **Registry**: `tests/exclusions/frontend-coverage.md` - no new or changed entry without a maintainer's approval. Removing an entry no code uses any more is cleanup and needs none
 - **Format**: `/* v8 ignore next - COV-XXX-NNN */` - verify the ID exists in the registry before accepting
 - **Unregistered `/* v8 ignore */` comments are policy violations**
 - **Backend**: `tests/exclusions/backend-coverage.md` holds the backend's exclusions, under the same approval rule. Format: `# pragma: no cover - BCOV-XXX-NNN` - the ID must exist in the backend list. An unregistered `# pragma: no cover` in `backend/wavecore/` is a policy violation
@@ -140,6 +140,7 @@ Every change must follow this process:
   ```
 - **Required host** - The three suites are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. For now, this is a hard requirement.
 - **Text checks** - `./scripts/check-text.sh` fails on spelling that `typos.toml` does not allow (`typos`, pinned in `backend/poetry.lock`), on em and en dashes in every text file that `.gitignore` does not exclude, and on process markers in source comments. The backend and frontend CI scripts and GitHub CI run it. Fix the text; a test string that needs a dash or a misspelling uses an escape or another misspelling.
+- **Branch name check** - `./scripts/check-branch-name.sh` allows only `master`, `release/<version>`, `fix/<version>-<name>` and `feature/<version>-<name>`; the three CI scripts run it first, and there a fix or feature branch also needs its release branch in `origin`; the `Branch name` workflow runs it on each pull request, which must go from a fix or feature branch into the release branch of the same version, or from a release branch into `master`.
 - **Optional results helpers** - `./scripts/sonar-results-backend.sh` and `./scripts/sonar-results-frontend.sh` are read-only reporting tools that summarize the SonarQube findings of the current branch after a scan of that branch has run. Use them only to inspect details when the quality-gate fails inside a CI script; never as a substitute for the CI script itself. With `--fix` they also print each finding's flow (for a security finding, the path from the input to the issue) and, once per rule, SonarQube's text on why it is an issue and how to fix it.
 - **Optional CodeQL check** - `./scripts/codeql-scan.sh` runs the checks GitHub's code scanning runs, on the host, and lists the alerts the target branch does not have (`--all` lists every alert of the working tree instead, `--flows` adds the path from the input to each problem). Run it before a push; it is not part of the CI scripts, and GitHub runs CodeQL on each pull request itself.
 - **CI scripts write logs to files** - Output is tee'd to `/tmp/ci-frontend.log` and `/tmp/ci-backend.log`

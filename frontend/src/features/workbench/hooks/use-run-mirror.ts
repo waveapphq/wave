@@ -31,8 +31,8 @@ export interface UseRunMirrorDeps {
   localSessionId: string | null
   /** Hydrate the announced run (converge test, restore paint, subscribe topics). */
   attach: (run: MirroredRun) => void
-  /** Unsubscribe from the attached run's topics. */
-  detach: () => void
+  /** Unsubscribe from the attached run's topics; `announceEnded` once the run is no longer announced. */
+  detach: (announceEnded: boolean) => void
 }
 
 export interface UseRunMirrorResult {
@@ -74,13 +74,13 @@ export function useRunMirror({
   useEffect(() => {
     if (targetSessionId === null || target === null) {
       if (attachedSessionRef.current !== null) {
-        detachRef.current()
+        detachRef.current(run === null)
         attachedSessionRef.current = null
       }
       return
     }
     if (attachedSessionRef.current !== null) {
-      detachRef.current()
+      detachRef.current(false)
     }
     const logStore = useLogStore.getState()
     // A tab that loaded into the run is already bound to it and holds its
@@ -98,7 +98,7 @@ export function useRunMirror({
   useEffect(
     () => () => {
       if (attachedSessionRef.current !== null) {
-        detachRef.current()
+        detachRef.current(false)
         attachedSessionRef.current = null
       }
     },

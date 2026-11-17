@@ -53,6 +53,13 @@ import {
   type NameRename,
 } from '@/features/workbench/lib/saved-block-fields'
 import { functionScopeNames, type ScopeBody } from '@/features/workbench/lib/function-scope-rows'
+import {
+  glideMoves,
+  glideProgress,
+  placeGliding,
+  type GlideMoves,
+  type MirrorGlide,
+} from '@/features/workbench/lib/mirror-glide'
 import type { ElementTypes } from '@/lib/variable-validation'
 import { validateVariableName } from '@/features/workbench/hooks/use-variable-name-validation'
 
@@ -184,6 +191,8 @@ interface HistoryEntry {
   variables?: WorkflowVariable[]
   timestamp: number
   isInitialState?: boolean
+  /** A baseline that is the undo floor but not a saved state: the canvas reads as unsaved until a save. */
+  unsaved?: boolean
   operationDescription?: string
 }
 
@@ -245,6 +254,8 @@ function persistDebugOptions(options: DebugOptions): void {
 interface FitViewOptions {
   padding?: number
   duration?: number
+  /** Fit these bounds with the rendered nodes: a watched build's finished test (WATCH-8). */
+  bounds?: Rect
 }
 
 interface FocusOptions {
@@ -408,6 +419,16 @@ interface WorkflowState {
   mirrorLastChangeNodeId: string | null
   mirrorChangeTick: number
 
+  // Where the watched build in progress ends up, or null when none streams (WATCH-8)
+  mirrorBuildBounds: Rect | null
+
+  // The staying Blocks of a watched change on their way to their new places
+  mirrorGlide: MirrorGlide | null
+
+  // Keep-a-new-Block-in-view coordination with React Flow (WATCH-8)
+  bringIntoViewRequested: boolean
+  bringIntoViewNodeId: string | null
+
   // Edge drag state (for dynamic ingress "+" handle visibility)
   isDraggingEdge: boolean
   draggingEdgeSourceId: string | null
@@ -427,11 +448,11 @@ interface WorkflowState {
   setNodeTree: (nodes: NodeType[], options?: { skipDirty?: boolean }) => void
   setEdges: (edges: EdgeType[], options?: { skipDirty?: boolean }) => void
   /** Mirror-apply a holder's draft snapshot at root: no history, never dirty. */
-  applyMirroredGraph: (snapshot: {
-    nodes: NodeType[]
-    edges: EdgeType[]
-    variables: WorkflowVariable[]
-  }) => void
+  applyMirroredGraph: (snapshot: MirroredGraph) => void
+  /** Mirror-apply as applyMirroredGraph, with every shown Block the snapshot moves gliding to its new place. */
+  glideMirroredGraph: (snapshot: MirroredGraph) => void
+  /** End a running glide with every Block on its new place. */
+  finishMirrorGlide: () => void
   /** Stamp every Shared instance, at any depth and in every history entry, with its pinned contract. */
   applyFunctionContracts: (versions: VersionsByFunction) => void
   addNode: (node: NodeType) => void
@@ -574,6 +595,9 @@ interface WorkflowState {
   acknowledgeFocus: () => void
   setMirrorActiveNodeId: (id: string | null) => void
   signalMirrorChange: (id: string | null) => void
+  setMirrorBuildBounds: (bounds: Rect | null) => void
+  requestBringIntoView: (nodeId: string) => void
+  acknowledgeBringIntoView: () => void
   setDirty: (dirty: boolean) => void
   resetZoom: () => void
 
@@ -603,6 +627,8 @@ interface WorkflowState {
   transaction: (callback: () => void, description?: string) => void
 
   markSaved: () => void
+  /** Floor the undo stack at the shown canvas, which is unsaved work (a surface this tab took over). */
+  markUnsaved: () => void
   reset: () => void
   clearError: () => void
 
@@ -676,13 +702,19 @@ interface WorkflowState {
   getEdgesBySource: (sourceId: string) => EdgeType[]
   getEdgesByTarget: (targetId: string) => EdgeType[]
   hasUnsavedChanges: () => boolean
-  /** The variables as of the last save (the dirty baseline). Used to tell whether
+  /** The variables of the undo floor (the last save, or a surface taken over). Used to tell whether
    *  a secret's value is still unsaved (visible) vs persisted (masked). */
   getSavedVariables: () => WorkflowVariable[]
-  /** The canvas nodes as of the last save (canonical, so Local Function bodies are in them). */
+  /** The canvas nodes of the undo floor (canonical, so Local Function bodies are in them). */
   getSavedNodes: () => NodeType[]
   isNodeSelected: (nodeId: string) => boolean
   prefersReducedMotion: () => boolean
+}
+
+interface MirroredGraph {
+  nodes: NodeType[]
+  edges: EdgeType[]
+  variables: WorkflowVariable[]
 }
 
 // Default node dimensions when not measured yet
@@ -694,6 +726,11 @@ interface Rect {
   y: number
   width: number
   height: number
+}
+
+function sameRect(a: Rect | null, b: Rect | null): boolean {
+  if (a === null || b === null) return a === b
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
 }
 
 /** Strip the transient `localDefinition` stamped by `pushSharedDrill` from
@@ -871,6 +908,7 @@ function computeDerivedDirty(
 ): boolean {
   const baseline = findBaselineEntry(state.history)
   if (!baseline) return state.isDirty
+  if (baseline.unsaved) return true
   return !(
     canonicalEqual(canonicalizeNodes(state.nodes), canonicalizeNodes(baseline.nodes)) &&
     canonicalEqual(canonicalizeEdges(state.edges), canonicalizeEdges(baseline.edges)) &&
@@ -1597,6 +1635,41 @@ function cancelPendingGroupingCommit(get: GetState, set: SetPartial): void {
   set({ groupingDebounceTimer: null })
 }
 
+/** Hold the moving Blocks where they show until the view has framed the finished test, then ease them over. */
+function startMirrorGlide(get: GetState, set: SetPartial, moves: GlideMoves): void {
+  let startedAt: number | null = null
+  const step = (now: number): void => {
+    if (startedAt === null && get().fitViewRequested) {
+      set({ mirrorGlide: { moves, startedAt, frame: requestAnimationFrame(step) } })
+      return
+    }
+    startedAt ??= now
+    const progress = glideProgress(now - startedAt)
+    set({
+      nodes: placeGliding(get().nodes, moves, progress),
+      mirrorGlide: progress < 1 ? { moves, startedAt, frame: requestAnimationFrame(step) } : null,
+    })
+  }
+  set({
+    nodes: placeGliding(get().nodes, moves, 0),
+    mirrorGlide: { moves, startedAt, frame: requestAnimationFrame(step) },
+  })
+}
+
+/** Stop a running glide's next step; the caller says where the Blocks end up. */
+function stopMirrorGlide(get: GetState): void {
+  const glide = get().mirrorGlide
+  if (glide) cancelAnimationFrame(glide.frame)
+}
+
+/** End a running glide with every moving Block on its new place. */
+function endMirrorGlide(get: GetState, set: SetPartial): void {
+  const glide = get().mirrorGlide
+  if (!glide) return
+  cancelAnimationFrame(glide.frame)
+  set({ nodes: placeGliding(get().nodes, glide.moves, 1), mirrorGlide: null })
+}
+
 /** Undo/redo are unavailable while executing or saving. */
 function historyGateBlocked(state: WorkflowState): boolean {
   return (
@@ -1751,6 +1824,10 @@ function buildInitializer(
     mirrorActiveNodeId: null,
     mirrorLastChangeNodeId: null,
     mirrorChangeTick: 0,
+    mirrorBuildBounds: null,
+    mirrorGlide: null,
+    bringIntoViewRequested: false,
+    bringIntoViewNodeId: null,
     isDraggingEdge: false,
     draggingEdgeSourceId: null,
     setDraggingEdge: (isDragging, sourceId = null) =>
@@ -1793,12 +1870,30 @@ function buildInitializer(
     },
 
     applyMirroredGraph: (snapshot) => {
+      endMirrorGlide(get, set)
+      // A watching tab keeps no undo of its own: its history starts at the surface it shows.
+      cancelPendingGroupingCommit(get, set)
       set({
         nodes: snapshot.nodes,
         edges: snapshot.edges,
         variables: snapshot.variables,
         isDirty: false,
+        history: [makeBaselineEntry(snapshot.nodes, snapshot.edges, snapshot.variables, 'Mirrored surface')],
+        historyIndex: 0,
       })
+    },
+
+    glideMirroredGraph: (snapshot) => {
+      endMirrorGlide(get, set)
+      const shown = get().nodes
+      get().applyMirroredGraph(snapshot)
+      if (get().prefersReducedMotion()) return
+      const moves = glideMoves(shown, snapshot.nodes)
+      if (moves.size > 0) startMirrorGlide(get, set, moves)
+    },
+
+    finishMirrorGlide: () => {
+      endMirrorGlide(get, set)
     },
 
     applyFunctionContracts: (versions) => {
@@ -2710,6 +2805,19 @@ function buildInitializer(
       }))
     },
 
+    setMirrorBuildBounds: (bounds: Rect | null) => {
+      // Every frame of one build repeats its bounds: keep the object, so the view frames once.
+      set((state) => (sameRect(state.mirrorBuildBounds, bounds) ? state : { mirrorBuildBounds: bounds }))
+    },
+
+    requestBringIntoView: (nodeId: string) => {
+      set({ bringIntoViewRequested: true, bringIntoViewNodeId: nodeId })
+    },
+
+    acknowledgeBringIntoView: () => {
+      set({ bringIntoViewRequested: false, bringIntoViewNodeId: null })
+    },
+
     setDirty: (dirty: boolean) => {
       set({ isDirty: dirty })
     },
@@ -3286,12 +3394,25 @@ function buildInitializer(
       })
     },
 
+    markUnsaved: () => {
+      cancelPendingGroupingCommit(get, set)
+      const state = get()
+      const floor = makeBaselineEntry(
+        canonicalizeNodes(state.nodes),
+        canonicalizeEdges(state.edges),
+        state.variables,
+        'Unsaved work',
+      )
+      set({ isDirty: true, history: [{ ...floor, unsaved: true }], historyIndex: 0 })
+    },
+
     /**
      * Reset the canvas to an empty draft and floor the undo stack with an
      * empty baseline so `canUndo() === false` immediately after.
      */
     reset: () => {
       cancelPendingGroupingCommit(get, set)
+      stopMirrorGlide(get)
       clearScriptSyntaxIssues()
       set({
         nodes: [],
@@ -3347,6 +3468,10 @@ function buildInitializer(
         mirrorActiveNodeId: null,
     mirrorLastChangeNodeId: null,
     mirrorChangeTick: 0,
+        mirrorBuildBounds: null,
+        mirrorGlide: null,
+        bringIntoViewRequested: false,
+        bringIntoViewNodeId: null,
         isDragging: false,
         isInTransaction: false,
         dragStartState: null,
@@ -3684,4 +3809,5 @@ export type {
   WorkflowState,
   SelectNodeOptions,
   Rect,
+  FitViewOptions,
 }

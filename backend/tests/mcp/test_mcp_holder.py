@@ -7,6 +7,7 @@ outcome by holder kind).
 """
 
 import contextlib
+import json
 from collections.abc import Generator
 from types import SimpleNamespace
 from typing import Any
@@ -308,6 +309,85 @@ class TestAuthoringToolWrappers:
 
         mock_build.assert_awaited_once_with("recipe-text", session_id=None)
         assert result == {"built": True}
+
+    async def test_watched_change_wrapper_injects_the_session_id(self) -> None:
+        from wavecore.mcp import server as mcp_server
+        from wavecore.mcp.tools import watch
+
+        ctx = SimpleNamespace(headers={"mcp-session-id": "s9"})
+        with patch.object(
+            watch, "amend_test_live_from_recipe", return_value={"amended": True}
+        ) as mock_change:
+            result = await mcp_server._amend_test_live_from_recipe_tool(
+                "ref-1", "recipe-text", ctx=ctx
+            )
+
+        mock_change.assert_awaited_once_with("ref-1", "recipe-text", session_id="s9")
+        assert result == {"amended": True}
+
+    async def test_the_watched_change_is_offered_with_the_fast_amends_arguments(self) -> None:
+        from wavecore.mcp import server as mcp_server
+
+        tools = {tool.name: tool for tool in await mcp_server._build_server().list_tools()}
+
+        watched = tools["amend_test_live_from_recipe"]
+        fast = tools["amend_test_from_recipe"]
+        assert sorted(watched.input_schema["properties"]) == ["recipe", "test_ref"]
+        assert sorted(watched.input_schema["properties"]) == sorted(fast.input_schema["properties"])
+
+
+@pytest.fixture
+def connected_tab() -> Generator[Any, None, None]:
+    """A live manager the slot reads, and a coroutine opening a tab identified by its id."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import WebSocket
+
+    from wavecore.api.app import app
+    from wavecore.api.websocket import WebSocketManager, session_registry
+
+    original = getattr(app.state, "ws_manager", None)
+    manager = WebSocketManager()
+    app.state.ws_manager = manager
+
+    async def open_tab(holder_id: str) -> None:
+        socket = AsyncMock(spec=WebSocket)
+        socket.__len__ = MagicMock(return_value=1)
+        conn = await manager.connect(socket)
+        await manager.handle_message(conn, json.dumps({"type": "identify", "holderId": holder_id}))
+
+    yield open_tab
+    app.state.ws_manager = original
+    session_registry.clear_sessions()
+
+
+class TestEveryAssistantReleaseHandsBack:
+    """A fast write and a finished run give the slot back to the tab that gave way."""
+
+    async def test_a_fast_write_hands_the_slot_back(self, connected_tab: Any) -> None:
+        from wavecore.api.services.workbench import ownership
+        from wavecore.mcp.tools import author
+
+        await connected_tab("h1")
+        with patch.object(ownership, "_emit"):
+            ownership.claim("h1", "Holder One")
+
+            author.run_held_write("s1", "amended", lambda: {"amended": True})
+
+        assert ownership.get_holder() == {"id": "h1", "label": "Holder One", "kind": "person"}
+
+    async def test_a_finished_run_hands_the_slot_back(self, connected_tab: Any) -> None:
+        from wavecore.api.services.workbench import ownership
+        from wavecore.mcp.tools import run as run_tools
+
+        await connected_tab("h1")
+        with patch.object(ownership, "_emit"):
+            ownership.claim("h1", "Holder One")
+            ownership.claim("s1", "claude-code (MCP)", "mcp")
+
+            run_tools._release_run_slot("s1")
+
+        assert ownership.get_holder() == {"id": "h1", "label": "Holder One", "kind": "person"}
 
 
 class TestRequestOutcomeByKind:

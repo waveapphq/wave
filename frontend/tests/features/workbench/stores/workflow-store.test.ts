@@ -3436,6 +3436,98 @@ describe('Workflow Store', () => {
     })
   })
 
+  describe('mirrorBuildBounds (watched build framing)', () => {
+    const BOUNDS = { x: -80, y: 140, width: 160, height: 353 }
+
+    it('starts with no build in progress', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().reset()
+
+      expect(useWorkflowStore.getState().mirrorBuildBounds).toBeNull()
+    })
+
+    it('stores the finished test bounds of a build in progress', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().reset()
+
+      useWorkflowStore.getState().setMirrorBuildBounds(BOUNDS)
+
+      expect(useWorkflowStore.getState().mirrorBuildBounds).toEqual(BOUNDS)
+    })
+
+    it('keeps the same bounds object while later frames of the build repeat them', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().reset()
+      useWorkflowStore.getState().setMirrorBuildBounds(BOUNDS)
+      const first = useWorkflowStore.getState().mirrorBuildBounds
+
+      useWorkflowStore.getState().setMirrorBuildBounds({ ...BOUNDS })
+
+      expect(useWorkflowStore.getState().mirrorBuildBounds).toBe(first)
+    })
+
+    it('takes new bounds when another build starts', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().reset()
+      useWorkflowStore.getState().setMirrorBuildBounds(BOUNDS)
+
+      useWorkflowStore.getState().setMirrorBuildBounds({ ...BOUNDS, height: 900 })
+
+      expect(useWorkflowStore.getState().mirrorBuildBounds).toEqual({ ...BOUNDS, height: 900 })
+    })
+
+    it('clears when the surface is no longer a build in progress', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().reset()
+      useWorkflowStore.getState().setMirrorBuildBounds(BOUNDS)
+
+      useWorkflowStore.getState().setMirrorBuildBounds(null)
+
+      expect(useWorkflowStore.getState().mirrorBuildBounds).toBeNull()
+    })
+
+    it('reset clears the bounds', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().setMirrorBuildBounds(BOUNDS)
+
+      useWorkflowStore.getState().reset()
+
+      expect(useWorkflowStore.getState().mirrorBuildBounds).toBeNull()
+    })
+  })
+
+  describe('requestBringIntoView and acknowledgeBringIntoView', () => {
+    it('requestBringIntoView names the Block to keep in view', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().reset()
+
+      useWorkflowStore.getState().requestBringIntoView('n7')
+
+      expect(useWorkflowStore.getState().bringIntoViewRequested).toBe(true)
+      expect(useWorkflowStore.getState().bringIntoViewNodeId).toBe('n7')
+    })
+
+    it('acknowledgeBringIntoView clears the request', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().requestBringIntoView('n7')
+
+      useWorkflowStore.getState().acknowledgeBringIntoView()
+
+      expect(useWorkflowStore.getState().bringIntoViewRequested).toBe(false)
+      expect(useWorkflowStore.getState().bringIntoViewNodeId).toBeNull()
+    })
+
+    it('reset clears the request', async () => {
+      const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')
+      useWorkflowStore.getState().requestBringIntoView('n7')
+
+      useWorkflowStore.getState().reset()
+
+      expect(useWorkflowStore.getState().bringIntoViewRequested).toBe(false)
+      expect(useWorkflowStore.getState().bringIntoViewNodeId).toBeNull()
+    })
+  })
+
   describe('setDirty', () => {
     it('setDirty(true) marks the canvas dirty', async () => {
       const { useWorkflowStore } = await import('../../../../src/features/workbench/stores/workflow-store')

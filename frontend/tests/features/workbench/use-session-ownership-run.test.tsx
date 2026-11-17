@@ -15,7 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-const { ownershipApi, mockSubscribe, mockSend, mockConnect, handlerRef } = vi.hoisted(() => {
+const { ownershipApi, mockSubscribe, mockSend, mockConnect, handlerRef, connection } = vi.hoisted(() => {
   const handlerRef: { current: (payload: Record<string, unknown>) => void } = {
     current: () => {},
   }
@@ -40,6 +40,7 @@ const { ownershipApi, mockSubscribe, mockSend, mockConnect, handlerRef } = vi.ho
     mockSend,
     mockConnect: vi.fn().mockResolvedValue(undefined),
     handlerRef,
+    connection: { isConnected: true },
   }
 })
 
@@ -48,7 +49,11 @@ vi.mock('@/features/workbench/api/ownership', async (importOriginal) => ({
   ownershipApi,
 }))
 vi.mock('@/features/workbench/stores/websocket-store', () => ({
-  useWebSocketStore: () => ({ isConnected: true, subscribe: mockSubscribe, connect: mockConnect }),
+  useWebSocketStore: () => ({
+    isConnected: connection.isConnected,
+    subscribe: mockSubscribe,
+    connect: mockConnect,
+  }),
 }))
 
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
@@ -122,6 +127,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
   handlerRef.current = () => {}
+  connection.isConnected = true
   useWorkflowStore.getState().reset()
   ownershipApi.getOwnership.mockResolvedValue(FREE)
   ownershipApi.claim.mockResolvedValue(HOLDER_ME)
@@ -199,6 +205,104 @@ describe('useSessionOwnership - announced run state', () => {
       sessionId: 'run-session-2',
       testName: 'Other Test',
     })
+  })
+})
+
+describe("useSessionOwnership - a person takes the session over during an assistant's run", () => {
+  const ASHLEY = { id: 'ashley-tab', label: 'Ashley', kind: 'person' }
+  const ASSISTANT_RUNNING = { ...HELD_BY_MCP, run: RUN_WIRE }
+  // The server still announces the run after the take-over: it goes on to its end.
+  const ASHLEY_HOLDS = { ...HELD_BY_MCP, holder: ASHLEY, run: RUN_WIRE }
+
+  async function watchAssistantRun() {
+    ownershipApi.getOwnership.mockResolvedValue(ASSISTANT_RUNNING)
+    const hook = mount()
+    await flush()
+    expect(hook.result.current.mirroredRun).toEqual(RUN_MAPPED)
+    return hook
+  }
+
+  // A dropped socket re-reads the ownership on its way back.
+  async function reconnect(rerender: () => void) {
+    connection.isConnected = false
+    rerender()
+    connection.isConnected = true
+    rerender()
+    await flush()
+  }
+
+  it('a tab that watches on stops mirroring the run and watches the taker', async () => {
+    const { result } = await watchAssistantRun()
+
+    emit({ event: 'holder_changed', holder: ASHLEY })
+
+    expect(result.current.mirroredRun).toBeNull()
+    expect(result.current.isMirroring).toBe(true)
+    expect(result.current.holderKind).toBe('person')
+    expect(result.current.holderLabel).toBe('Ashley')
+    expect(result.current.takeoverResult).toBeNull()
+  })
+
+  it('does not mirror that run again when a read after a reconnect still announces it', async () => {
+    const { result, rerender } = await watchAssistantRun()
+    emit({ event: 'holder_changed', holder: ASHLEY })
+    ownershipApi.getOwnership.mockClear().mockResolvedValue(ASHLEY_HOLDS)
+
+    await reconnect(rerender)
+
+    expect(ownershipApi.getOwnership).toHaveBeenCalled()
+    expect(result.current.holderLabel).toBe('Ashley')
+    expect(result.current.mirroredRun).toBeNull()
+  })
+
+  it('stops mirroring the run when it learns of the take-over only from a read after a reconnect', async () => {
+    const { result, rerender } = await watchAssistantRun()
+    ownershipApi.getOwnership.mockResolvedValue(ASHLEY_HOLDS)
+
+    await reconnect(rerender)
+
+    expect(result.current.holderLabel).toBe('Ashley')
+    expect(result.current.mirroredRun).toBeNull()
+  })
+
+  it('a tab that took the session over does not mirror the run once another person takes it from it', async () => {
+    const { result } = await watchAssistantRun()
+    ownershipApi.requestTakeover.mockResolvedValue({ outcome: 'granted', ...HOLDER_ME, run: RUN_WIRE })
+    await act(async () => {
+      result.current.takeOver()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(result.current.isHolder).toBe(true)
+
+    emit({ event: 'holder_changed', holder: ASHLEY })
+
+    expect(result.current.isMirroring).toBe(true)
+    expect(result.current.mirroredRun).toBeNull()
+  })
+
+  it('mirrors the next run announced after that run ends', async () => {
+    const { result } = await watchAssistantRun()
+    emit({ event: 'holder_changed', holder: ASHLEY })
+    emit({ event: 'run_state_changed', run: null })
+    expect(result.current.mirroredRun).toBeNull()
+
+    emit({ event: 'run_state_changed', run: { ...RUN_WIRE, session_id: 'run-session-2' } })
+
+    expect(result.current.mirroredRun).toMatchObject({ sessionId: 'run-session-2' })
+  })
+
+  it("keeps mirroring a person's run when another person takes the session over", async () => {
+    ownershipApi.getOwnership.mockResolvedValue({
+      ...HELD_BY_MCP,
+      holder: { id: 'other', label: 'Will', kind: 'person' },
+      run: RUN_WIRE,
+    })
+    const { result } = mount()
+    await flush()
+
+    emit({ event: 'holder_changed', holder: ASHLEY })
+
+    expect(result.current.mirroredRun).toEqual(RUN_MAPPED)
   })
 })
 

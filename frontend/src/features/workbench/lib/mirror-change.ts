@@ -6,6 +6,10 @@
  * depth. Variable and metadata edits do not change any node signature, so they
  * return null (Follow Changes must not move for them). The first snapshot
  * (empty previous) returns null so the initial mirror load never yanks the view.
+ *
+ * mirrorChangeTarget - the Block a mirrored frame changed. A watched stream (a
+ * frame with bounds) names its own target, and null means none; only a frame
+ * without bounds, such as a person's, is diffed.
  */
 
 interface DiffNode {
@@ -46,4 +50,19 @@ export function changedMirrorNode(
     if (before.get(id) !== signature) changed = id
   }
   return changed
+}
+
+interface MirrorFrame {
+  active_node_id?: string | null
+  final_bounds?: unknown
+}
+
+export function mirrorChangeTarget(
+  frame: MirrorFrame,
+  prev: readonly DiffNode[],
+  next: readonly DiffNode[],
+): string | null {
+  // A watched change moves every staying Block in its first step: the diff would ring one of them.
+  if (frame.final_bounds) return frame.active_node_id ?? null
+  return frame.active_node_id ?? changedMirrorNode(prev, next)
 }

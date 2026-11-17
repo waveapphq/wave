@@ -46,6 +46,8 @@ class TestApplyDraft:
             "dirty": True,
             "from_holder_id": "h1",
             "active_node_id": None,
+            "final_bounds": None,
+            "watch_kind": None,
         }
 
     def test_apply_draft_carries_surface_identity_and_saved_state(self) -> None:
@@ -336,7 +338,66 @@ class TestApplyDraftActiveNode:
             "dirty": True,
             "from_holder_id": "h1",
             "active_node_id": None,
+            "final_bounds": None,
+            "watch_kind": None,
         }
+
+
+class TestApplyDraftFinalBounds:
+    """``apply_draft`` carries a build's finished bounds (null on person pushes)."""
+
+    def test_apply_draft_carries_final_bounds_into_the_cached_draft(self) -> None:
+        bounds = {"x": -80.0, "y": 140.0, "width": 160.0, "height": 353.0}
+        with patch.object(ownership, "_emit"):
+            ownership.claim("h1", "H1", "person")
+
+        result = ownership.apply_draft(
+            "h1",
+            {"nodes": [{"id": "n1"}], "edges": [], "variables": [], "final_bounds": bounds},
+        )
+
+        assert result["final_bounds"] == bounds
+        shared = ownership.get_shared_draft()
+        assert shared is not None
+        assert shared["final_bounds"] == bounds
+
+
+class TestApplyDraftWatchKind:
+    """``apply_draft`` says whether an assistant is building or changing a test (null otherwise)."""
+
+    def test_apply_draft_carries_the_watch_kind_into_the_cached_draft(self) -> None:
+        with patch.object(ownership, "_emit"):
+            ownership.claim("s1", "claude-code (MCP)", "mcp")
+
+        result = ownership.apply_draft(
+            "s1", {"nodes": [], "edges": [], "variables": {}, "watch_kind": "change"}
+        )
+
+        assert result["watch_kind"] == "change"
+        shared = ownership.get_shared_draft()
+        assert shared is not None
+        assert shared["watch_kind"] == "change"
+
+    async def test_a_person_draft_carries_no_watch_kind(self) -> None:
+        manager = WebSocketManager()
+        conn = await manager.connect(_fresh_ws())
+        with patch.object(ownership, "_emit"):
+            ownership.claim("h1", "H1", "person")
+
+        await manager.handle_message(
+            conn,
+            json.dumps(
+                {
+                    "type": "draft_update",
+                    "holderId": "h1",
+                    "snapshot": {"nodes": [], "edges": [], "variables": {}},
+                }
+            ),
+        )
+
+        shared = ownership.get_shared_draft()
+        assert shared is not None
+        assert shared["watch_kind"] is None
 
 
 class TestSubscribeReplay:
@@ -462,3 +523,194 @@ class TestSharedDraftLifecycle:
         assert holder is not None
         assert holder["id"] == "h2"
         assert ownership.get_shared_draft() is not None
+
+
+KEPT = {"test_id": None, "variables": {"token": {"secret": True, "value": "sealed"}}}
+
+
+def _stream_holding_kept(test_id: str | None = None) -> dict[str, object]:
+    """An assistant holds the slot and has streamed one frame of a draft, keeping its secrets."""
+    kept = {**KEPT, "test_id": test_id}
+    with patch.object(ownership, "_emit"):
+        ownership.claim("s1", "claude-code (MCP)", "mcp")
+    ownership.keep_draft_secrets("s1", kept)
+    ownership.apply_draft(
+        "s1", {"nodes": [], "edges": [], "variables": {}, "test_id": test_id, "dirty": True}
+    )
+    return kept
+
+
+def _person_takes_over() -> None:
+    with patch.object(ownership, "_emit"):
+        ownership.force_takeover("r1", "Ashley")
+
+
+def _surface(test_id: str | None, *, dirty: bool) -> dict[str, object]:
+    """The frame a holding tab sends of what it shows."""
+    return {"nodes": [], "edges": [], "variables": [], "test_id": test_id, "dirty": dirty}
+
+
+class TestKeptDraftSecrets:
+    """The real secret values of a streamed draft stay on the server for whoever continues it,
+    and only while that draft lasts."""
+
+    def test_a_person_continuing_the_draft_saves_with_its_kept_secrets(self) -> None:
+        kept = _stream_holding_kept()
+        _person_takes_over()
+
+        assert ownership.kept_draft_secrets(None, "r1") == kept
+
+    @pytest.mark.parametrize("saver", [None, "r2"], ids=["no tab", "another tab"])
+    def test_they_are_served_only_to_the_tab_that_holds_the_session(
+        self, saver: str | None
+    ) -> None:
+        _stream_holding_kept()
+        _person_takes_over()
+
+        assert ownership.kept_draft_secrets(None, saver) is None
+
+    @pytest.mark.parametrize("saver", [None, "r2"], ids=["no tab", "another tab"])
+    def test_a_save_from_anywhere_but_the_holding_tab_never_ends_them(
+        self, saver: str | None
+    ) -> None:
+        kept = _stream_holding_kept("test-1")
+        _person_takes_over()
+
+        ownership.drop_draft_secrets("test-1", saver)
+
+        assert ownership.kept_draft_secrets("test-1", "r1") == kept
+
+    def test_they_are_never_served_while_the_assistant_streams(self) -> None:
+        _stream_holding_kept()
+
+        assert ownership.kept_draft_secrets(None, "s1") is None
+
+    def test_they_are_served_only_for_the_test_the_draft_is(self) -> None:
+        _stream_holding_kept("test-1")
+        _person_takes_over()
+
+        assert ownership.kept_draft_secrets(None, "r1") is None
+        assert ownership.kept_draft_secrets("test-2", "r1") is None
+        assert ownership.kept_draft_secrets("test-1", "r1") is not None
+
+    def test_keeping_them_takes_the_holder(self) -> None:
+        with pytest.raises(ConflictException, match=r"^You are not the session holder$"):
+            ownership.keep_draft_secrets("s1", KEPT)
+
+    def test_the_continued_draft_keeps_them(self) -> None:
+        kept = _stream_holding_kept("test-1")
+        _person_takes_over()
+
+        ownership.apply_draft(
+            "r1", {"nodes": [], "edges": [], "variables": [], "test_id": "test-1", "dirty": True}
+        )
+
+        assert ownership.kept_draft_secrets("test-1", "r1") == kept
+
+    @pytest.mark.parametrize(
+        ("test_id", "dirty"),
+        [("test-2", True), (None, True), ("test-1", False)],
+        ids=["another test opened", "a new test started", "the change discarded"],
+    )
+    def test_another_surface_in_the_tab_ends_them(self, test_id: str | None, dirty: bool) -> None:
+        _stream_holding_kept("test-1")
+        _person_takes_over()
+
+        ownership.apply_draft(
+            "r1", {"nodes": [], "edges": [], "variables": [], "test_id": test_id, "dirty": dirty}
+        )
+
+        assert ownership.kept_draft_secrets("test-1", "r1") is None
+
+    def test_the_tab_that_claims_after_the_assistant_drops_and_continues_saves_with_them(
+        self,
+    ) -> None:
+        kept = _stream_holding_kept("test-1")
+
+        with patch.object(ownership, "_emit"):
+            ownership.release("s1", "handoff")
+            ownership.claim("r2", "Will")
+        ownership.apply_draft("r2", _surface("test-1", dirty=True))
+
+        assert ownership.kept_draft_secrets("test-1", "r2") == kept
+
+    def test_after_the_slot_frees_they_wait_for_the_next_tab_to_show_the_draft(self) -> None:
+        kept = _stream_holding_kept()
+        _person_takes_over()
+
+        with patch.object(ownership, "_emit"):
+            ownership.release("r1")
+            assert ownership.kept_draft_secrets(None, "r1") is None
+            ownership.claim("r2", "Will")
+
+        assert ownership.kept_draft_secrets(None, "r2") is None
+        ownership.apply_draft("r2", _surface(None, dirty=True))
+        assert ownership.kept_draft_secrets(None, "r2") == kept
+
+    @pytest.mark.parametrize(
+        ("test_id", "dirty"),
+        [("test-2", True), (None, True), ("test-1", False)],
+        ids=["another test opened", "a new test started", "the change discarded"],
+    )
+    def test_after_the_slot_frees_the_next_tab_showing_another_surface_ends_them(
+        self, test_id: str | None, dirty: bool
+    ) -> None:
+        _stream_holding_kept("test-1")
+
+        with patch.object(ownership, "_emit"):
+            ownership.release("s1", "handoff")
+            ownership.claim("r2", "Will")
+        ownership.apply_draft("r2", _surface(test_id, dirty=dirty))
+        ownership.apply_draft("r2", _surface("test-1", dirty=True))
+
+        assert ownership.kept_draft_secrets("test-1", "r2") is None
+
+    def test_a_new_stream_after_the_slot_frees_replaces_them(self) -> None:
+        _stream_holding_kept()
+        newer = {"test_id": None, "variables": {"other": {"secret": True, "value": "sealed"}}}
+
+        with patch.object(ownership, "_emit"):
+            ownership.release("s1", "handoff")
+            ownership.claim("s2", "claude-code (MCP)", "mcp")
+        ownership.keep_draft_secrets("s2", newer)
+        _person_takes_over()
+
+        assert ownership.kept_draft_secrets(None, "r1") == newer
+
+    def test_a_granted_take_over_hands_them_on_with_the_draft(self) -> None:
+        kept = _stream_holding_kept()
+        _person_takes_over()
+
+        with patch.object(ownership, "_emit"):
+            ownership.request_takeover("r2", "Will")
+            ownership.release("r1")
+
+        assert ownership.kept_draft_secrets(None, "r2") == kept
+
+    def test_a_new_stream_replaces_them(self) -> None:
+        _stream_holding_kept()
+        newer = {"test_id": None, "variables": {"other": {"secret": True, "value": "sealed"}}}
+
+        ownership.keep_draft_secrets("s1", newer)
+        _person_takes_over()
+
+        assert ownership.kept_draft_secrets(None, "r1") == newer
+
+    def test_the_save_of_the_draft_ends_them(self) -> None:
+        _stream_holding_kept("test-1")
+        _person_takes_over()
+
+        ownership.drop_draft_secrets("test-2", "r1")
+        assert ownership.kept_draft_secrets("test-1", "r1") is not None
+        ownership.drop_draft_secrets("test-1", "r1")
+        assert ownership.kept_draft_secrets("test-1", "r1") is None
+
+    def test_a_reset_ends_them(self) -> None:
+        _stream_holding_kept()
+        _person_takes_over()
+
+        ownership.clear()
+        with patch.object(ownership, "_emit"):
+            ownership.claim("r1", "Ashley")
+
+        assert ownership.kept_draft_secrets(None, "r1") is None

@@ -488,6 +488,29 @@ def iter_secret_settings(
     ]
 
 
+FUNCTION_LOCAL = _LOCAL
+FUNCTION_OUTPUT = _OUTPUT
+
+
+def _holds_the_mask(slot: _Slot) -> bool:
+    """A map credential holds the mask when any of its values is it."""
+    if slot.kind == _CREDENTIAL and isinstance(slot.value, dict):
+        return any(item == MASK_PLACEHOLDER for item in slot.value.values())
+    return bool(slot.value == MASK_PLACEHOLDER)
+
+
+def masked_secrets(
+    workflow: Any, *, secret_inputs: SecretInputNames | None = None
+) -> list[SecretSetting]:
+    """Every secret place a workflow holds as the bare mask: a Function local or output default,
+    a credential field or a secret Setter row, at any depth."""
+    return [
+        SecretSetting(slot.place[:-2][::3], slot.kind, slot.name, slot.value)
+        for slot in _workflow_slots(workflow, (), secret_inputs)
+        if slot.kind in _REPORTED and _holds_the_mask(slot)
+    ]
+
+
 def iter_plugin_credential_secret_items(workflow: dict[str, Any]) -> list[tuple[str, Any]]:
     """Ordered ``(field-name, stored-value)`` pairs for every declared credential field."""
     return _items(workflow, _workflow_source(), {_CREDENTIAL})

@@ -9,14 +9,18 @@ import { Bot, Crosshair, Eye, EyeOff, Link2, Lock, type LucideIcon } from 'lucid
 
 import { Button } from '@/components/ui/button'
 import { ConditionalTooltip } from '@/components/ui/tooltip'
+import type { HolderKind } from '@/features/workbench/api/ownership'
+import type { WatchKind } from '@/features/workbench/hooks/use-session-ownership'
 import { cn } from '@/lib/utils'
 
 export interface MirrorBannerProps {
   holderLabel: string
   /** null once nobody holds the workbench. */
-  holderKind: 'person' | 'mcp' | null
+  holderKind: HolderKind | null
   /** True while the holder has a run in flight (mirrored or browsed past). */
   runActive?: boolean
+  /** What the assistant streams: a watched build or a watched change. */
+  watchKind?: WatchKind | null
   /** True while this watcher browses freely instead of tracking the holder. */
   browsing?: boolean
   /** Switch back to watching the holder's session; shown while browsing. */
@@ -29,9 +33,10 @@ export interface MirrorBannerProps {
   onToggleFollow?: () => void
 }
 
-function trailingPhrase(isMcp: boolean, runActive: boolean): string {
+function trailingPhrase(isMcp: boolean, runActive: boolean, watchKind: WatchKind | null): string {
   if (runActive) return 'running live'
-  return isMcp ? 'building live' : 'updates as they edit'
+  if (!isMcp) return 'updates as they edit'
+  return watchKind === 'change' ? 'changing live' : 'building live'
 }
 
 // Person: "another session on {connection}" (bare until known); assistant keeps its client name.
@@ -58,7 +63,7 @@ function bannerIcon(noHolder: boolean, isMcp: boolean): LucideIcon {
   return Eye
 }
 
-function holderKindAttribute(noHolder: boolean, holderKind: 'person' | 'mcp' | null): string {
+function holderKindAttribute(noHolder: boolean, holderKind: HolderKind | null): string {
   if (noHolder) return 'none'
   return holderKind ?? 'person'
 }
@@ -67,12 +72,14 @@ function BannerMessage({
   browsing,
   noHolder,
   runActive,
+  watchKind,
   isMcp,
   displayName,
 }: Readonly<{
   browsing: boolean
   noHolder: boolean
   runActive: boolean
+  watchKind: WatchKind | null
   isMcp: boolean
   displayName: string
 }>) {
@@ -105,7 +112,7 @@ function BannerMessage({
       You&apos;re watching <span className={nameClass}>{displayName}</span>
       <span className="text-muted-foreground">
         {' '}
-        &middot; read-only, {trailingPhrase(isMcp, runActive)}
+        &middot; read-only, {trailingPhrase(isMcp, runActive, watchKind)}
       </span>
     </span>
   )
@@ -208,6 +215,7 @@ export function MirrorBanner({
   holderLabel,
   holderKind,
   runActive = false,
+  watchKind = null,
   browsing = false,
   onWatchSession,
   onTakeOver,
@@ -237,6 +245,7 @@ export function MirrorBanner({
           browsing={browsing}
           noHolder={noHolder}
           runActive={runActive}
+          watchKind={watchKind}
           isMcp={isMcp}
           displayName={holderDisplayName(isMcp, holderLabel)}
         />

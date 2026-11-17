@@ -1,0 +1,101 @@
+{
+  "name": "Watch Change",
+  "version": "1.0.0",
+  "description": "A Log Alpha, a Log Bravo with its own recipe key and a Delay, stored as a recipe compiles them. A watched change keeps Alpha, adds a Log after it, renames Bravo with a new message and removes the Delay.",
+  "variables": {},
+  "workflow": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 140
+        },
+        "data": {
+          "label": "Alpha",
+          "recipeKey": "flow[0]",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "alpha",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        }
+      },
+      {
+        "id": "node-2",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 280
+        },
+        "data": {
+          "label": "Bravo",
+          "recipeKey": "bravo",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "message": "bravo",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        }
+      },
+      {
+        "id": "node-3",
+        "type": "workflowNode",
+        "position": {
+          "x": -80,
+          "y": 420
+        },
+        "data": {
+          "label": "Pause",
+          "elementType": "delay",
+          "nodeType": "control",
+          "category": "timing",
+          "version": "1.0.0",
+          "config": {
+            "values": {
+              "duration": 500
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          },
+          "expressionFields": [],
+          "templateFields": []
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-start-alpha",
+        "source": "start-node",
+        "target": "node-1"
+      },
+      {
+        "id": "e-alpha-bravo",
+        "source": "node-1",
+        "target": "node-2"
+      },
+      {
+        "id": "e-bravo-pause",
+        "source": "node-2",
+        "target": "node-3"
+      }
+    ]
+  }
+}

@@ -163,6 +163,16 @@ function renderResult(props: Partial<TakeOverResultDialogProps> = {}) {
   return { ...render(<TakeOverResultDialog {...defaultProps} />), props: defaultProps }
 }
 
+/** The icon, its badge and the action button, as the outcome styles them. */
+function lookOf(dialog: HTMLElement) {
+  const icon = dialog.querySelector('svg')
+  return {
+    icon: icon?.getAttribute('class'),
+    badge: icon?.parentElement?.className,
+    action: within(dialog).getByRole('button').className,
+  }
+}
+
 describe('TakeOverResultDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -174,6 +184,33 @@ describe('TakeOverResultDialog', () => {
 
     const dialog = await screen.findByRole('alertdialog')
     expect(within(dialog).getByText('You now hold the session')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Start editing' }))
+    expect(props.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('says in the granted outcome that the previous holder is watching', async () => {
+    renderResult({ outcome: 'granted' })
+
+    const dialog = await screen.findByRole('alertdialog')
+    expect(
+      within(dialog).getByText('You are now editing this draft; the previous holder is watching.'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the inherited outcome as the granted one, without the sentence that the previous holder is watching', async () => {
+    const user = userEvent.setup()
+    const granted = renderResult({ outcome: 'granted' })
+    const grantedLook = lookOf(await screen.findByRole('alertdialog'))
+    granted.unmount()
+
+    const { props } = renderResult({ outcome: 'inherited' })
+
+    const dialog = await screen.findByRole('alertdialog')
+    expect(within(dialog).getByText('You now hold the session')).toBeInTheDocument()
+    expect(within(dialog).getByText('You are now editing this draft.')).toBeInTheDocument()
+    expect(dialog).not.toHaveTextContent(/watching/)
+    expect(lookOf(dialog)).toEqual(grantedLook)
 
     await user.click(within(dialog).getByRole('button', { name: 'Start editing' }))
     expect(props.onClose).toHaveBeenCalledTimes(1)

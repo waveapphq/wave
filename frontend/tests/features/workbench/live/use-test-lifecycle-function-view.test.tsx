@@ -3,10 +3,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, cleanup, renderHook } from '@testing-library/react'
 
-vi.mock('@/components/ui/toast', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/components/ui/toast')>()),
-  useToast: () => ({ error: vi.fn() }),
-}))
 vi.mock('@/features/settings/api/global-variables/crud', () => ({
   fetchSystemVariables: vi.fn().mockResolvedValue({}),
 }))

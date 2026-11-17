@@ -134,6 +134,12 @@ variables:
   a block setting or profile field as `NO_VALUE_SECRET` ("Secret field '<field>'
   holds no value").
 
+The mask `********` that a read shows for a secret is not a value. Given as the
+value of a secret variable, a Function's secret local or output default, a
+block's secret setting or a secret `set:` row, it keeps the value the test already
+stores there; where the test stores none, the save refuses it
+(`MASKED_SECRET_VALUE`).
+
 **Choosing one.** If the value is already a file on the WAVE server, reference it.
 Otherwise, if it must never appear in the conversation - a private key, a
 production credential - declare it empty and let a person enter it in the UI.
@@ -767,18 +773,40 @@ move. Secret values are never included in a readback - re-provide them (inline,
 `value_from_file`, or declare-empty) in the amended recipe. A secret setting written
 as an expression names a variable, not a value, so it reads back as written.
 Every step and construct may carry `key: <name>`, a name of your own for it: an
-amendment keeps a Block's place on the canvas when its step keeps the same `key`.
+amendment recognizes the step's Block by that `key`, wherever the step goes.
 A step with no `key` is recognized by what it is - its block, name and settings,
 in the same section of the same construct - so adding, removing or moving other
-steps never costs it its place. A block you add or move is placed in the flow, and
-when it, or a block that grew, needs the room, the blocks below it move down just
-enough to make room, so no two blocks overlap.
+steps never costs it its place. A section is recognized by what it is too - a
+switch case by its value, a parallel branch by its name or its blocks - so adding
+or removing one in the middle leaves the others' blocks recognized. After the
+change the test reads in flow order, as a fresh build does: a block you add or move
+goes under the block before it, in that block's column, and a new branch gets its
+own column. When there is no room, the blocks below or beside it move, keeping
+their order, and the others stay, a place a person dragged a block to included.
+When you remove a block, the blocks below it move up to close the gap, unless a
+person left it. No two blocks overlap.
+
+Change a test in one of two modes, as when you create one, and let the person choose:
+- `amend_test_from_recipe` - fast. Replaces the test in one step; a workbench tab that
+  has it open re-reads it.
+- `amend_test_live_from_recipe` - watched change. Holds the workbench session and plays
+  the change on the live canvas: first the blocks that stay move to their places and
+  removed blocks go, then each added or changed block takes its turn, then the test is
+  saved once and the session goes back to the person. Offer this when the person wants
+  to watch the change happen.
+
+Both modes take the same recipe, save the same test and answer the same way; a block
+the amendment recognizes keeps its id. A person with unsaved work in the workbench
+refuses either one (`SESSION_HELD`), and nothing is written. If someone takes the
+session over during a watched change, the answer carries `released` and nothing is
+saved: the half-done change stays in their tab as unsaved work.
 
 A secret `set:` row holding a plain value reads back as `null` under
 `secret_rows`: give its value again, or keep `null` for a person to fill in. One
 written `{expr: ...}` or as a template reads back as written. A block's reveal
-choices for its secret fields are not part of a recipe; an amend sets them back
-to the system setting.
+choices for its run output and its secret fields are not part of a recipe; an
+amend keeps them on every block it recognizes, and a block it adds starts on the
+system setting.
 
 A readback carries `test.version`. Because an amendment applies the whole recipe,
 one built on a readback that has since been superseded - by a person editing in

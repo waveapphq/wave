@@ -47,6 +47,11 @@ tests/e2e/
 
 A fixture README describes what its spec does in its container. Do not run its steps against your dev backend.
 
+Two things outlive a spec unless it removes them:
+
+- A spec that publishes a library Function deletes it with `?cascade=true` and checks each delete, as `deleteLibraryFunction` in `helpers/entry-behavior.ts` does. The reset does not remove Functions, and a delete without `cascade` refuses a Function that a Test or another Function uses.
+- A spec that opens `/workbench` without `?editTest=` and needs an empty canvas deletes `/workbench/session` in `beforeEach`. The auto fixture in `helpers/playwright-fixtures.ts` frees the workbench slot but not the draft the session holds.
+
 ### Usage in Tests
 
 ```typescript
@@ -264,7 +269,7 @@ Visual specs: `visual/<area>/v-<name>.spec.ts`. Functional specs: `functional/<s
 | `number-entry.ts` | Number box keystrokes and pastes (`typeKeys`, `typeAtEnd`, `pasteOver`, `expectTypedAs`), refused saves (`refusalOf`, `messagesOf`, `expectBlocked`), import dry runs (`importDryRun`, `validateInDialog`) and a response's raw JSON text, every digit kept (`rawBody`), shared by the number rule specs (REQ-3.1.3.14) |
 | `number-rule.ts` | Shared steps of the number rule specs (REQ-3.1.3.14): save refusals (`expectTestRefused`, `expectFunctionRefused`), raw JSON bodies (`sendJson`, `postJson`, `rawJson`, `withPlaceholders`), sheet reads (`typeNumber`, `clearNumber`, `badgeLines`), DEBUG lines (`ioLines`) and recipe refusals over MCP (`callToolRaw`, `recipeErrors`) |
 | `run-fill.ts` | The run fill specs' Test Data (`uploadRunFillData`), the kwok workload they roll (`createDeployment`, `restartStamp`), stored-field reads (`storedBlock`, `expectLeftOut`) and the run lines they read (`httpSendLine`, `deploymentRestartLine`) |
-| `mcp.ts` | MCP settings reset / until-restart enable (`resetMcpSettings`, `enableMcpUntilRestart`), endpoint probes (`askMcpEndpoint`, `askMcpSession`), a held client session (`connectMcpClient`), one-shot tool calls through the SDK client (`callTool(port, tool, args)` returns the `{ isError, payload }` envelope; `callToolItems` keeps every text item of the answer, since a listing tool sends one item per row) and a recipe text read as data (`recipeData`, such as a `get_test_recipe` readback) |
+| `mcp.ts` | MCP settings reset / until-restart enable (`resetMcpSettings`, `enableMcpUntilRestart`), endpoint probes (`askMcpEndpoint`, `askMcpSession`), a held client session (`connectMcpClient`), one-shot tool calls through the SDK client (`callTool(port, tool, args)` returns the `{ isError, payload }` envelope; `callToolAsync` returns it as a promise, for a tool that answers only when its work ends, such as a watched build or change; `startCancelableCall` starts such a call that the spec can `cancel()` before it answers, which also ends the client's session, the way an assistant that drops goes; `callToolItems` keeps every text item of the answer, since a listing tool sends one item per row) and a recipe text read as data (`recipeData`, such as a `get_test_recipe` readback) |
 | `testdata.ts` | The per-test Test Data HTTP surface: `uploadTestData` (one file per request, fields in the order path, replace, then the file part), `createTestDataFolder`, `deleteTestDataEntry`, `readTestDataListing` / `listTestDataPaths`, `readTestDataContent` / `readTestDataBytes`, and `readTestDataUploads` (what is in flight and what did not land). Seed a test's own files through it and read every assertion back from it; the sheet's own locators stay with its suite |
 | `opensearch-stack.ts` | Admin-side OpenSearch access for specs: the `wave-e2e` template, index create and `_bulk` seed, per-token cleanup, API token mint / revoke, oracle searches, field counts, search-task watch, slow-query calibration, and the F-LOGS / F-METRICS / B-PAGE / S-SLOW / D-DAILY data |
 | `theme.ts` | `toggleTheme(page)` clicks the shell's theme toggle, waits until the page carries the other theme and returns it (`'light'` or `'dark'`). Use it wherever a visual spec repeats its checks in the second theme |

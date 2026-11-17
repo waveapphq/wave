@@ -5,7 +5,7 @@
  * URL ?editTest and ?newTest handling, and system variable refresh.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useDraftPersistence, type WorkflowNode, type WorkflowEdge } from '@/features/workbench/hooks/use-draft-persistence'
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
@@ -17,34 +17,17 @@ import { convertSystemVariables } from './variable-helpers'
 import { SAVE_RESYNC_OWNER, sanitizeEdgesForSave, sanitizeNodesForSave } from './save-utils'
 import { canvasLocalFunctionBodies } from '@/features/workbench/lib/canonical-workflow'
 import { reconcileOutputBindingVariables, useLoadTest } from './use-load-test'
-import { useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
+import { isTestNotFound, useDeletedTestStore } from '@/features/workbench/stores/deleted-test-store'
 import { fetchSystemVariables } from '@/features/settings/api/global-variables/crud'
 import { fetchTest } from '@/features/tests/api/crud'
-import { useToast } from '@/components/ui/toast'
 import { usePageBlock } from '@/hooks/use-page-block'
+import { startBlockingRead } from '@/hooks/use-blocking-reads'
 import { toFailureDetail } from '@/lib/failure-detail'
 import type { FailedRead } from '@/stores/page-block-store'
 import { usePageBlockStore } from '@/stores/page-block-store'
 import { alreadyReported } from '@/features/workbench/lib/already-reported'
 
 const SYSTEM_VARIABLES_LABEL = 'system variables'
-
-/** Where a failed route-re-entry refresh of the open test lands. */
-export interface TestRefreshFailureSink {
-  /** The open test is gone from storage. */
-  deleted: () => void
-  /** The refresh failed, so suite and regression suggestions stay as they were. */
-  stale: (reason: string) => void
-}
-
-/** Exported for direct unit testing - not intended for cross-module use. */
-export function reportTestRefreshFailure(err: unknown, sink: TestRefreshFailureSink): void {
-  if ((err as { status?: number } | null)?.status === 404) {
-    sink.deleted()
-    return
-  }
-  sink.stale(toFailureDetail(err).message)
-}
 
 type SystemVariablesRead = Awaited<ReturnType<typeof fetchSystemVariables>>
 
@@ -87,6 +70,22 @@ export function toNamespaceEntries(
   return vars.map((v) => ({ name: v.name, type: v.type }))
 }
 
+const SUITES_LABEL = 'suite variables'
+
+type TestSuites = Pick<Awaited<ReturnType<typeof fetchTest>>, 'suite_ids' | 'suite_variables' | 'regression_variables'>
+
+const NO_SUITES: TestSuites = {}
+
+/** Store the suites a test is in and the suite and regression variables its expressions can read. */
+function applyTestSuites(
+  details: TestSuites,
+  setNamespaceVariables: (namespace: 'suite' | 'regression', entries: Array<{ name: string; type: string }>) => void,
+): void {
+  setNamespaceVariables('suite', toNamespaceEntries(details.suite_variables ?? []))
+  setNamespaceVariables('regression', toNamespaceEntries(details.regression_variables ?? []))
+  useWorkflowStore.getState().setEditingTestSuiteIds(details.suite_ids ?? [])
+}
+
 export interface TestLifecycleResult {
   // Draft persistence
   draft: ReturnType<typeof useDraftPersistence>['draft']
@@ -112,6 +111,8 @@ export interface UseTestLifecycleParams {
   setShowValidationErrorDialog: (show: boolean) => void
   /** Session-ownership mirror: a mirrored stream must never autosave as a local draft. */
   isMirroring?: boolean
+  /** A watcher browsing on its own: its opens read their own suites. */
+  browsingAway?: boolean
   workbenchStatus: string
   isSessionRecoveryComplete: boolean
   recoveredTestId: string | null
@@ -126,6 +127,7 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
     setValidationMode,
     setShowValidationErrorDialog,
     isMirroring = false,
+    browsingAway = false,
     workbenchStatus,
     isSessionRecoveryComplete,
     recoveredTestId,
@@ -156,7 +158,6 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
   const { draft, saveDraft, clearDraft } = useDraftPersistence()
 
   const { blockPage, clearPageBlock } = usePageBlock()
-  const { error: toastError } = useToast()
 
   // The re-sync reports under this fixed owner; the canvas lifecycle bounds it.
   useEffect(() => {
@@ -169,6 +170,44 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
   // dropped when the canvas goes rather than being raised again on the next mount.
   const deletedTestInfo = useDeletedTestStore((state) => state.info)
   useEffect(() => () => useDeletedTestStore.getState().clear(), [])
+
+  // An answer for a canvas that is gone, or for a test it no longer shows, is dropped.
+  const activeRef = useRef(true)
+  useEffect(() => {
+    activeRef.current = true
+    return () => { activeRef.current = false }
+  }, [])
+  const watchingRef = useRef(false)
+  useEffect(() => {
+    watchingRef.current = isMirroring && !browsingAway
+  }, [isMirroring, browsingAway])
+
+  // Every refresh of the open test's suites: a failed read blocks with a retry; a test gone from storage raises the dialog, except in a watching tab.
+  const refreshTestSuites = useCallback(
+    (testId: string) => {
+      const superseded = () => !activeRef.current || useWorkflowStore.getState().editingTestId !== testId
+      startBlockingRead(
+        {
+          label: SUITES_LABEL,
+          canceled: superseded,
+          run: async () => {
+            const details = await fetchTest(testId).catch((err: unknown) => {
+              if (superseded() || !isTestNotFound(err)) throw err
+              // A watching tab only mirrors: a watched test that is gone has no suites, and no dialog.
+              if (watchingRef.current) return NO_SUITES
+              useDeletedTestStore.getState().raise({ testId, testName: useWorkflowStore.getState().editingTestName })
+              return null
+            })
+            if (superseded()) return
+            if (details) applyTestSuites(details, setNamespaceVariables)
+            clearPageBlock(SUITES_LABEL)
+          },
+        },
+        blockPage,
+      )
+    },
+    [setNamespaceVariables, blockPage, clearPageBlock],
+  )
 
   // Load test hook (handles API calls, validation, variable reconciliation)
   const { isLoadingTest, loadTest } = useLoadTest(
@@ -294,40 +333,29 @@ export function useTestLifecycle(params: UseTestLifecycleParams): TestLifecycleR
     const currentTestId = useWorkflowStore.getState().editingTestId
     if (!currentTestId) return
 
-    let canceled = false
     // Refresh suite + regression namespace variables in place on workbench
     // route re-entry. Do NOT touch nodes/edges/variables - the user may
     // have unsaved canvas work, and ``loadTest`` is the only path that
     // rebuilds the canvas. This keeps expression-field autocomplete fresh
     // when the user navigates away (e.g. to the regression detail page,
     // edits vars, saves, and comes back) without a page refresh.
-    const handleDetails = (details: Awaited<ReturnType<typeof fetchTest>>) => {
-      if (canceled) return
-      setNamespaceVariables('suite', toNamespaceEntries(details.suite_variables ?? []))
-      setNamespaceVariables(
-        'regression',
-        toNamespaceEntries(details.regression_variables ?? []),
-      )
-      useWorkflowStore.getState().setEditingTestSuiteIds(details.suite_ids ?? [])
-    }
-    const handleFetchError = (err: unknown) => {
-      if (canceled) return
-      reportTestRefreshFailure(err, {
-        deleted: () => {
-          const name = useWorkflowStore.getState().editingTestName
-          useDeletedTestStore.getState().raise({ testId: currentTestId, testName: name })
-        },
-        stale: (reason) =>
-          toastError(
-            `Suite and regression variables may be out of date: ${reason}`,
-            'Variables Not Refreshed',
-          ),
-      })
-    }
-    fetchTest(currentTestId).then(handleDetails).catch(handleFetchError)
-    return () => { canceled = true }
-  }, [location.key, deletedTestInfo, setNamespaceVariables, toastError])
+    refreshTestSuites(currentTestId)
+  }, [location.key, deletedTestInfo, refreshTestSuites])
   /* v8 ignore stop */
+
+  // A mirrored frame that switches the shown test brings that test's suites, as opening it does.
+  const shownTestIdRef = useRef(editingTestId)
+  useEffect(() => {
+    const previous = shownTestIdRef.current
+    shownTestIdRef.current = editingTestId
+    if (!isMirroring || browsingAway || editingTestId === previous) return
+    if (editingTestId === null) {
+      applyTestSuites({}, setNamespaceVariables)
+      clearPageBlock(SUITES_LABEL)
+      return
+    }
+    refreshTestSuites(editingTestId)
+  }, [editingTestId, isMirroring, browsingAway, setNamespaceVariables, clearPageBlock, refreshTestSuites])
 
   // Load system namespace variables on mount (always - needed for expression autocomplete)
   const systemVariablesSink = useMemo<SystemVariablesSink>(

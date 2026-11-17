@@ -14,11 +14,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import type { HolderKind } from '@/features/workbench/api/ownership'
 
 export interface TakeOverWaitingDialogProps {
   open: boolean
   holderLabel: string
-  holderKind: 'person' | 'mcp'
+  holderKind: HolderKind
   onCancel: () => void
   onForce: () => void
 }

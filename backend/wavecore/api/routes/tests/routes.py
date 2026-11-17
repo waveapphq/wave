@@ -42,6 +42,7 @@ router = APIRouter(tags=["Tests"])
 
 # Reusable string constants
 _CACHE_CONTROL_60 = "max-age=60"
+_HOLDER_ID_DESCRIPTION = "The workbench tab saving the draft it holds"
 
 
 def missing_test(test_id: str) -> NotFoundException:
@@ -202,7 +203,11 @@ async def list_tests(
 
 
 @router.post("/tests", status_code=status.HTTP_201_CREATED, response_model=None)
-async def create_test(request: Request, response: Response) -> dict[str, Any] | JSONResponse:
+async def create_test(
+    request: Request,
+    response: Response,
+    holder_id: Annotated[str | None, Query(description=_HOLDER_ID_DESCRIPTION)] = None,
+) -> dict[str, Any] | JSONResponse:
     """Create a new test.
 
     Validates test definition including naming conventions and workflow structure.
@@ -210,6 +215,7 @@ async def create_test(request: Request, response: Response) -> dict[str, Any] | 
     Args:
         request: HTTP request with test data
         response: HTTP response for setting headers
+        holder_id: The workbench tab saving the draft it holds, if any
 
     Returns:
         Created test with metadata
@@ -225,7 +231,7 @@ async def create_test(request: Request, response: Response) -> dict[str, Any] | 
 
     # Create test (service layer runs the unified write-path pipeline)
     try:
-        test = test_service.create_test(body)
+        test = test_service.create_test(body, holder_id)
     except SaveValidationError as e:
         return _save_validation_response(e)
     repairs = test.pop("repairs", [])
@@ -266,6 +272,7 @@ async def update_test(
     request: Request,
     response: Response,
     if_match: Annotated[str | None, Header()] = None,
+    holder_id: Annotated[str | None, Query(description=_HOLDER_ID_DESCRIPTION)] = None,
 ) -> dict[str, Any] | JSONResponse:
     """Update test.
 
@@ -274,6 +281,7 @@ async def update_test(
         request: HTTP request with update data
         response: HTTP response for setting headers
         if_match: ETag for optimistic concurrency control
+        holder_id: The workbench tab saving the draft it holds, if any
 
     Returns:
         Updated test
@@ -287,7 +295,7 @@ async def update_test(
         validate_test_name(body["name"])
 
     try:
-        result = test_service.update_test(test_id, body, etag=if_match)
+        result = test_service.update_test(test_id, body, etag=if_match, holder_id=holder_id)
     except SaveValidationError as e:
         return _save_validation_response(e)
 
@@ -412,7 +420,7 @@ async def get_test_variables(test_id: str) -> dict[str, Any]:
 
 
 @router.patch("/tests/{test_id}/variables", response_model=None)
-async def update_test_variables(test_id: str, request: Request) -> dict[str, Any]:
+async def update_test_variables(test_id: str, request: Request) -> dict[str, Any] | JSONResponse:
     """Update test variables.
 
     Args:
@@ -435,7 +443,10 @@ async def update_test_variables(test_id: str, request: Request) -> dict[str, Any
         raise ValidationException("Field 'variables' must be an object")
     merge = body.get("merge", False)
 
-    result = test_service.update_test_variables(test_id, variables, merge=merge)
+    try:
+        result = test_service.update_test_variables(test_id, variables, merge=merge)
+    except SaveValidationError as e:
+        return _save_validation_response(e)
 
     if result is None:
         raise missing_test(test_id)

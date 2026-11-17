@@ -380,7 +380,7 @@ describe('useSessionOwnership - rejoining the mirror', () => {
 })
 
 describe('useSessionOwnership - leaving the browse state via ownership', () => {
-  it('claims the freed slot while browsing without dirtying the browsed canvas', async () => {
+  it('claims the freed slot while browsing without dirtying the browsed canvas, and re-reads its open test', async () => {
     const { result } = await mountMirroring()
     act(() => {
       result.current.browseAway()
@@ -392,7 +392,7 @@ describe('useSessionOwnership - leaving the browse state via ownership', () => {
     expect(result.current.isHolder).toBe(true)
     expect(result.current.browsingAway).toBe(false)
     expect(useWorkflowStore.getState().isDirty).toBe(false)
-    expect(result.current.inheritRefreshTick).toBe(0)
+    expect(result.current.inheritRefreshTick).toBe(1)
   })
 
   it('still dirties an inherited STREAMED draft when it was NOT browsing', async () => {

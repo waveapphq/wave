@@ -1,51 +1,73 @@
 /**
  * V-RUNM-MCP-FUNCTIONAL: assistant-held runs borrow the session and mirror.
- * Design Decisions: RUNM-5, RUNM-6, RUNM-7, RUNM-8; MCP-1..9
+ * Design Decisions: RUNM-5, RUNM-6, RUNM-7, RUNM-8, RUNM-11; MCP-1..9
  * REQ: REQ-5.2.7.15, REQ-5.2.7.16
  *
  * Pass Criteria:
  * 1. An assistant test run over a clean idle holder auto-yields the tab with
- *    NO dialog; the banner names "<client> (MCP)" and reads "running live";
+ *    NO dialog; the banner names the client by the title it sends, "Claude
+ *    Code (MCP)" for a client named claude-code, and reads "running live";
  *    the console streams; the tool reply carries mirrored: true.
  * 2. On terminal the slot hands back silently (no "You now hold the session"
- *    dialog); the tab inherits CLEAN (Save disabled) with run paint kept.
- * 3. The execution record is attributed "mcp:<client>" (Executions row).
+ *    dialog); the tab inherits CLEAN (Save disabled) with run paint kept, and
+ *    its environment picker, empty before the run, shows the run's environment.
+ * 3. The execution record is attributed by the client's name,
+ *    "mcp:claude-code", never its title (Executions row).
  * 4. A dirty holder refuses the borrow: the run still starts, mirrored: false,
  *    the tab keeps the session; once clean again the next claim yields.
  * 5. Suite runs never borrow the workbench (mirrored: false, slot untouched).
  * 6. A second start while a run is in flight fails synchronously in the tool
  *    reply with the active-session conflict message.
  * 7. Take Over during an assistant run grants immediately and silently (the
- *    mirror just ends, no dialog); the run continues.
+ *    mirror just ends, no dialog); the run continues. A third tab that was
+ *    watching stops mirroring the run at that moment, while it is still in
+ *    flight: it watches the taker, its banner no longer reads "running live",
+ *    the "Env:" readout is gone and it offers no Stop. The taker offers Run
+ *    again, not a Stop for the assistant's run.
  * 8. An MCP amend of the open test converges the tab on the amended version,
  *    clean - a save right after cannot resurrect the pre-amend workflow.
  * 9. A watch build over an open test shows an unsaved draft breadcrumb during
  *    the reveal and hands back bound to the NEW test, clean, with the
  *    previously open test intact in storage.
+ * 10. The assistant's run fits the whole test in the tab it plays in, the
+ *    canvas's own Fit View, even when the viewer had panned away (RUNM-11).
+ * 11. When the run's environment is deleted while the run plays, the picker
+ *    shows what it showed before the run once the run ends.
  */
 
 import { spawn } from 'child_process'
 import path from 'path'
-import type { BrowserContext } from '@playwright/test'
+import type { APIRequestContext, BrowserContext } from '@playwright/test'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, BACKEND_PORT, E2E_ENV_NAME } from '../../helpers/config'
-import { callTool, enableMcpUntilRestart, type McpToolResult, resetMcpSettings } from '../../helpers/mcp'
+import { selectEnvironment } from '../../helpers/workbench'
+import {
+  callTool,
+  enableMcpUntilRestart,
+  type McpClientInfo,
+  type McpToolResult,
+  resetMcpSettings,
+} from '../../helpers/mcp'
 import { SEL, resetOwnership, waitUntilHeld, ownershipState } from '../../helpers/ownership'
 import { dragPaletteItemToCanvas } from '../../helpers/canvas'
 import {
   loadFixture,
   importFixture,
   openHolderWithTest,
+  openWatcher,
   allowRunAttach,
   ensureConsoleExpanded,
   consoleRows,
   pollExecutionTerminal,
+  panCanvas,
+  testCenterOffset,
 } from './helpers'
 
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const CLIENT_PATH = path.resolve(__dirname, '../recipe-authoring/mcp_tool_client.py')
 const BACKEND_DIR = path.resolve(__dirname, '../../../../backend')
-const CLIENT_NAME = 'wave-e2e-tool-client'
+const CLAUDE_CODE: McpClientInfo = { name: 'claude-code', title: 'Claude Code' }
+const STOP_BUTTON = '[data-testid="action-stop-button"]'
 
 /** Spawn the client asynchronously for tools that block (watch build). */
 function callToolAsync(tool: string, args: Record<string, unknown>): Promise<McpToolResult> {
@@ -77,6 +99,19 @@ function callToolAsync(tool: string, args: Record<string, unknown>): Promise<Mcp
   })
 }
 
+interface FixtureNode {
+  data: { elementType: string; config: { values: Record<string, unknown> } }
+}
+
+/** The run mirror fixture with every Delay set to `ms`. */
+function pacedFixture(ms: number): Record<string, unknown> {
+  const fixture = loadFixture()
+  for (const node of (fixture.workflow as { nodes: FixtureNode[] }).nodes) {
+    if (node.data.elementType === 'delay') node.data.config.values.duration = ms
+  }
+  return fixture
+}
+
 function uniqueName(base: string): string {
   return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
@@ -92,7 +127,16 @@ async function expectNoDialog(page: Page): Promise<void> {
   await expect(page.getByRole('alertdialog')).toHaveCount(0)
 }
 
+async function createEnvironment(request: APIRequestContext, name: string): Promise<string> {
+  const resp = await request.post(`${BACKEND_URL}/environments/`, {
+    data: { name, description: 'Run mirror MCP e2e' },
+  })
+  expect(resp.ok(), `POST /environments/ failed: ${resp.status()} ${await resp.text()}`).toBeTruthy()
+  return ((await resp.json()).data as { id: string }).id
+}
+
 const open: BrowserContext[] = []
+const ownPaths: string[] = []
 
 test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-back', () => {
   test.beforeEach(async ({ request }) => {
@@ -101,7 +145,13 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
 
   test.afterEach(async ({ page, request }) => {
     for (const context of open.splice(0)) await context.close().catch(() => {})
+    // A run a failed test left in flight would refuse the next test's assistant claim.
+    await expect
+      .poll(async () => (await ownershipState(request)).run ?? null, { timeout: 30_000 })
+      .toBeNull()
+      .catch(() => {})
     await resetOwnership(request)
+    for (const own of ownPaths.splice(0)) await request.delete(`${BACKEND_URL}${own}`).catch(() => {})
     await resetMcpSettings(page)
   })
 
@@ -116,13 +166,18 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
     expect(holder.kind).toBe('person')
     await ensureConsoleExpanded(tab)
     await allowRunAttach(tab)
+    await expect(tab.locator(SEL.envSelector)).toHaveText('Select Environment')
+    // Look away from the test, so only the run's own fit brings it back.
+    await panCanvas(tab, 500, -250)
+    await expect.poll(async () => testCenterOffset(tab)).toBeGreaterThan(200)
 
     await enableMcpUntilRestart(page, MCP_PORT)
-    const result = callTool(MCP_PORT, 'start_execution', {
-      entity_type: 'test',
-      ref: testId,
-      environment: E2E_ENV_NAME,
-    })
+    const result = callTool(
+      MCP_PORT,
+      'start_execution',
+      { entity_type: 'test', ref: testId, environment: E2E_ENV_NAME },
+      CLAUDE_CODE,
+    )
     expect(result.isError, JSON.stringify(result.payload)).toBe(false)
     expect(result.payload.mirrored, 'a clean idle holder yields to the borrow').toBe(true)
     const executionId = result.payload.execution_id as string
@@ -130,13 +185,18 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
 
     await test.step('the tab flips to watching with no dialog', async () => {
       await expect(tab.locator(SEL.bannerMcp)).toBeVisible({ timeout: 15_000 })
-      await expect(tab.locator(SEL.banner)).toContainText(`${CLIENT_NAME} (MCP)`)
+      await expect(tab.locator(SEL.banner)).toContainText('Claude Code (MCP)')
+      await expect(tab.locator(SEL.banner)).not.toContainText('claude-code')
       await expect(tab.locator(SEL.banner)).toContainText('read-only, running live')
       await expectNoDialog(tab)
       expect((await ownershipState(request)).holder?.kind).toBe('mcp')
       const readout = tab.locator(SEL.envSelector)
       await expect(readout).toContainText('Env:')
       await expect(readout).toContainText(E2E_ENV_NAME)
+    })
+
+    await test.step('the run fits the whole test in view, as Fit View does', async () => {
+      await expect.poll(async () => testCenterOffset(tab), { timeout: 10_000 }).toBeLessThan(3)
     })
 
     await test.step('the console streams while the run is in flight', async () => {
@@ -159,6 +219,10 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
       await expect(
         tab.locator('[data-testid^="workflow-node-"][data-execution-status="success"]').first(),
       ).toBeVisible()
+      // The picker keeps the environment the run used, so the next Run uses it too.
+      const picker = tab.locator(SEL.envSelector)
+      await expect(picker).toBeEnabled()
+      await expect(picker).toHaveText(E2E_ENV_NAME)
       // Settle: the dialog must not appear late either.
       await tab.waitForTimeout(1_500)
       await expectNoDialog(tab)
@@ -167,14 +231,67 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
     await test.step('the record is attributed to the MCP client', async () => {
       const detail = await request.get(`${BACKEND_URL}/executions/${executionId}`)
       const data = ((await detail.json()).data ?? {}) as { triggered_by?: string }
-      expect(data.triggered_by).toBe(`mcp:${CLIENT_NAME}`)
+      expect(data.triggered_by).toBe('mcp:claude-code')
 
       await tab.goto('/executions')
       const row = tab.locator('[data-testid="execution-row"]', { hasText: 'Run Mirror Slow Stream' }).first()
       await expect(row).toBeVisible({ timeout: 15_000 })
-      await expect(row.locator('[data-testid="execution-triggered-by"]')).toHaveText(
-        new RegExp(`^mcp:`),
-      )
+      await expect(row.locator('[data-testid="execution-triggered-by"]')).toHaveText('mcp:claude-code')
+    })
+  })
+
+  test("an environment deleted while the assistant's run plays leaves the picker as it was", async ({
+    browser,
+    page,
+    request,
+  }) => {
+    const testId = await importFixture(request, loadFixture())
+    ownPaths.push(`/tests/${testId}`)
+    // Made before the tab opens, so the tab's own environment list has it.
+    const envName = uniqueName('Run Mirror Retired Env')
+    const envId = await createEnvironment(request, envName)
+    ownPaths.push(`/environments/${envId}`)
+
+    const tab = await openHolderWithTest(browser, testId, (c) => open.push(c))
+    await waitUntilHeld(request)
+    await allowRunAttach(tab)
+    await selectEnvironment(tab)
+    const picker = tab.locator(SEL.envSelector)
+    await expect(picker).toHaveText(E2E_ENV_NAME)
+
+    await enableMcpUntilRestart(page, MCP_PORT)
+    const result = callTool(
+      MCP_PORT,
+      'start_execution',
+      { entity_type: 'test', ref: testId, environment: envName },
+      CLAUDE_CODE,
+    )
+    expect(result.isError, JSON.stringify(result.payload)).toBe(false)
+    expect(result.payload.mirrored, 'a clean idle holder yields to the borrow').toBe(true)
+    const executionId = result.payload.execution_id as string
+
+    await test.step('the environment is deleted while the run plays in the tab', async () => {
+      await expect(tab.locator(SEL.bannerMcp)).toBeVisible({ timeout: 15_000 })
+      await expect(picker).toContainText(envName)
+      const deleted = await request.delete(`${BACKEND_URL}/environments/${envId}`)
+      expect(deleted.ok(), `DELETE /environments failed: ${deleted.status()}`).toBeTruthy()
+      const run = await request.get(`${BACKEND_URL}/executions/${executionId}`)
+      const runStatus = (((await run.json()).data ?? {}) as { status?: string }).status
+      expect(['passed', 'failed', 'stopped', 'skipped'], 'the run still plays').not.toContain(runStatus)
+    })
+
+    expect(await pollExecutionTerminal(request, executionId)).toBe('passed')
+
+    await test.step('after the run the picker shows what it showed before', async () => {
+      await expect(tab.locator(SEL.banner)).toHaveCount(0, { timeout: 15_000 })
+      await expect
+        .poll(async () => (await ownershipState(request)).holder?.kind, { timeout: 15_000 })
+        .toBe('person')
+      await expect(picker).toBeEnabled()
+      await expect(picker).toHaveText(E2E_ENV_NAME)
+      // Settle: the deleted environment must not be taken late either.
+      await tab.waitForTimeout(1_500)
+      await expect(picker).toHaveText(E2E_ENV_NAME)
     })
   })
 
@@ -293,11 +410,15 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
     page,
     request,
   }) => {
-    const testId = await importFixture(request, loadFixture())
+    // Slower pacing keeps the run in flight through every check after the take-over.
+    const testId = await importFixture(request, pacedFixture(3_000))
     const tab = await openHolderWithTest(browser, testId, (c) => open.push(c))
     await waitUntilHeld(request)
     await ensureConsoleExpanded(tab)
     await allowRunAttach(tab)
+    const watcher = await openWatcher(browser, (c) => open.push(c))
+    await expect(watcher.locator(SEL.bannerPerson)).toBeVisible()
+    await allowRunAttach(watcher)
 
     await enableMcpUntilRestart(page, MCP_PORT)
     const result = callTool(MCP_PORT, 'start_execution', {
@@ -309,6 +430,13 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
     const executionId = result.payload.execution_id as string
     await expect(tab.locator(SEL.bannerMcp)).toBeVisible({ timeout: 15_000 })
 
+    await test.step('the third tab mirrors the run', async () => {
+      await expect(watcher.locator(SEL.bannerMcp)).toContainText('read-only, running live', {
+        timeout: 15_000,
+      })
+      await expect(watcher.locator(SEL.envSelector)).toContainText('Env:')
+    })
+
     // An assistant run-holder has no atomic step to finish: the grant is
     // immediate and silent - the mirror simply ends. No approval round-trip
     // and no result dialog (those belong to a request that was PENDING).
@@ -317,6 +445,21 @@ test.describe('V-RUNM-MCP-FUNCTIONAL: assistant-held runs, auto-yield and hand-b
     await expect(tab.locator(SEL.canvasReadOnly)).toHaveCount(0)
     await expectNoDialog(tab)
     expect((await ownershipState(request)).holder?.kind).toBe('person')
+
+    await test.step('the mirror of the run ends in the third tab too, while the run goes on', async () => {
+      await expect(watcher.locator(SEL.bannerPerson)).toContainText('read-only, updates as they edit', {
+        timeout: 5_000,
+      })
+      await expect(watcher.locator(SEL.envSelector, { hasText: 'Env:' })).toHaveCount(0)
+      await expect(watcher.locator(STOP_BUTTON)).toHaveCount(0)
+      await expectNoDialog(watcher)
+      expect((await ownershipState(request)).run, 'the run is still in flight').not.toBeNull()
+    })
+
+    await test.step("the taker holds its draft again: Run, not the assistant's Stop", async () => {
+      await expect(tab.locator(STOP_BUTTON)).toHaveCount(0)
+      await expect(tab.locator(SEL.runButton)).toBeEnabled()
+    })
 
     // The tracked run continues unaffected and its record is unharmed.
     expect(await pollExecutionTerminal(request, executionId)).toBe('passed')

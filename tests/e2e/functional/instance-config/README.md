@@ -240,8 +240,9 @@ the stack's config file, and starts, moves and stops the real MCP endpoint.
     and click Try Again.
 21. **13:** on a running endpoint answer `GET /mcp/status` with 500 and a reason; stop the
     endpoint through the API; remove the route.
-22. **14:** with one MCP client connected, answer `DELETE /mcp/sessions/{id}` with 500 and a
-    reason and click Disconnect; remove the route and click Disconnect again.
+22. **14:** with one MCP client connected that sends a title, answer
+    `DELETE /mcp/sessions/{id}` with 500 and a reason and click Disconnect; remove the route and
+    click Disconnect again.
 
 ### Validation
 
@@ -331,7 +332,8 @@ the stack's config file, and starts, moves and stops the real MCP endpoint.
 - **13:** `mcp-status-stale` reads `<reason> (showing the last known state)`; the status bar
   keeps Running and its address and both groups stay, also after the endpoint stopped. After
   the route is removed the line goes and the status reads Stopped.
-- **14:** the refused Disconnect shows the toast "Could Not Disconnect Session" with the
-  reason; the row stays and the session still answers. Disconnect answers 204, the row goes,
-  the list reads "No connected clients.", `GET /mcp/status` lists no session and the endpoint
-  answers that session with 404 `Session terminated`.
+- **14:** the row names the client by its title, not its name. The refused Disconnect shows
+  the toast "Could Not Disconnect Session" with the reason; the row stays and the session
+  still answers. Disconnect answers 204, the row goes, the list reads "No connected clients.",
+  `GET /mcp/status` lists no session and the endpoint answers that session with 404
+  `Session terminated`.

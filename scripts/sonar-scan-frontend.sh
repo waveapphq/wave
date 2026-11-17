@@ -14,6 +14,9 @@ SCAN_ARGS=(-Dsonar.host.url="$SONAR_URL" -Dsonar.qualitygate.wait=true)
 if [ -n "$SONAR_BRANCH" ]; then
   SCAN_ARGS+=(-Dsonar.branch.name="$SONAR_BRANCH")
 fi
+if [ -n "$SONAR_BRANCH_TARGET" ]; then
+  SCAN_ARGS+=(-Dsonar.branch.target="$SONAR_BRANCH_TARGET")
+fi
 
 echo "=== Running SonarQube scan for WAVE Frontend ==="
 cd "$PROJECT_DIR"

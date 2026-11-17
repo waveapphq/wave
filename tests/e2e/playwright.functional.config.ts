@@ -217,7 +217,8 @@ export default defineConfig({
         // Watch-mode authoring + Focus Current. Focus Current
         // navigates across Function levels then centers; two person tabs prove
         // Follow Changes / change pulse / variable cue; a real MCP
-        // build_test_from_recipe reveal is mirrored and taken over mid-build.
+        // build_test_from_recipe reveal is mirrored and taken over mid-build,
+        // and a real amend_test_live_from_recipe change plays in every tab.
         'watch-mode/**/*.spec.ts',
         // Browser sessions as first-class terminable connections.
         // Real holder + mirror contexts drive the /server/status roster + roles,

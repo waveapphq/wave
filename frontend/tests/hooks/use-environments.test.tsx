@@ -276,6 +276,44 @@ describe('useEnvironments', () => {
     })
   })
 
+  describe('Read Latest', () => {
+    it('answers with the current list and shows it', async () => {
+      mockFetchEnvironmentNames
+        .mockResolvedValueOnce(mockEnvironments)
+        .mockResolvedValueOnce([mockEnvironments[0]])
+
+      const { result } = renderHook(() => useEnvironments())
+      await waitFor(() => expect(result.current.loaded).toBe(true))
+
+      let latest: EnvironmentName[] = []
+      await act(async () => {
+        latest = await result.current.readLatest()
+      })
+
+      expect(latest).toEqual([mockEnvironments[0]])
+      expect(result.current.environments).toEqual([mockEnvironments[0]])
+      expect(mockFetchEnvironmentNames).toHaveBeenCalledTimes(2)
+    })
+
+    it('a failed read rejects, keeps the last good list and blocks nothing', async () => {
+      mockFetchEnvironmentNames
+        .mockResolvedValueOnce(mockEnvironments)
+        .mockRejectedValueOnce(readFailure('down'))
+
+      const { result } = renderHook(() => useEnvironments())
+      await waitFor(() => expect(result.current.loaded).toBe(true))
+
+      await act(async () => {
+        await expect(result.current.readLatest()).rejects.toThrow('down')
+      })
+
+      expect(result.current.environments).toEqual(mockEnvironments)
+      expect(result.current.loaded).toBe(true)
+      expect(result.current.loading).toBe(false)
+      expect(usePageBlockStore.getState().block).toBeNull()
+    })
+  })
+
   describe('hasEnvironments Helper', () => {
     it('hasEnvironments is true when environments exist', async () => {
       mockFetchEnvironmentNames.mockResolvedValue(mockEnvironments)

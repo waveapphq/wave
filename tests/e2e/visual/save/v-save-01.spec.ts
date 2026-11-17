@@ -20,6 +20,7 @@
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
+import { apiPathMatcher } from '../../helpers/api-route'
 import { mockInventedTestReads, waitForCanvasLoad } from '../../helpers/canvas'
 
 // Helper to add a block to make canvas dirty
@@ -307,7 +308,7 @@ test.describe('V-SAVE-01: Save Test Dialog', () => {
     page,
   }) => {
     // Mock the API to add delay
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await new Promise((resolve) => setTimeout(resolve, 500))
         await route.fulfill({
@@ -367,7 +368,7 @@ test.describe('V-SAVE-01: Save Test Dialog', () => {
 
   test('V-SAVE-01-S16: successful save closes dialog', async ({ page }) => {
     // Mock successful save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,
@@ -409,7 +410,7 @@ test.describe('V-SAVE-01: Save Test Dialog', () => {
     page,
   }) => {
     // Mock successful save
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 201,
@@ -456,7 +457,7 @@ test.describe('V-SAVE-01: Save Test Dialog', () => {
 
   test('V-SAVE-01-S18: duplicate name shows error', async ({ page }) => {
     // Mock API to return duplicate name error
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 409,
@@ -496,7 +497,7 @@ test.describe('V-SAVE-01: Save Test Dialog', () => {
 
   test('V-SAVE-01-S19: API error shows in footer', async ({ page }) => {
     // Mock API error
-    await page.route('**/tests', async (route) => {
+    await page.route(apiPathMatcher('/tests'), async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 500,

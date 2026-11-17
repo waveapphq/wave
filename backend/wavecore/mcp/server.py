@@ -175,6 +175,15 @@ async def _build_test_from_recipe_tool(recipe: str, ctx: Context | None = None) 
     return await watch.build_test_from_recipe(recipe, session_id=_session_id_from(ctx))
 
 
+async def _amend_test_live_from_recipe_tool(
+    test_ref: str, recipe: str, ctx: Context | None = None
+) -> dict[str, Any]:
+    """Change a test live through the workbench session, playing the change step by step."""
+    return await watch.amend_test_live_from_recipe(
+        test_ref, recipe, session_id=_session_id_from(ctx)
+    )
+
+
 def _start_execution_tool(
     entity_type: str,
     ref: str,
@@ -281,6 +290,7 @@ def _tools() -> list[Tool]:
             ("create_test_from_recipe", _on_loop(_create_test_from_recipe_tool)),
             ("amend_test_from_recipe", _on_loop(_amend_test_from_recipe_tool)),
             ("build_test_from_recipe", _build_test_from_recipe_tool),
+            ("amend_test_live_from_recipe", _amend_test_live_from_recipe_tool),
         ]
     )
     return [
@@ -408,6 +418,11 @@ def _parse_json_rpc(body: bytes) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _client_display_name(client_info: dict[str, Any]) -> str:
+    """The name a person reads for a client: its clientInfo title, else its name."""
+    return str(client_info.get("title") or client_info.get("name") or "client")
+
+
 def _registering_send(send: _Send, client_info: dict[str, Any], ip: str) -> _Send:
     """Register the session when the initialize response carries a session id."""
 
@@ -417,7 +432,7 @@ def _registering_send(send: _Send, client_info: dict[str, Any], ip: str) -> _Sen
                 if key.decode("latin-1").lower() == _SESSION_ID_HEADER:
                     mcp_state.register_session(
                         value.decode("latin-1"),
-                        str(client_info.get("name") or "client"),
+                        _client_display_name(client_info),
                         str(client_info.get("version") or ""),
                         ip,
                     )

@@ -7,6 +7,7 @@ refuses tests whose hand-built wiring a recipe cannot express.
 
 import contextlib
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -100,8 +101,11 @@ def _with_conflict_fix(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return findings
 
 
-def _stage2_findings(test_data: dict[str, Any], step_map: dict[str, str]) -> list[dict[str, Any]]:
-    errors = test_service.validate_test_data_for_create(test_data)
+def create_check_findings(
+    test_data: dict[str, Any], step_map: dict[str, str], *, check_name: bool = True
+) -> list[dict[str, Any]]:
+    """What the create pipeline would refuse in a compiled test, found without saving."""
+    errors = test_service.validate_test_data_for_create(test_data, check_name=check_name)
     return _with_conflict_fix(map_platform_errors(errors, step_map))
 
 
@@ -228,7 +232,7 @@ def validate_recipe(recipe: str, test_ref: str | None = None) -> dict[str, Any]:
     elif target is not None:
         findings.extend(_amend_dry_run_findings(result, target))
     elif result["test_data"] is not None:
-        findings.extend(_stage2_findings(result["test_data"], result["step_map"]))
+        findings.extend(create_check_findings(result["test_data"], result["step_map"]))
     valid = not any(item["severity"] == "error" for item in findings)
     return {
         "valid": valid,
@@ -265,10 +269,38 @@ def _amend_dry_run_findings(result: dict[str, Any], target: dict[str, Any]) -> l
     return findings
 
 
-def create_test_from_recipe(recipe: str) -> dict[str, Any]:
-    """Compile and persist through the strict create pipeline, or create nothing."""
+def save_new_test(
+    test_data: dict[str, Any],
+    step_map: dict[str, str],
+    compiled_findings: list[dict[str, Any]],
+    result_key: str,
+) -> dict[str, Any]:
+    """Persist a compiled test through the strict create pipeline, or create nothing."""
     from wavecore.api.exceptions import ConflictException
 
+    findings = list(compiled_findings)
+    warnings = [item for item in findings if item["severity"] == "warning"]
+    try:
+        created = test_service.create_test(test_data)
+    except ConflictException as exc:
+        findings.append(finding("test", "NAME_CONFLICT", exc.message, NAME_CONFLICT_FIX))
+        return {result_key: False, "findings": findings}
+    except SaveValidationError as exc:
+        findings.extend(_with_conflict_fix(map_platform_errors(exc.errors, step_map)))
+        return {result_key: False, "findings": findings}
+    return {
+        result_key: True,
+        "test_id": created["id"],
+        "name": created["name"],
+        "version": created["version"],
+        "warnings": warnings,
+        "repairs": created.get("repairs", []),
+        "action_items": no_value_action_items(test_data),
+    }
+
+
+def create_test_from_recipe(recipe: str) -> dict[str, Any]:
+    """Compile and persist through the strict create pipeline, or create nothing."""
     recipe, secret_findings = _resolve_secret_files(recipe)
     if secret_findings:
         return {"created": False, "findings": secret_findings}
@@ -279,24 +311,7 @@ def create_test_from_recipe(recipe: str) -> dict[str, Any]:
     findings = list(result["findings"])
     if result["test_data"] is None:
         return {"created": False, "findings": findings}
-    warnings = [item for item in findings if item["severity"] == "warning"]
-    try:
-        created = test_service.create_test(result["test_data"])
-    except ConflictException as exc:
-        findings.append(finding("test", "NAME_CONFLICT", exc.message, NAME_CONFLICT_FIX))
-        return {"created": False, "findings": findings}
-    except SaveValidationError as exc:
-        findings.extend(_with_conflict_fix(map_platform_errors(exc.errors, result["step_map"])))
-        return {"created": False, "findings": findings}
-    return {
-        "created": True,
-        "test_id": created["id"],
-        "name": created["name"],
-        "version": created["version"],
-        "warnings": warnings,
-        "repairs": created.get("repairs", []),
-        "action_items": no_value_action_items(result["test_data"]),
-    }
+    return save_new_test(result["test_data"], result["step_map"], findings, "created")
 
 
 def get_test_recipe(test_ref: str) -> dict[str, Any]:
@@ -313,40 +328,6 @@ def get_test_recipe(test_ref: str) -> dict[str, Any]:
         "expressible": readback["expressible"],
         "inexpressible": readback["inexpressible"],
     }
-
-
-def _key_anchors(
-    target: dict[str, Any], test_data: dict[str, Any], step_map: dict[str, str]
-) -> dict[str, str]:
-    """New node id -> stored node id for each step the recipe names with a `key` of its own."""
-    stored: dict[str, str] = {}
-    for node in (target.get("workflow") or {}).get("nodes") or []:
-        key = (node.get("data") or {}).get("recipeKey")
-        if key is not None:
-            stored.setdefault(str(key), str(node["id"]))
-    anchors: dict[str, str] = {}
-    for node in test_data["workflow"]["nodes"]:
-        key = str(node["data"]["recipeKey"])
-        if key == step_map.get(node["id"]):
-            continue
-        # A stored node anchors one step only, so two steps never share a place.
-        old_id = stored.pop(key, None)
-        if old_id is not None:
-            anchors[node["id"]] = old_id
-    return anchors
-
-
-def _apply_pinned_layout(
-    target: dict[str, Any], test_data: dict[str, Any], step_map: dict[str, str]
-) -> None:
-    """Keep untouched (incl. human-dragged and hand-resized) block geometry across an amend."""
-    from wavecore.core.layout.revision import carry_geometry
-
-    carry_geometry(
-        target.get("workflow") or {},
-        test_data["workflow"],
-        _key_anchors(target, test_data, step_map),
-    )
 
 
 def _stale_version_finding(recipe: str, target: dict[str, Any]) -> dict[str, Any] | None:
@@ -367,22 +348,41 @@ def _stale_version_finding(recipe: str, target: dict[str, Any]) -> dict[str, Any
     )
 
 
-def amend_test_from_recipe(test_ref: str, recipe: str) -> dict[str, Any]:
-    """Recompile a fully-expressible test from a revised recipe, or amend nothing."""
-    from wavecore.api.exceptions import ConflictException
+@dataclass
+class Amendment:
+    """A test's revision, checked and ready to save over it."""
+
+    # The stored test, as a read serves it.
+    target: dict[str, Any]
+    # The compiled revision: each Block it recognizes keeps its stored place and id.
+    test_data: dict[str, Any]
+    step_map: dict[str, str]
+    findings: list[dict[str, Any]]
+    # The stored test's fingerprint when the revision was made, to tell a save made since.
+    fingerprint: str | None
+
+    @property
+    def target_id(self) -> str:
+        return str(self.target.get("id"))
+
+
+def prepare_amend(test_ref: str, recipe: str) -> tuple[Amendment | None, list[dict[str, Any]]]:
+    """The checked revision of a fully-expressible test, or None and the findings refusing it."""
+    from wavecore.core.recipes.amend import revise
     from wavecore.mcp.tools.discover import resolve_test
 
     target = resolve_test(test_ref)
+    fingerprint = test_service.stored_fingerprint(str(target.get("id")))
     if not decompile_test_data(target)["expressible"]:
-        return {"amended": False, "findings": [_target_not_expressible_finding()]}
+        return None, [_target_not_expressible_finding()]
 
     stale = _stale_version_finding(recipe, target)
     if stale is not None:
-        return {"amended": False, "findings": [stale]}
+        return None, [stale]
 
     recipe, secret_findings = _resolve_secret_files(recipe)
     if secret_findings:
-        return {"amended": False, "findings": secret_findings}
+        return None, secret_findings
 
     result = compile_recipe(
         recipe,
@@ -390,27 +390,64 @@ def amend_test_from_recipe(test_ref: str, recipe: str) -> dict[str, Any]:
         placement_defaults=ssh_hosts.placement_defaults(),
     )
     findings = list(result["findings"])
-    if result["test_data"] is None:
-        return {"amended": False, "findings": findings}
-
-    target_id = str(target.get("id"))
     test_data = result["test_data"]
-    conflict = name_conflict_finding(str(test_data.get("name") or ""), target_id)
-    if conflict is not None:
-        findings.append(conflict)
-        return {"amended": False, "findings": findings}
+    if test_data is None:
+        return None, findings
 
-    _apply_pinned_layout(target, test_data, result["step_map"])
+    conflict = name_conflict_finding(str(test_data.get("name") or ""), str(target.get("id")))
+    if conflict is not None:
+        return None, [*findings, conflict]
+
+    step_map = revise(target.get("workflow") or {}, test_data["workflow"], result["step_map"])
+    return Amendment(target, test_data, step_map, findings, fingerprint), findings
+
+
+def amendment_check_findings(amendment: Amendment) -> list[dict[str, Any]]:
+    """What the update pipeline would refuse in the revision, found without saving."""
+    errors = test_service.validate_test_data_for_update(amendment.target_id, amendment.test_data)
+    return _with_conflict_fix(map_platform_errors(errors, amendment.step_map))
+
+
+def _saved_meanwhile_finding(amendment: Amendment) -> dict[str, Any] | None:
+    """A watched change takes a while; a save of the test in that time is never overwritten."""
+    current = test_service.stored_fingerprint(amendment.target_id)
+    # A test deleted meanwhile is answered by the save, which finds nothing to update.
+    if current is None or current == amendment.fingerprint:
+        return None
+    return finding(
+        "test",
+        "STALE_RECIPE_VERSION",
+        "The test was saved elsewhere while the change played",
+        "Read the test back again and re-apply your changes",
+    )
+
+
+def save_amendment(amendment: Amendment) -> dict[str, Any]:
+    """Persist the revision through the strict update pipeline, or amend nothing."""
+    from wavecore.api.exceptions import ConflictException
+
+    findings = list(amendment.findings)
+    moved_on = _saved_meanwhile_finding(amendment)
+    if moved_on is not None:
+        return {"amended": False, "findings": [*findings, moved_on]}
     warnings = [item for item in findings if item["severity"] == "warning"]
     try:
-        updated = test_service.update_test(target_id, test_data, etag=None)
+        updated = test_service.update_test(amendment.target_id, amendment.test_data, etag=None)
     except SaveValidationError as exc:
-        findings.extend(_with_conflict_fix(map_platform_errors(exc.errors, result["step_map"])))
+        findings.extend(_with_conflict_fix(map_platform_errors(exc.errors, amendment.step_map)))
         return {"amended": False, "findings": findings}
     except ConflictException as exc:
         findings.append(finding("test", "NAME_CONFLICT", exc.message, NAME_CONFLICT_FIX))
         return {"amended": False, "findings": findings}
     if updated is None:
+        findings.append(
+            finding(
+                "test",
+                "TARGET_NOT_FOUND",
+                "The test was deleted before the change was saved",
+                "If the test is still wanted, create it again from the recipe",
+            )
+        )
         return {"amended": False, "findings": findings}
     return {
         "amended": True,
@@ -419,5 +456,13 @@ def amend_test_from_recipe(test_ref: str, recipe: str) -> dict[str, Any]:
         "version": updated["version"],
         "warnings": warnings,
         "repairs": updated.get("repairs", []),
-        "action_items": no_value_action_items(test_data),
+        "action_items": no_value_action_items(amendment.test_data),
     }
+
+
+def amend_test_from_recipe(test_ref: str, recipe: str) -> dict[str, Any]:
+    """Recompile a fully-expressible test from a revised recipe, or amend nothing."""
+    amendment, findings = prepare_amend(test_ref, recipe)
+    if amendment is None:
+        return {"amended": False, "findings": findings}
+    return save_amendment(amendment)

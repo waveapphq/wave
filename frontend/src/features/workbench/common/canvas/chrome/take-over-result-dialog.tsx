@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type TakeOverOutcome = 'granted' | 'denied' | 'forced'
+export type TakeOverOutcome = 'granted' | 'inherited' | 'denied' | 'forced'
 
 export interface TakeOverResultDialogProps {
   open: boolean
@@ -33,16 +33,20 @@ interface OutcomeConfig {
   actionVariant: 'default' | 'secondary'
 }
 
+const GRANTED: OutcomeConfig = {
+  Icon: CheckCircle2,
+  iconWrap: 'bg-emerald-500/15',
+  iconColor: 'text-emerald-600 dark:text-emerald-400',
+  title: 'You now hold the session',
+  body: 'You are now editing this draft; the previous holder is watching.',
+  action: 'Start editing',
+  actionVariant: 'default',
+}
+
 const OUTCOMES: Record<TakeOverOutcome, OutcomeConfig> = {
-  granted: {
-    Icon: CheckCircle2,
-    iconWrap: 'bg-emerald-500/15',
-    iconColor: 'text-emerald-600 dark:text-emerald-400',
-    title: 'You now hold the session',
-    body: 'You are now editing this draft; the previous holder is watching.',
-    action: 'Start editing',
-    actionVariant: 'default',
-  },
+  granted: GRANTED,
+  // The previous holder is gone, so it is not watching.
+  inherited: { ...GRANTED, body: 'You are now editing this draft.' },
   denied: {
     Icon: XCircle,
     iconWrap: 'bg-muted',

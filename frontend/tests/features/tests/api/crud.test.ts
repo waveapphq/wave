@@ -289,6 +289,18 @@ describe('Tests API', () => {
       expect(result.id).toBe('test-new')
     })
 
+    it('names the workbench tab that saves the draft it holds', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: { id: 'test-new', name: 'New Test', version: '1.0' },
+        meta: { requestId: '' },
+        status: 201,
+      })
+
+      await createTest({ name: 'New Test' }, 'tab 1')
+
+      expect(apiClient.post).toHaveBeenCalledWith('/tests?holder_id=tab%201', { name: 'New Test' })
+    })
+
     it('throws error with status on conflict', async () => {
       vi.mocked(apiClient.post).mockRejectedValue(
         Object.assign(new Error('Test already exists'), { type: 'conflict', status: 409, isRetryable: false })
@@ -339,6 +351,20 @@ describe('Tests API', () => {
         expect.objectContaining({ name: 'Updated Test' })
       )
       expect(result.name).toBe('Updated Test')
+    })
+
+    it('names the workbench tab that saves the draft it holds', async () => {
+      vi.mocked(apiClient.put).mockResolvedValue({
+        data: { id: 'test-1', name: 'Updated Test', version: '2.0' },
+        meta: { requestId: '' },
+        status: 200,
+      })
+
+      await updateTest('test-1', { name: 'Updated Test' }, 'tab 1')
+
+      expect(apiClient.put).toHaveBeenCalledWith('/tests/test-1?holder_id=tab%201', {
+        name: 'Updated Test',
+      })
     })
 
     it('throws error with status on not found', async () => {

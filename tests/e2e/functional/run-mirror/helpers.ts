@@ -210,3 +210,35 @@ export function expectProgressiveArrivals(
     `console lines arrived within ${spread}ms - looks like one end-of-run dump`,
   ).toBeGreaterThanOrEqual(minSpreadMs)
 }
+
+/** Pan the canvas by a screen delta, grabbing an empty near-corner so no Block is hit. */
+export async function panCanvas(page: Page, dx: number, dy: number): Promise<void> {
+  const box = await page.locator('[data-testid="workflow-canvas"]').boundingBox()
+  if (!box) throw new Error('canvas has no bounding box')
+  const sx = box.x + 48
+  const sy = box.y + box.height - 48
+  await page.mouse.move(sx, sy)
+  await page.mouse.down()
+  await page.mouse.move(sx + dx, sy + dy, { steps: 12 })
+  await page.mouse.up()
+}
+
+/** How far the drawn test's center sits from the canvas center, in screen px; Fit View puts it at 0. */
+export async function testCenterOffset(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const pane = document.querySelector('[data-testid="workflow-canvas"] .react-flow')
+    const nodes = [...document.querySelectorAll('.react-flow__node')].map((node) =>
+      node.getBoundingClientRect(),
+    )
+    if (!pane || nodes.length === 0) return Number.POSITIVE_INFINITY
+    const box = pane.getBoundingClientRect()
+    const left = Math.min(...nodes.map((node) => node.left))
+    const right = Math.max(...nodes.map((node) => node.right))
+    const top = Math.min(...nodes.map((node) => node.top))
+    const bottom = Math.max(...nodes.map((node) => node.bottom))
+    return Math.hypot(
+      (left + right) / 2 - (box.left + box.right) / 2,
+      (top + bottom) / 2 - (box.top + box.bottom) / 2,
+    )
+  })
+}

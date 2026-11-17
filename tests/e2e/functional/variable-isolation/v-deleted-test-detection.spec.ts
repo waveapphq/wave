@@ -13,14 +13,21 @@
  * label, the variant class and the body text are asserted here, and they
  * mirror the unit test at
  * frontend/tests/features/workbench/live/workbench-dialogs.test.tsx.
+ *
+ * A tab watching another tab's test only mirrors it: when that test is gone,
+ * its return to the Workbench and a re-entry of the Workbench, which reads the
+ * test and meets the 404, show no dialog and no retry card, and it keeps
+ * mirroring the holder (REQ-5.2.7.16, SESS-1..4).
  */
 
+import type { BrowserContext } from '@playwright/test'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
-import { BACKEND_URL } from '../../helpers/config'
+import { BACKEND_URL, FRONTEND_URL } from '../../helpers/config'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
 import { failApiRoute } from '../../helpers/api-route'
 import { testValidateRoute } from '../../helpers/page-block'
+import { SEL, nodeIds, openWorkbench, resetOwnership, waitUntilHeld } from '../../helpers/ownership'
 import { clickNodeContextMenuItem, saveBtn, selectEnvironment } from '../../helpers/workbench'
 import fs from 'fs'
 import path from 'path'
@@ -346,5 +353,79 @@ test.describe('Deleted Test Detection', () => {
     await expectCleanVariant(page)
     await expect(page.locator('[data-toast]', { hasText: 'Save Failed' })).toHaveCount(0)
     await dismissAndExpectFreshCanvas(page, 'Close')
+  })
+})
+
+/** A watching tab still mirrors the one-Block test: person banner, read-only canvas, no dialog, no retry card. */
+async function expectMirroringWithoutDialog(page: Page): Promise<void> {
+  await expect(page.locator(SEL.bannerPerson)).toBeVisible()
+  await expect(deletedModal(page)).toHaveCount(0)
+  await expect(page.locator('[data-testid="page-blocked-card"]')).toHaveCount(0)
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await expect(page.locator(SEL.canvasReadOnly)).toBeVisible()
+  await expect(page.locator('[data-testid="workflow-node-delay-only"]')).toBeVisible()
+}
+
+test.describe('Deleted Test Detection in a watching tab', () => {
+  const open: BrowserContext[] = []
+  const created: string[] = []
+
+  test.afterEach(async ({ request }) => {
+    for (const context of open.splice(0)) await context.close().catch(() => {})
+    await resetOwnership(request)
+    // The test deletes its test on purpose; this only catches one it left behind.
+    for (const id of created.splice(0)) await request.delete(`${BACKEND_URL}/tests/${id}`).catch(() => undefined)
+  })
+
+  test('a tab watching a test that is deleted shows no dialog on its return and keeps mirroring the holder', async ({
+    browser,
+    request,
+  }) => {
+    await resetOwnership(request)
+    const holderContext = await browser.newContext({ baseURL: FRONTEND_URL })
+    open.push(holderContext)
+    const holder = await holderContext.newPage()
+    const testId = await importValidateAndNavigate(holder, loadFixture())
+    created.push(testId)
+    await expect(workflowNodes(holder)).toHaveCount(1)
+    expect((await waitUntilHeld(request)).kind).toBe('person')
+
+    const watching = await openWorkbench(browser)
+    open.push(watching.context)
+    const watcher = watching.page
+    await expect(watcher.locator(SEL.bannerPerson)).toBeVisible()
+    await expect(watcher.locator('[data-testid="workflow-node-delay-only"]')).toBeVisible({ timeout: 10_000 })
+
+    await deleteTest(request, testId)
+
+    await test.step('its return to the Workbench shows no dialog and no retry card', async () => {
+      await watcher.locator('[data-testid="sidebar"] a[href="/suites"]').click()
+      await expect(watcher.locator('h1')).toBeVisible()
+      await watcher.locator('[data-testid="sidebar"] a[href="/workbench"]').click()
+      await expectMirroringWithoutDialog(watcher)
+    })
+
+    await test.step('a re-entry of the Workbench meets the 404, with no dialog and no retry card', async () => {
+      const gone = watcher.waitForResponse(
+        (response) =>
+          response.request().method() === 'GET' &&
+          new URL(response.url()).pathname.endsWith(`/tests/${testId}`) &&
+          response.status() === 404,
+      )
+      // A click on Workbench while on it re-enters the route in the same mount, which re-reads the open test.
+      await watcher.locator('[data-testid="sidebar"] a[href="/workbench"]').click()
+      await gone
+      await expectMirroringWithoutDialog(watcher)
+    })
+
+    await test.step('it keeps mirroring the holder', async () => {
+      const before = await nodeIds(holder)
+      const box = await holder.locator(SEL.canvas).boundingBox()
+      await dragPaletteItemToCanvas(holder, 'shell script', { x: box!.width / 2, y: box!.height * 0.7 })
+      const added = (await nodeIds(holder)).filter((id) => !before.includes(id))
+      expect(added, 'the holder added one Block').toHaveLength(1)
+      await expect(watcher.locator(`[data-testid="workflow-node-${added[0]}"]`)).toBeVisible({ timeout: 15_000 })
+      await expect(deletedModal(watcher)).toHaveCount(0)
+    })
   })
 })

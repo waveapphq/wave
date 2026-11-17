@@ -12,10 +12,13 @@ import { apiClient } from '@/lib/api'
 // Types
 // ===========================================================================
 
+/** Who holds the workbench session: a person in a browser tab, or an assistant over MCP. */
+export type HolderKind = 'person' | 'mcp'
+
 export interface OwnershipHolder {
   id: string
   label: string
-  kind: 'person' | 'mcp'
+  kind: HolderKind
 }
 
 export interface MirroredRunWire {

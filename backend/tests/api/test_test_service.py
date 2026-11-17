@@ -132,6 +132,19 @@ class TestMaskSecretVariables:
         assert result["simple_var"] == "simple_value"
 
 
+def _masked_variable_error(name: str) -> dict[str, Any]:
+    return {
+        "path": f"variables.{name}.value",
+        "node_id": None,
+        "node_label": None,
+        "element_type": None,
+        "code": "MASKED_SECRET_VALUE",
+        "message": f"The value of secret variable '{name}' has to be entered again",
+        "severity": "error",
+        "fix_action": "Clear the masked value and type the secret in again",
+    }
+
+
 class TestSecretRoundTripPreservation:
     """A round-tripped masked secret keeps its stored value; the placeholder is never data."""
 
@@ -219,22 +232,134 @@ class TestSecretRoundTripPreservation:
         assert raw is not None
         assert raw["variables"]["banner"]["value"] == "********"
 
-    def test_update_test_keeps_the_placeholder_for_a_new_secret_variable(self) -> None:
+    def test_update_test_refuses_the_placeholder_for_a_new_secret_variable(self) -> None:
         test_id = self._create_with_secret()
 
-        test_service.update_test(
-            test_id,
-            {
-                "variables": {
-                    "ssh_pwd": {"type": "string", "secret": True, "value": "real-secret"},
-                    "brand_new": {"type": "string", "secret": True, "value": "********"},
-                }
-            },
-        )
+        with pytest.raises(test_service.SaveValidationError) as refused:
+            test_service.update_test(
+                test_id,
+                {
+                    "variables": {
+                        "ssh_pwd": {"type": "string", "secret": True, "value": "real-secret"},
+                        "brand_new": {"type": "string", "secret": True, "value": "********"},
+                    }
+                },
+            )
 
+        assert refused.value.errors == [_masked_variable_error("brand_new")]
         raw = test_service._get_raw_test(test_id)
         assert raw is not None
-        assert unseal_all(raw["variables"]["brand_new"]["value"]) == "********"
+        assert "brand_new" not in raw["variables"]
+
+    def test_create_test_refuses_the_placeholder_for_a_secret_variable(self) -> None:
+        data = {
+            "name": "Masked New Secret",
+            "workflow": {"nodes": [], "edges": []},
+            "variables": {"api_key": {"type": "string", "secret": True, "value": "********"}},
+        }
+
+        assert test_service.validate_test_data_for_create(data) == [
+            _masked_variable_error("api_key")
+        ]
+        with pytest.raises(test_service.SaveValidationError) as refused:
+            test_service.create_test(data)
+
+        assert refused.value.errors == [_masked_variable_error("api_key")]
+        assert test_service.list_tests()["total"] == 0
+
+    def test_the_update_dry_run_refuses_the_placeholder_for_a_new_secret_variable(self) -> None:
+        test_id = self._create_with_secret()
+
+        errors = test_service.validate_test_data_for_update(
+            test_id,
+            {"variables": {"brand_new": {"type": "string", "secret": True, "value": "********"}}},
+        )
+
+        assert errors == [_masked_variable_error("brand_new")]
+
+    def test_the_update_dry_run_keeps_a_masked_function_secret_the_test_stores(self) -> None:
+        from tests.api.services.workbench.functions.conftest import (
+            make_local_function_node,
+            make_test_with_function_node,
+        )
+
+        node = make_local_function_node(node_id="fn-1")
+        node["data"]["localDefinition"]["workflow"] = {"nodes": [], "edges": []}
+        node["data"]["localDefinition"]["variables"] = [
+            {"name": "pin", "type": "string", "secret": True, "value": "stored-pin"}
+        ]
+        test_id = test_service.create_test(make_test_with_function_node(node))["id"]
+        read = test_service.get_test(test_id)
+        assert read is not None
+
+        assert (
+            test_service.validate_test_data_for_update(test_id, {"workflow": read["workflow"]})
+            == []
+        )
+
+    @staticmethod
+    def _secret_data_test(secret_data: dict[str, Any]) -> dict[str, Any]:
+        """A Test whose K8s Apply Block holds ``secret_data``, its secret map field."""
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins import K8sApplyPlugin
+
+        register_plugin(K8sApplyPlugin())
+        values = {"define_with": "form", "kind": "Secret", "name": "creds"}
+        block = {
+            "id": "apply-1",
+            "type": "workflowNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "elementType": "k8s-apply",
+                "nodeType": "plugin",
+                "version": "1.0.0",
+                "label": "Apply Secret",
+                "config": {"values": {**values, "secret_data": secret_data}},
+            },
+        }
+        return {"name": "Map Credential", "workflow": {"nodes": [block], "edges": []}}
+
+    @staticmethod
+    def _masked_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [error for error in errors if error["code"] == "MASKED_SECRET_VALUE"]
+
+    def test_create_refuses_a_map_credential_item_given_as_the_mask(self) -> None:
+        data = self._secret_data_test({"user": "admin", "password": "********"})
+
+        assert self._masked_errors(test_service.validate_test_data_for_create(data)) == [
+            {
+                "path": "nodes.apply-1",
+                "node_id": "apply-1",
+                "node_label": "Apply Secret",
+                "element_type": "k8s-apply",
+                "code": "MASKED_SECRET_VALUE",
+                "message": (
+                    "The value of secret field 'secret_data' in Block 'Apply Secret' "
+                    "has to be entered again"
+                ),
+                "severity": "error",
+                "fix_action": "Clear the masked value and type the secret in again",
+            }
+        ]
+
+    def test_create_takes_a_map_credential_whose_items_are_all_typed(self) -> None:
+        data = self._secret_data_test({"user": "admin", "password": "s3cr3t"})
+
+        assert self._masked_errors(test_service.validate_test_data_for_create(data)) == []
+
+    def test_the_update_dry_run_keeps_a_stored_map_credential_echoed_as_the_mask(self) -> None:
+        from wavecore.core.secrets.sealing import mask_workflow_node_secrets
+
+        test_id = _store_unvalidated_test(self._secret_data_test({"password": "s3cr3t"}))["id"]
+        read = test_service.get_test(test_id)
+        assert read is not None
+        echoed = mask_workflow_node_secrets(read["workflow"])
+        values = echoed["nodes"][0]["data"]["config"]["values"]
+        assert values["secret_data"] == {"password": "********"}
+
+        errors = test_service.validate_test_data_for_update(test_id, {"workflow": echoed})
+
+        assert self._masked_errors(errors) == []
 
     def test_update_test_passes_non_dict_variables_through(self) -> None:
         test_id = self._create_with_secret()
@@ -310,6 +435,45 @@ class TestSecretRoundTripPreservation:
         raw = test_service._get_raw_test(test_id)
         assert raw is not None
         assert "masked" not in raw["variables"]["ssh_pwd"]
+
+    @pytest.mark.parametrize("merge", [False, True], ids=["replace", "merge"])
+    def test_update_test_variables_refuses_the_placeholder_for_a_new_secret_variable(
+        self, merge: bool
+    ) -> None:
+        test_id = self._create_with_secret()
+
+        with pytest.raises(test_service.SaveValidationError) as refused:
+            test_service.update_test_variables(
+                test_id,
+                {
+                    "ssh_pwd": {"type": "string", "secret": True, "value": "********"},
+                    "brand_new": {"type": "string", "secret": True, "value": "********"},
+                },
+                merge=merge,
+            )
+
+        assert refused.value.errors == [_masked_variable_error("brand_new")]
+        raw = test_service._get_raw_test(test_id)
+        assert raw is not None
+        assert set(raw["variables"]) == {"ssh_pwd"}
+        assert unseal_all(raw["variables"]["ssh_pwd"]["value"]) == "real-secret"
+
+    def test_update_test_variables_refuses_the_placeholder_for_a_secret_stored_without_a_value(
+        self,
+    ) -> None:
+        created = test_service.create_test(
+            {"name": "Owed Secret", "variables": {"token": {"type": "string", "secret": True}}}
+        )
+
+        with pytest.raises(test_service.SaveValidationError) as refused:
+            test_service.update_test_variables(
+                created["id"], {"token": {"type": "string", "secret": True, "value": "********"}}
+            )
+
+        assert refused.value.errors == [_masked_variable_error("token")]
+        raw = test_service._get_raw_test(created["id"])
+        assert raw is not None
+        assert raw["variables"]["token"] == {"type": "string", "secret": True}
 
 
 class TestListTests:

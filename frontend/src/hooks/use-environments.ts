@@ -8,7 +8,7 @@
  * Uses the lightweight /environments/names endpoint which returns all environments
  * with minimal data (id, name, tags) - suitable for dropdown selection UI.
  *
- * A failed read blocks the surface that started it; it never empties the list,
+ * A failed load blocks the surface that started it; it never empties the list,
  * so an empty list always means the backend answered with none.
  */
 
@@ -28,6 +28,8 @@ export interface UseEnvironmentsReturn {
   loaded: boolean
   hasEnvironments: boolean
   refresh: () => Promise<void>
+  /** Reads the list again and answers with it; a failed read rejects and blocks nothing. */
+  readLatest: () => Promise<EnvironmentName[]>
 }
 
 const ENVIRONMENTS_LABEL = 'environments'
@@ -40,6 +42,13 @@ export function useEnvironments(primary: PrimaryState = 'loaded'): UseEnvironmen
   const [loaded, setLoaded] = useState(false)
   const blocking = useBlockingReads(primary)
 
+  const readLatest = useCallback(async () => {
+    const latest = await fetchEnvironmentNames()
+    setEnvironments(latest)
+    setLoaded(true)
+    return latest
+  }, [])
+
   const reads = useMemo<BlockingRead[]>(
     () => [
       {
@@ -47,15 +56,14 @@ export function useEnvironments(primary: PrimaryState = 'loaded'): UseEnvironmen
         run: async () => {
           setLoading(true)
           try {
-            setEnvironments(await fetchEnvironmentNames())
-            setLoaded(true)
+            await readLatest()
           } finally {
             setLoading(false)
           }
         },
       },
     ],
-    []
+    [readLatest]
   )
 
   const refresh = useCallback(() => blocking.load(reads), [blocking, reads])
@@ -70,5 +78,6 @@ export function useEnvironments(primary: PrimaryState = 'loaded'): UseEnvironmen
     loaded,
     hasEnvironments: environments.length > 0,
     refresh,
+    readLatest,
   }
 }

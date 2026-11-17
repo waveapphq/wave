@@ -677,6 +677,63 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
     })
   })
 
+  describe('markUnsaved floors the undo stack at unsaved work', () => {
+    async function floorAtUnsavedWork() {
+      const { useWorkflowStore } = await import(
+        '@/features/workbench/stores/workflow-store'
+      )
+      const store = () => useWorkflowStore.getState()
+      useWorkflowStore.setState({
+        nodes: [makeBlock('old')],
+        edges: [],
+        variables: [],
+        history: [makeBaseline([makeBlock('old')])],
+        historyIndex: 0,
+        isDirty: false,
+      })
+      store().addNode(makeBlock('own-edit'))
+      useWorkflowStore.setState({ nodes: [makeBlock('taken-1'), makeBlock('taken-2')] })
+
+      store().markUnsaved()
+      return store
+    }
+
+    it('nothing to undo or redo, and the canvas reads as unsaved', async () => {
+      const store = await floorAtUnsavedWork()
+
+      expect(store().history).toHaveLength(1)
+      expect(store().historyIndex).toBe(0)
+      expect(store().canUndo()).toBe(false)
+      expect(store().canRedo()).toBe(false)
+      expect(store().isDirty).toBe(true)
+    })
+
+    it('an edit plus undo returns to the floor, still unsaved', async () => {
+      const store = await floorAtUnsavedWork()
+
+      store().addNode(makeBlock('next'))
+      store().undo()
+
+      expect(store().nodes.map((node) => node.id)).toEqual(['taken-1', 'taken-2'])
+      expect(store().isDirty).toBe(true)
+      store().undo()
+      expect(store().nodes.map((node) => node.id)).toEqual(['taken-1', 'taken-2'])
+    })
+
+    it('keeps the surface it took over as the secret baseline, and a save makes the floor saved', async () => {
+      const store = await floorAtUnsavedWork()
+
+      expect(store().getSavedNodes().map((node) => node.id)).toEqual(['taken-1', 'taken-2'])
+
+      store().markSaved()
+      store().addNode(makeBlock('next'))
+      store().undo()
+
+      expect(store().isDirty).toBe(false)
+      expect(store().getSavedNodes().map((node) => node.id)).toEqual(['taken-1', 'taken-2'])
+    })
+  })
+
   describe('reset floors to empty baseline', () => {
     it('after reset: empty canvas, single baseline entry, cannot undo or redo', async () => {
       const { useWorkflowStore } = await import(

@@ -15,8 +15,8 @@
  *    and a fresh request is accepted (no "already pending" lockout).
  * 5. The holder leaving promotes NOBODY: every watcher detaches to the
  *    amber no-holder banner, stays read-only, and becomes the holder only by
- *    pressing Take Session. A second watcher is never dragged onto the new
- *    holder's surface.
+ *    pressing Take Session, which tells it it now holds the session. A second
+ *    watcher is never dragged onto the new holder's surface.
  *
  * Every assertion anchors on observable state (banner, data-readonly canvas,
  * outcome-modal copy, mirrored node, backend holder), never mere presence.
@@ -220,8 +220,12 @@ test.describe('V-SESS-TAKEOVER-FUNCTIONAL: take-over protocol', () => {
       }
     }
 
-    // Only an explicit Take Session claims it.
+    // Only an explicit Take Session claims it, and the tab is told it now holds the lost holder's surface.
     await b.page.locator(SEL.takeOver).click()
+    const told = dialog(b.page, 'You now hold the session')
+    await expect(told).toBeVisible({ timeout: 15_000 })
+    await told.getByRole('button').click()
+    await expect(told).toHaveCount(0)
     await expect(b.page.locator(SEL.banner)).toHaveCount(0, { timeout: 15_000 })
     await expect(b.page.locator(SEL.canvasReadOnly)).toHaveCount(0)
     await expect

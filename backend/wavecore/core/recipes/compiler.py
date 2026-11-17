@@ -394,6 +394,13 @@ def _made_secret_finding(step_path: str, output: str, variable: str) -> dict[str
     )
 
 
+def wire_id(source: str, source_handle: str | None, target: str, target_handle: str | None) -> str:
+    """A compiled wire's id; it names both handles, so wires between the same two Blocks
+    stay apart."""
+    parts = [source, source_handle, target, target_handle]
+    return "-".join(["edge", *(part for part in parts if part is not None)])
+
+
 @dataclass
 class _SetterRows:
     """A Setter's rows as stored, with the shared flags and entry types they hold."""
@@ -632,10 +639,8 @@ class _Emitter:
     def _attach(self, node_id: str, pending: _Pending, workflow: _Workflow) -> None:
         for index, (source, handle) in enumerate(pending):
             target_handle = f"ingress_{index}" if index else None
-            # The id names both handles, so wires between the same two Blocks stay apart.
-            parts = [source, handle, node_id, target_handle]
             edge: dict[str, Any] = {
-                "id": "-".join(["edge", *(part for part in parts if part is not None)]),
+                "id": wire_id(source, handle, node_id, target_handle),
                 "source": source,
                 "target": node_id,
             }

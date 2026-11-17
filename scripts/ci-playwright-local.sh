@@ -74,6 +74,9 @@ mkdir -p "$ARTIFACTS_ROOT"
 
 exec > >(tee "$LOG_FILE") 2>&1
 
+# Runs before the exit trap, so a failure here touches no containers.
+"$SCRIPT_DIR/check-branch-name.sh" || exit 1
+
 CI_START_EPOCH=$(date +%s)
 format_duration() {
   local total=$1

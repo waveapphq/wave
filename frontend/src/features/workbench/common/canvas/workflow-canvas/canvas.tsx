@@ -19,6 +19,7 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
+import { glidePhase } from '@/features/workbench/lib/mirror-glide'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { ToastContext } from '@/components/ui/toast'
 import { useQuickAddShortcut } from '@/features/workbench/hooks/use-quick-add-shortcut'
@@ -48,6 +49,7 @@ import { useCanvasNodes } from './use-canvas-nodes'
 import { useCanvasEdges } from './use-canvas-edges'
 import { useCanvasFitView } from './use-canvas-fitview'
 import { useCanvasFocus } from '@/features/workbench/hooks/use-canvas-focus'
+import { useCanvasBringIntoView } from '@/features/workbench/hooks/use-canvas-bring-into-view'
 import { useCanvasDrop } from './use-canvas-drop'
 import { useCanvasConnections } from './use-canvas-connections'
 import { useCanvasInteractions } from './use-canvas-interactions'
@@ -220,6 +222,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
 
   const viewport = useWorkflowStore((state) => state.viewport)
   const isCanvasReady = useWorkflowStore((state) => state.isCanvasReady)
+  const mirrorGlidePhase = useWorkflowStore((state) => glidePhase(state.mirrorGlide))
 
   // Hint popover state - ephemeral, no localStorage persistence (REQ-4.2.5)
   const [hintPopoverOpen, setHintPopoverOpen] = useState(false)
@@ -315,6 +318,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
   // Fit view effect
   useCanvasFitView()
   useCanvasFocus()
+  useCanvasBringIntoView()
 
   // UI interactions (selection, context menus, keyboard)
   const {
@@ -425,6 +429,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
       ref={reactFlowWrapper}
       data-testid="workflow-canvas"
       data-readonly={readOnly ? 'true' : undefined}
+      data-mirror-glide={mirrorGlidePhase}
       role="application"
       aria-roledescription="workflow canvas"
       aria-label="Workflow canvas"
