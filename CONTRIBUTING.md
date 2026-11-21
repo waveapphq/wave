@@ -224,7 +224,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
    If no release branch fits the change, ask in its issue which release the change is for. Go on to step 3 when the command lists the release branch.
 
-3. From that release branch, make a branch for one change. `<version>` is the version of that release branch, and `<branch>` is the name of the new branch. Name a fix `fix/<version>-` followed by a short name, such as `fix/1.0.0-ssh-timeout`. Name any other change `feature/<version>-` followed by a short name, such as `feature/1.0.0-csv-export`. The short name has only lowercase letters, digits and single hyphens. A check enforces these names when you run the suites and on each pull request. A `fix/` branch only fixes a bug of a released version, or of a change that is already merged. It holds nothing else.
+3. From that release branch, make a branch for one change. `<version>` is the version of that release branch, and `<branch>` is the name of the new branch. Name a bug fix or a cleanup `fix/<version>-` followed by a short name, such as `fix/1.0.0-ssh-timeout`. Name a feature or an enhancement `feature/<version>-` followed by a short name, such as `feature/1.0.0-csv-export`. The short name has only lowercase letters, digits and single hyphens. A check enforces these names when you run the suites and on each pull request. A `fix/` branch holds bug fixes and cleanup only; a change that adds behavior goes on a `feature/` branch.
 
    ```sh
    git fetch origin
