@@ -1,9 +1,4 @@
-/**
- * Quick-add insert semantics (REQ-4.2.5, CANVAS-225/226): executes the two
- * insert modes against the workflow store, reusing the promoted node
- * builders + egress connect helper so quick-add and palette drop share
- * construction and wiring.
- */
+/** Quick Insert placement (REQ-4.2.5, CANVAS-225, CANVAS-226, CANVAS-249), shared with palette drop. */
 
 import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 import { usePaletteUsageStore } from '@/features/workbench/stores/palette-usage-store'
@@ -13,14 +8,17 @@ import {
   generateNodeId,
   START_NODE_ID,
   START_NODE_POSITION,
+  START_NODE_WIDTH,
 } from '../workflow-canvas/canvas-constants'
 import {
   buildLocalFunctionNode,
   buildPaletteNode,
   buildPublishedFunctionNode,
   connectFromFirstFreeEgress,
+  findFirstFreeEgress,
   type NewNode,
 } from '../workflow-canvas/node-builders'
+import { computeFreshNodeWidth } from '../workflow-node/node-width'
 import type { QuickAddInsertMode } from './quick-add-popover'
 
 /** Anchored inserts place the new node one row below the anchor. */
@@ -37,6 +35,8 @@ export interface QuickAddInsertDeps {
   drilledFunctionIds: ReadonlySet<string>
   /** Whether a placed block would sit fully inside the visible canvas. */
   isPlacementVisible?: (position: { x: number; y: number }) => boolean
+  /** Flow center of a drawn node's source handle, or of the node with no handle named; null when not drawn. */
+  resolveHandleCenter: (nodeId: string, sourceHandle?: string) => { x: number; y: number } | null
 }
 
 interface StoreSelectionSlice {
@@ -46,7 +46,9 @@ interface StoreSelectionSlice {
 
 interface ActiveNode {
   id: string
+  type: NewNode['type']
   position: { x: number; y: number }
+  data: NewNode['data']
 }
 
 interface ResolvedAnchor {
@@ -54,8 +56,7 @@ interface ResolvedAnchor {
   position: { x: number; y: number }
 }
 
-/** Single selection -> last interacted -> end of the flow; a stale candidate
- *  is skipped rather than dropping to center, so Enter always has an anchor. */
+/** Single selection, else last interacted, else end of flow; a stale candidate is skipped. */
 function resolveAnchor(
   store: StoreSelectionSlice,
   activeNodes: ReadonlyArray<ActiveNode>,
@@ -68,11 +69,26 @@ function resolveAnchor(
   if (selected) return selected
   const lastInteracted = findActive(store.lastInteractedNodeId)
   if (lastInteracted) return lastInteracted
-  // End of the flow: the last terminal block; the Start block when the canvas
-  // (or Function body) is empty - implicit inside a body, a real node at root.
+  // End of the flow: the last terminal block, else Start (implicit in a Function body).
   const sources = new Set(activeEdges.map((edge) => edge.source))
   const tail = activeNodes.findLast((node) => !sources.has(node.id))
   return tail ?? { id: START_NODE_ID, position: START_NODE_POSITION }
+}
+
+/** The x of the anchor's first free egress, else its center (CANVAS-248, CANVAS-249). */
+function resolveEgressCenterX(
+  anchor: ResolvedAnchor,
+  activeNodes: ReadonlyArray<ActiveNode>,
+  activeEdges: ReadonlyArray<{ id: string; source: string; target: string; sourceHandle?: string }>,
+  resolveHandleCenter: QuickAddInsertDeps['resolveHandleCenter'],
+): number {
+  const anchorNode = activeNodes.find((node) => node.id === anchor.id)
+  const egress = anchorNode ? findFirstFreeEgress(anchorNode, activeEdges) : { free: false }
+  const center = resolveHandleCenter(anchor.id, egress.free ? egress.sourceHandle : undefined)
+  if (center) return center.x
+  // Only Start is drawn without a store node.
+  if (!anchorNode) return START_NODE_POSITION.x + START_NODE_WIDTH / 2
+  return anchor.position.x + computeFreshNodeWidth(anchorNode) / 2
 }
 
 function buildNodeForItem(
@@ -104,8 +120,7 @@ function buildNodeForItem(
   )
 }
 
-/** Insert `item` per the approved mode semantics; returns the new node id,
- *  or null when the insert is rejected (published-Function self-nesting). */
+/** Insert `item`; returns the new node id, or null when it is refused (Function self-nesting). */
 export function performQuickAddInsert(
   item: QuickAddItem,
   mode: QuickAddInsertMode,
@@ -138,17 +153,28 @@ export function performQuickAddInsert(
           activeEdges as ReadonlyArray<{ source: string }>,
         )
       : null
-  const position = anchor
-    ? { x: anchor.position.x, y: anchor.position.y + ANCHOR_VERTICAL_GAP }
-    : deps.viewportCenter
-
   const newNodeId = generateNodeId()
-  const newNode = buildNodeForItem(
+  const built = buildNodeForItem(
     item,
     newNodeId,
-    position,
+    deps.viewportCenter,
     activeNodes as ReadonlyArray<{ data: { label: string; nodeType?: string } }>,
   )
+  // Enter centers the new block under the egress it links from (CANVAS-249).
+  const position = anchor
+    ? {
+        x:
+          resolveEgressCenterX(
+            anchor,
+            activeNodes as ReadonlyArray<ActiveNode>,
+            activeEdges as ReadonlyArray<{ id: string; source: string; target: string; sourceHandle?: string }>,
+            deps.resolveHandleCenter,
+          ) -
+          computeFreshNodeWidth(built) / 2,
+        y: anchor.position.y + ANCHOR_VERTICAL_GAP,
+      }
+    : deps.viewportCenter
+  const newNode: NewNode = { ...built, position }
   store.addNode(newNode as unknown as Parameters<typeof store.addNode>[0])
 
   if (anchor) {
@@ -166,8 +192,7 @@ export function performQuickAddInsert(
         typeof connectFromFirstFreeEgress
       >[0]['addEdge'],
     })
-    // An empty Function body has no Start node to look up: its Start is
-    // implicit, with a single always-free egress, so wire it directly.
+    // An empty Function body's Start is implicit with one free egress, so wire it directly.
     if (
       !connected &&
       anchor.id === START_NODE_ID &&
@@ -187,8 +212,7 @@ export function performQuickAddInsert(
     usePaletteUsageStore.getState().trackUsage(item.id)
   }
 
-  // The placed element is always selected, replacing any current selection,
-  // and becomes the new "last interacted" block (via selectNode).
+  // The placed element becomes the only selection and the last interacted block.
   store.selectNode(newNodeId)
   // An anchored insert can land past the edge of what the canvas is showing.
   if (deps.isPlacementVisible && !deps.isPlacementVisible(position)) {

@@ -10,6 +10,17 @@ from wavecore.core.functions.declarations import is_enum_input
 _DEFAULT_TYPE = "string"
 _NO_TYPES: Mapping[str, str] = {}
 
+# Output type -> the variable types it may bind to (mirrors FE OUTPUT_TYPE_COMPAT).
+OUTPUT_TYPE_COMPAT: Mapping[str, frozenset[str]] = {
+    "string": frozenset({"string"}),
+    "integer": frozenset({"integer"}),
+    "float": frozenset({"float", "integer"}),
+    "boolean": frozenset({"boolean"}),
+    "map": frozenset({"map"}),
+    "array": frozenset({"array"}),
+    "table": frozenset({"table"}),
+}
+
 _declared_types: ContextVar[Mapping[str, str]] = ContextVar("wave_declared_types")
 
 
@@ -21,6 +32,21 @@ def declared_type_scope(types: Mapping[str, str]) -> Iterator[None]:
         yield
     finally:
         _declared_types.reset(token)
+
+
+def binds_to(output_type: str, variable_type: str) -> bool:
+    """Whether an output of one type may bind to a variable of another."""
+    return variable_type in OUTPUT_TYPE_COMPAT.get(output_type, {output_type})
+
+
+def output_binding_type_message(
+    output: str, output_type: str, variable: str, variable_type: str
+) -> str:
+    """The INVALID_OUTPUT_BINDING_TYPE message every save and recipe check gives."""
+    return (
+        f"Output '{output}' (type {output_type}) cannot bind to variable "
+        f"'{variable}' (type {variable_type})"
+    )
 
 
 def declared_type(name: str) -> str | None:

@@ -1,16 +1,4 @@
-"""Tests for `services.workbench.functions.publish_local_function`.
-
-Contract:
-
-    services.workbench.functions.publish_local_function(test_id, node_id, payload)
-        Validates the local Function's body via validate_function_for_save;
-        runs detect_circular_deps; creates the library entry via
-        services.functions.create_function; mutates the Test's workflow node
-        from local -> reference; returns the new function_id + updated node.
-        Atomic: rolls back library create on Test mutation failure.
-
-Error messages are asserted with anchored regex.
-"""
+"""Tests for `services.workbench.functions.publish_local_function`."""
 
 from __future__ import annotations
 
@@ -38,9 +26,7 @@ from .conftest import (
 
 
 def publish_local_function(*args: Any, **kwargs: Any) -> Any:
-    """Lazy proxy: re-binds to the real implementation at call-time so the
-    test module collects without importing the public symbol from
-    ``wavecore.api.services.workbench.functions`` up front."""
+    """Binds to the real function at call time, so collection imports nothing."""
     from wavecore.api.services.workbench.functions import (
         publish_local_function as _impl,
     )
@@ -74,9 +60,7 @@ NODE_NOT_FOUND_RE = re.compile(r"^Block '.+' not found in Test '.+'$")
 NODE_NOT_LOCAL_RE = re.compile(r"^Block '.+' is not a local Function$")
 
 
-# ---------------------------------------------------------------------------
 # Happy path
-# ---------------------------------------------------------------------------
 
 
 class TestPublishHappyPath:
@@ -127,6 +111,22 @@ class TestPublishHappyPath:
         assert node["data"]["functionId"] == result["function_id"]
         # The local body is dropped from the Test node once the reference is set.
         assert "localDefinition" not in node["data"]
+
+    def test_the_published_block_stores_the_library_name(self) -> None:
+        # REQ-3.1.1.5: the server copy a reload reads names the library Function.
+        fn_node = make_local_function_node(node_id="fn-name", fn_name="Local Draft")
+        created = test_service.create_test(make_test_with_function_node(fn_node))
+        test_id = created["id"]
+
+        result = publish_local_function(
+            test_id, "fn-name", make_published_function_payload(name="Library Name")
+        )
+
+        assert result["node"]["data"]["originalLibraryName"] == "Library Name"
+        reloaded = test_service.get_test(test_id)
+        assert reloaded is not None
+        node = next(n for n in reloaded["workflow"]["nodes"] if n["id"] == "fn-name")
+        assert node["data"]["originalLibraryName"] == "Library Name"
 
     def test_published_library_entry_omits_profile_bindings(self) -> None:
         """profileBindings live on instances, not the library entry."""
@@ -210,9 +210,7 @@ class TestPublishHappyPath:
         assert outputs == {"out": "kept"}
 
 
-# ---------------------------------------------------------------------------
 # Name validation
-# ---------------------------------------------------------------------------
 
 
 class TestPublishNameValidation:
@@ -264,9 +262,7 @@ class TestPublishNameValidation:
             )
 
 
-# ---------------------------------------------------------------------------
 # Error precedence
-# ---------------------------------------------------------------------------
 
 
 class TestPublishErrorPrecedence:
@@ -341,9 +337,7 @@ class TestPublishErrorPrecedence:
             )
 
 
-# ---------------------------------------------------------------------------
 # Cycle rejection
-# ---------------------------------------------------------------------------
 
 
 class TestPublishCircularDependencyDetection:
@@ -391,9 +385,7 @@ class TestPublishCircularDependencyDetection:
         assert exc_info.value.status_code == 422
 
 
-# ---------------------------------------------------------------------------
 # Test / node lookup
-# ---------------------------------------------------------------------------
 
 
 class TestPublishLookupErrors:
@@ -459,8 +451,7 @@ class TestPublishLookupErrors:
                 "config": {"values": {}, "outputBindings": {}},
             },
         }
-        # The save pipeline rejects a missing library entry (REQ-3.1.2.4), so the
-        # already-shared state is persisted directly; publishing it must be rejected.
+        # The save pipeline rejects a missing library entry (REQ-3.1.2.4).
         test_id = "22222222-2222-2222-2222-222222220999"
         test_service._save_test(
             {
@@ -483,9 +474,7 @@ class TestPublishLookupErrors:
             )
 
 
-# ---------------------------------------------------------------------------
 # Local Function body validation
-# ---------------------------------------------------------------------------
 
 
 class TestPublishBodyValidation:
@@ -503,12 +492,7 @@ class TestPublishBodyValidation:
         assert result["function_id"]
 
     def test_local_referencing_unknown_plugin_is_rejected(self) -> None:
-        """A body invoking an unregistered plugin fails validate_function_for_save.
-
-        The Test save pipeline normally rejects such a body too; this test
-        bypasses that by writing the Test directly to storage so the publish
-        path is the one under exercise.
-        """
+        """A body invoking an unregistered plugin fails validate_function_for_save."""
         import uuid as _uuid
         from datetime import UTC, datetime
 
@@ -556,22 +540,14 @@ class TestPublishBodyValidation:
             )
 
 
-# ---------------------------------------------------------------------------
 # Atomicity: library write rolls back if Test mutation fails
-# ---------------------------------------------------------------------------
 
 
 class TestPublishAtomicity:
     def test_test_mutation_failure_rolls_back_library_entry(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """If the Test cannot be re-saved (storage failure mid-flight),
-        the just-created library entry must be removed so the system
-        does not end up with a half-published-half-local state.
-
-        We force the Test save to raise after the library entry is written,
-        then assert the library entry no longer exists.
-        """
+        """A failed Test re-save removes the just-created library entry."""
         fn_node = make_local_function_node(node_id="fn-atomic", fn_name="Atomic Fn")
         created = test_service.create_test(make_test_with_function_node(fn_node))
         test_id = created["id"]
@@ -608,9 +584,7 @@ class TestPublishAtomicity:
         assert "localDefinition" in node["data"]
 
 
-# ---------------------------------------------------------------------------
 # Defensive branches in publish_local_function (coverage)
-# ---------------------------------------------------------------------------
 
 
 class TestPublishDefensiveBranches:
@@ -630,9 +604,7 @@ class TestPublishDefensiveBranches:
     def test_already_in_use_from_create_function_reraises_as_conflict(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """If a race lets create_function raise the 'is already in use'
-        ValidationException after our pre-check passes, publish must
-        re-raise it as ConflictException (so the route maps to 409)."""
+        """A name race in create_function surfaces as ConflictException."""
         from wavecore.api.exceptions import ConflictException as _Conflict
 
         fn_node = make_local_function_node(node_id="fn-1", fn_name="Greet")
@@ -652,8 +624,7 @@ class TestPublishDefensiveBranches:
     def test_generic_validation_from_create_function_propagates(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """If `create_function` raises a non-name-collision ValidationException,
-        publish_local_function must re-raise it as-is (not re-classify)."""
+        """Any other ValidationException from create_function is re-raised as is."""
         fn_node = make_local_function_node(node_id="fn-1", fn_name="Greet")
         created = test_service.create_test(make_test_with_function_node(fn_node))
         test_id = created["id"]
@@ -671,8 +642,7 @@ class TestPublishDefensiveBranches:
     def test_changelog_lookup_error_during_metadata_set_is_swallowed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """If load_function fails after create succeeds (race), publish must
-        still complete - the changelog/details just don't land in metadata."""
+        """If load_function fails after create succeeds, publish must still complete."""
         fn_node = make_local_function_node(node_id="fn-1", fn_name="Greet")
         created = test_service.create_test(make_test_with_function_node(fn_node))
         test_id = created["id"]
@@ -695,10 +665,7 @@ class TestPublishDefensiveBranches:
             monkeypatch.setattr(_function_storage, "load_function", original_load)
 
     def test_rollback_lookup_error_is_swallowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """If the rollback delete_function_file ALSO raises LookupError (the
-        entry was deleted by some other actor before rollback ran), the
-        OSError from the Test save still surfaces to the caller and the
-        rollback exception is swallowed."""
+        """A failing rollback is swallowed; the Test save's OSError surfaces."""
         fn_node = make_local_function_node(node_id="fn-1", fn_name="Greet")
         created = test_service.create_test(make_test_with_function_node(fn_node))
         test_id = created["id"]

@@ -1,9 +1,4 @@
-"""Recipe emission: nodes, edges, variables, step map, and layout.
-
-The compiler owns ALL wiring and geometry: consecutive steps chain in
-order, construct children anchor on their declared handles, completion
-rejoins the parent flow, and positions come from the layout engine.
-"""
+"""Recipe emission: nodes, edges, variables, step map, and layout."""
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -11,6 +6,7 @@ from decimal import Decimal
 from typing import Any, NamedTuple
 
 from wavecore.controls.assertion_evaluator import UNARY_OPERATORS, drop_unused_compare_to
+from wavecore.controls.note import NOTE_NODE_TYPE
 from wavecore.core.layout.dimensions import fit_node_width
 from wavecore.core.layout.engine import ingress_counts, layout_workflow
 from wavecore.core.number_rule import is_integer_value, wire_number
@@ -29,12 +25,14 @@ from wavecore.core.recipes.validator import (
     BLOCK_FORM_CONTROLS,
     BlockEntry,
     FunctionContract,
+    StepOutputs,
     function_block_entry,
     is_choice_field,
     is_template_value,
     load_block_catalog,
     remote_execution_entry,
     resolve_function_contract,
+    step_outputs,
     validate_recipe_doc,
     value_form,
     written_word,
@@ -72,8 +70,7 @@ def _infer_value_type(value: Any) -> str:
 
 
 def _stored_numbers(value: Any) -> Any:
-    """Every number a recipe wrote, at any depth, in its stored form (REQ-3.1.3.14); a map
-    key written as a decimal number is its text."""
+    """Every number a recipe wrote, at any depth, in its stored form (REQ-3.1.3.14)."""
     if isinstance(value, Decimal) or is_integer_value(value):
         return wire_number(value)
     if isinstance(value, list):
@@ -87,8 +84,7 @@ def _stored_numbers(value: Any) -> Any:
 
 
 def _form(raw: Any, *, template_place: bool) -> tuple[str, Any]:
-    """A written value's form and inner value; a `{{ }}` string is a template only where a
-    template is allowed, plain text elsewhere."""
+    """A written value's form and inner value."""
     kind, inner = value_form(raw)
     if kind == "plain" and template_place and is_template_value(inner):
         return "template", inner
@@ -96,8 +92,7 @@ def _form(raw: Any, *, template_place: bool) -> tuple[str, Any]:
 
 
 def _as_written(value: Any) -> Any:
-    """Plain data with each `{literal: ...}` inside it unwrapped; value modes never reach this
-    deep, so only the literal form is read."""
+    """Plain data with each `{literal: ...}` inside it unwrapped."""
     kind, inner = value_form(value)
     if kind == "literal":
         return inner
@@ -315,8 +310,7 @@ def creation_values(
     *,
     values: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """A new Block's values: each choice-list and true / false default, the placement stamp
-    on top, and every value the step sets winning over both (FIELD-8)."""
+    """A new Block's values: each choice-list and true / false default (FIELD-8)."""
     created: dict[str, Any] = {
         name: param["default"]
         for name, param in parameters.items()
@@ -362,15 +356,12 @@ def _marked_secret_outputs(outputs: list[dict[str, Any]], given: Any) -> list[st
     return [name for name in names if name in marked]
 
 
-def _block_output_rows(entry: BlockEntry, settings: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _block_output_rows(outputs: StepOutputs, entry: BlockEntry) -> list[dict[str, Any]]:
     """A block's outputs in table order: its schema outputs, then those its settings declare."""
     rows: list[dict[str, Any]] = [
-        {"name": name, "secret": name in entry.secret_outputs} for name in entry.outputs
+        {"name": name, "secret": name in entry.secret_outputs} for name in outputs.fixed
     ]
-    for param in entry.output_name_params:
-        declared = settings.get(param)
-        if isinstance(declared, list):
-            rows.extend({"name": name} for name in declared if isinstance(name, str))
+    rows.extend({"name": name} for name in outputs.declared)
     return rows
 
 
@@ -395,8 +386,7 @@ def _made_secret_finding(step_path: str, output: str, variable: str) -> dict[str
 
 
 def wire_id(source: str, source_handle: str | None, target: str, target_handle: str | None) -> str:
-    """A compiled wire's id; it names both handles, so wires between the same two Blocks
-    stay apart."""
+    """A compiled wire's id; it names both handles."""
     parts = [source, source_handle, target, target_handle]
     return "-".join(["edge", *(part for part in parts if part is not None)])
 
@@ -523,9 +513,7 @@ class _Emitter:
         self.side_notes: set[str] = set()
         self.local_workflows: list[dict[str, Any]] = []
 
-    # ------------------------------------------------------------------
     # Small helpers
-    # ------------------------------------------------------------------
 
     def _next_node_id(self) -> str:
         self.counter += 1
@@ -632,9 +620,7 @@ class _Emitter:
             return str(declaration["type"])
         return None
 
-    # ------------------------------------------------------------------
     # Node/edge fabric
-    # ------------------------------------------------------------------
 
     def _attach(self, node_id: str, pending: _Pending, workflow: _Workflow) -> None:
         for index, (source, handle) in enumerate(pending):
@@ -688,7 +674,7 @@ class _Emitter:
         data.update(_identity(identity))
         node = {
             "id": node_id,
-            "type": "noteNode" if element_type == "note" else "workflowNode",
+            "type": NOTE_NODE_TYPE if element_type == "note" else "workflowNode",
             "data": data,
         }
         scope.workflow.nodes.append(node)
@@ -696,9 +682,7 @@ class _Emitter:
         self._attach(node_id, pending, scope.workflow)
         return node_id
 
-    # ------------------------------------------------------------------
     # Flows
-    # ------------------------------------------------------------------
 
     def emit_flow(
         self, steps: list[Any], path_prefix: str, pending: _Pending, scope: _Scope
@@ -749,9 +733,7 @@ class _Emitter:
             return self._emit_remote(value, step_path, pending, scope)
         return self._emit_sugar(keyword, step, value, step_path, pending, scope)
 
-    # ------------------------------------------------------------------
     # Leaf steps
-    # ------------------------------------------------------------------
 
     def _profile_bindings(self, bindings: Any) -> list[dict[str, Any]]:
         resolved: list[dict[str, Any]] = []
@@ -827,6 +809,7 @@ class _Emitter:
         if contract.lifecycle == "shared":
             extras["functionId"] = contract.function_id
             extras["functionVersion"] = contract.version
+            extras["originalLibraryName"] = contract.name
         node_id = self._emit_field_block(
             step, step_path, pending, scope, entry, fields, element_type="function", extras=extras
         )
@@ -850,16 +833,20 @@ class _Emitter:
     ) -> str:
         """One Block node from a step's settings: values, flags, capture, Secret outputs."""
         values = fields.values
+        outputs = step_outputs(entry, values, {*fields.expression_fields, *fields.template_fields})
         capture_types = {
-            name: resolve_output_type(
-                declared, entry.output_type_when.get(name), values, entry.parameters
-            )
-            for name, declared in entry.outputs.items()
+            **{
+                name: resolve_output_type(
+                    declared, entry.output_type_when.get(name), values, entry.parameters
+                )
+                for name, declared in outputs.fixed.items()
+            },
+            **outputs.declared,
         }
         # Without secret_outputs the Block keeps its schema's Secret boxes at run time.
         given = step.get("secret_outputs")
         marks = _SecretMarks(
-            _marked_secret_outputs(_block_output_rows(entry, fields.settings), given), step_path
+            _marked_secret_outputs(_block_output_rows(outputs, entry), given), step_path
         )
         node_id = self._emit_node(
             scope,
@@ -889,8 +876,7 @@ class _Emitter:
     def _set_row(
         self, name: str, raw: Any, scope: _Scope, declared_types: Any, rows: _SetterRows
     ) -> None:
-        """One Setter row on the shared stored shape: `variables.<row>` flags, entry flags one
-        level down, entry types at the row's place; the row's own type is its variable's."""
+        """One Setter row on the shared stored shape."""
         place = f"{_SETTER_PLACE}.{name}"
         kind, inner = _form(raw, template_place=True)
         if kind in ("expr", "template"):
@@ -982,8 +968,7 @@ class _Emitter:
 
     @staticmethod
     def _resolve_loop_target(value: Any, scope: _Scope) -> str:
-        """The innermost loop, or the nearest enclosing one whose label (else block name) is
-        the one given."""
+        """The innermost loop, or the nearest enclosing one whose label is the one given."""
         label = value.get("loop") if isinstance(value, dict) else None
         if label is None:
             return scope.loop_stack[-1][0]
@@ -993,9 +978,7 @@ class _Emitter:
             if loop_label == str(label)
         )
 
-    # ------------------------------------------------------------------
     # Local Function definitions
-    # ------------------------------------------------------------------
 
     def _compile_local_definition(self, name: str) -> dict[str, Any]:
         declaration = self.local_functions[name]
@@ -1031,9 +1014,7 @@ class _Emitter:
             "variables": local_variables,
         }
 
-    # ------------------------------------------------------------------
     # Constructs
-    # ------------------------------------------------------------------
 
     def _child_flows(
         self,
@@ -1135,8 +1116,7 @@ class _Emitter:
                 )
             )
         if not has_explicit_else:
-            # No else authored: the false path falls through to whatever comes
-            # next, so it needs a real else lane wired onward (pruned if unused).
+            # No else authored: the false path falls through to whatever comes next.
             implicit = {"id": f"branch_{len(branches)}", "type": "else", "label": ""}
             branches.append(implicit)
             self._implicit_else.append((node_id, str(implicit["id"])))
@@ -1174,8 +1154,7 @@ class _Emitter:
         return [(node_id, "then")]
 
     def _for_each_type(self, value: Mapping[str, Any], scope: _Scope) -> str | None:
-        """A For Each left without `collection_type` takes the type of the variable a literal
-        `collection` names, as its window does; an expression collection gets none."""
+        """A For Each without `collection_type` takes its literal collection variable's type."""
         kind, collection = value_form(value.get("collection"))
         if kind != "plain" or not isinstance(collection, str):
             return None
@@ -1362,9 +1341,7 @@ class _Emitter:
         )
         return [(node_id, "then")]
 
-    # ------------------------------------------------------------------
     # Document assembly
-    # ------------------------------------------------------------------
 
     def _emit_declared_variables(self) -> dict[str, dict[str, Any]]:
         return {
@@ -1480,9 +1457,7 @@ def compile_recipe(
     emitter = _Emitter(doc, placement_defaults)
     test_data = emitter.emit()
     findings.extend(emitter.findings)
-    # Wiring self-check: an emitted graph must reach every flow node, or the
-    # compiler has produced a block that can never execute.
-    # One finding per step: a local Function used twice compiles twice.
+    # Wiring self-check: an emitted graph must reach every flow node.
     orphans = dict.fromkeys(
         emitter.step_map.get(node_id, "test")
         for workflow in (*emitter.local_workflows, test_data["workflow"])

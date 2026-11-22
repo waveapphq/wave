@@ -110,7 +110,16 @@ test.describe('V-CANVAS-LOAD-02: Viewport Centering', () => {
     await waitForCanvasEmptyState(page)
 
     const ghostEdge = page.locator('.react-flow__edge[data-id="ghost-edge"]')
-    await expect(ghostEdge, 'Ghost edge should be visible').toBeVisible()
+    // Per CANVAS-248: Start and the placeholder share center x 0, so the edge is a vertical line with a 0 px wide box.
+    const path = ghostEdge.locator('path.react-flow__edge-path')
+    await expect(path, 'Ghost edge path should be drawn').toHaveCount(1)
+    const d = (await path.getAttribute('d')) ?? ''
+    const numbers = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number)
+    expect(numbers.length, `Ghost edge path should have points: ${d}`).toBeGreaterThanOrEqual(4)
+    const startX = numbers[0]
+    const endX = numbers[numbers.length - 2]
+    expect(Math.abs(endX - startX), `Ghost edge should be vertical: ${d}`).toBeLessThanOrEqual(1)
+    expect(numbers[numbers.length - 1] - numbers[1], `Ghost edge should run down to the placeholder: ${d}`).toBeGreaterThan(0)
   })
 
   test('V-CANVAS-LOAD-02-S4: start node in upper portion of canvas viewport', async ({ page }) => {

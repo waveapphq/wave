@@ -1,9 +1,4 @@
-"""Function steps: inline local definitions and library Function references.
-
-REQ-5.2.7.3. A Function step has a block step's form: its settings are the Function's
-inputs, stored like every Block's fields. A local Function Block embeds a recursive
-localDefinition; a library one pins functionId + functionVersion.
-"""
+"""Function steps: inline local definitions and library Function references (REQ-5.2.7.3)."""
 
 from typing import Any
 
@@ -196,6 +191,29 @@ class TestLibraryFunctionStep:
         assert data["functionVersion"] == "1.2.0"
         assert "localDefinition" not in data
 
+    def test_a_library_step_stores_the_library_functions_name(self) -> None:
+        # REQ-3.1.1.5: the Block keeps the library name its window, actions and banner read.
+        seed_library_function()
+        flow = [{"function": "fetch_remote", "version": "1.2.0", "settings": {"host": "h"}}]
+        result = compile_clean(make_recipe(flow))
+        data = nodes_by_id(result)["node-1"]["data"]
+        assert data.get("originalLibraryName") == "fetch_remote"
+
+    def test_a_local_function_block_stores_no_library_name(self) -> None:
+        result = compile_clean(local_function_recipe())
+        assert "originalLibraryName" not in nodes_by_id(result)["node-1"]["data"]
+
+    def test_the_library_name_round_trips_through_a_readback(self) -> None:
+        from wavecore.core.recipes.decompiler import decompile_test_data
+
+        seed_library_function()
+        flow = [{"function": "fetch_remote", "version": "1.2.0", "settings": {"host": "h"}}]
+        first = compile_clean(make_recipe(flow))
+        readback = decompile_test_data(first["test_data"])
+        assert readback["expressible"] is True
+        second = compile_clean(readback["recipe"])
+        assert nodes_by_id(second)["node-1"]["data"].get("originalLibraryName") == "fetch_remote"
+
     def test_a_literal_text_setting_is_stored_as_its_value(self) -> None:
         seed_library_function()
         flow = [{"function": "fetch_remote", "version": "1.2.0", "settings": {"host": "h.local"}}]
@@ -263,9 +281,7 @@ def forms_data(settings: dict[str, Any], **step: Any) -> dict[str, Any]:
 
 
 class TestFunctionStepSettingForms:
-    """Each setting form a block step writes is stored the same way on a Function Block:
-    the value in config.values, its kind in the expression and template flags, its element
-    types beside it (REQ-3.1.1.5, REQ-3.1.3.19)."""
+    """A Function Block stores each setting form as a block step does (REQ-3.1.1.5)."""
 
     def test_a_template_setting_is_stored_with_its_template_flag(self) -> None:
         data = forms_data({"note": "id-{{ run_id }}"})
@@ -412,8 +428,7 @@ def output_kind_recipe(*outputs: dict[str, Any]) -> str:
 
 
 class TestOutputKind:
-    """An output declares its kind like a variable: the source sits in `default` under the
-    variable's kind keys (REQ-3.1.2.8)."""
+    """An output declares its kind like a variable (REQ-3.1.2.8)."""
 
     @pytest.mark.parametrize(("authored", "stored"), OUTPUT_KINDS)
     def test_an_output_kind_is_stored_with_the_variable_kind_keys(
@@ -466,8 +481,7 @@ def declared_inputs_recipe(
 
 
 class TestInputDeclarationsCompileVerbatim:
-    """An enum input and a Required input's default are stored as written, so a compiled
-    Test and a hand-built one hold the same declaration (REQ-3.1.2.10, REQ-3.1.2.11)."""
+    """Enum inputs and Required defaults are stored as written (REQ-3.1.2.10)."""
 
     def test_an_enum_input_is_stored_as_written(self) -> None:
         result = compile_clean(declared_inputs_recipe([ENUM_INPUT], {"level": "high"}))
@@ -543,9 +557,7 @@ def issue_step(**extra: Any) -> dict[str, Any]:
 
 
 class TestFunctionStepSecretOutputs:
-    """A Function step marks its Secret outputs as the Function Block window does; a capture
-    it declares for a marked output is declared secret, and the stored list holds only a
-    choice the step made (SECUI-11, REQ-3.1.2.9)."""
+    """A Function step marks Secret outputs as its window does (SECUI-11, REQ-3.1.2.9)."""
 
     def test_without_a_choice_the_outputs_declared_secret_mark_the_capture(self) -> None:
         result = compile_clean(make_recipe([issue_step()], functions=[ISSUE_FUNCTION]))
@@ -636,8 +648,7 @@ def setter_function(variables: dict[str, Any], outputs: list[dict[str, Any]]) ->
 
 
 class TestSetterRowTypesInAFunctionBody:
-    """A Variable Setter row inside a Function body takes its type from the Function's
-    scope, never from a Test variable of the same name (REQ-3.1.2.7)."""
+    """A Setter row in a Function body is typed by the Function's scope (REQ-3.1.2.7)."""
 
     def test_rows_take_the_types_the_function_scope_declares(self) -> None:
         function = setter_function(
@@ -713,9 +724,7 @@ class TestSetterRowTypesInAFunctionBody:
 
 
 class TestMarkedFunctionCaptureMakesADeclaredVariableSecret:
-    """A Function step's marked capture into a variable the recipe declares plain makes it
-    secret with a warning, as the Function Block window's Save does after its warning
-    (SECUI-11, SECUI-12)."""
+    """A marked capture makes a plain variable secret, warning (SECUI-11, SECUI-12)."""
 
     def test_a_test_variable_is_stored_secret_with_a_warning(self) -> None:
         variables = {"tok": {"type": "string"}}

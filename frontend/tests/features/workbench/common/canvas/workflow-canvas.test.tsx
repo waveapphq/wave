@@ -17,10 +17,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
+import { computeFreshNodeWidth } from '@/features/workbench/common/canvas/workflow-node/node-width'
 
 // Mock @xyflow/react
 const mockScreenToFlowPosition = vi.fn((pos: { x: number; y: number }) => pos)
 const mockFitView = vi.fn()
+// React Flow's measured nodes, read by Quick Insert to find the egress handle.
+const mockNodeLookup = new Map<string, unknown>()
 
 // Canvas nodes report a failed Function-body read through the toast; these
 // specs render nodes without the app shell that provides one.
@@ -87,7 +90,7 @@ vi.mock('@xyflow/react', () => ({
     fitView: mockFitView,
   }),
   useStoreApi: () => ({
-    getState: () => ({ nodeLookup: new Map() }),
+    getState: () => ({ nodeLookup: mockNodeLookup }),
   }),
   useInternalNode: (id: string) => id ? ({
     id,
@@ -2565,6 +2568,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
     mockWorkflowStore.selectedEdgeIds = []
     mockWorkflowStore.openConfigNodeIds = []
     mockWorkflowStore.pendingDeleteNodeIds = null
+    mockNodeLookup.clear()
   })
 
   it('opens the window on Ctrl+Space and inserts on Enter', async () => {
@@ -2580,6 +2584,76 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
     expect(mockWorkflowStore.addNode).toHaveBeenCalledTimes(1)
     expect(mockWorkflowStore.selectNode).toHaveBeenCalledTimes(1)
     expect(screen.queryByTestId('quick-add-popover')).not.toBeInTheDocument()
+  })
+
+  // CANVAS-249: Enter centers the new block under the measured egress handle.
+  it('centers the inserted block under the named branch handle it links from', async () => {
+    mockWorkflowStore.nodes = [
+      {
+        id: 'if-1',
+        position: { x: 100, y: 0 },
+        data: {
+          label: 'If/Else',
+          elementType: 'if-else',
+          nodeType: 'control',
+          config: {
+            values: {
+              branches: [
+                { id: 'branch_0', type: 'if', label: '', conditions: [] },
+                { id: 'branch_1', type: 'else', label: '' },
+              ],
+            },
+          },
+        },
+      },
+      { id: 'node-2', position: { x: 0, y: 200 }, data: { label: 'Log', elementType: 'log' } },
+    ]
+    mockWorkflowStore.edges = [
+      { id: 'e-1', source: 'if-1', target: 'node-2', sourceHandle: 'branch_0' } as { id: string; source: string; target: string },
+    ]
+    mockWorkflowStore.selectedNodeIds = ['if-1']
+    mockNodeLookup.set('if-1', {
+      measured: { width: 300, height: 80 },
+      internals: {
+        positionAbsolute: { x: 100, y: 0 },
+        handleBounds: {
+          source: [
+            { id: 'branch_0', x: 50, y: 76, width: 16, height: 8 },
+            { id: 'branch_1', x: 200, y: 76, width: 16, height: 8 },
+          ],
+        },
+      },
+    })
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    render(<WorkflowCanvas />)
+    fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+
+    const added = mockWorkflowStore.addNode.mock.calls[0][0]
+    expect(added.position.x + computeFreshNodeWidth(added) / 2).toBe(308)
+    expect(added.position.y).toBe(140)
+  })
+
+  it('centers the inserted block under the anchor center when no handle is named', async () => {
+    mockWorkflowStore.nodes = [
+      { id: 'node-1', position: { x: 40, y: 0 }, data: { label: 'HTTP', elementType: 'http-client' } },
+    ]
+    mockWorkflowStore.selectedNodeIds = ['node-1']
+    // The handle bounds sit off center, so using them would move the block.
+    mockNodeLookup.set('node-1', {
+      measured: { width: 200, height: 60 },
+      internals: {
+        positionAbsolute: { x: 40, y: 0 },
+        handleBounds: { source: [{ x: 0, y: 56, width: 16, height: 8 }] },
+      },
+    })
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    render(<WorkflowCanvas />)
+    fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+
+    const added = mockWorkflowStore.addNode.mock.calls[0][0]
+    expect(added.position.x + computeFreshNodeWidth(added) / 2).toBe(140)
   })
 
   it('does not open the window in read-only mode', async () => {

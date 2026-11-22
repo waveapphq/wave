@@ -1,10 +1,4 @@
-"""Discover catalog contract: list_blocks/get_block over the registries.
-
-The catalog reads the LIVE registries (never file storage): 39 plugins + 15
-controls + the remote-execution container entry; a plugin with no settings and
-no outputs carries implemented=false with guidance. Also pins the registry extensions
-plugin_registry.list_plugins and controls.registry.list_latest_control_metadata.
-"""
+"""Discover catalog contract: list_blocks/get_block over the registries."""
 
 import re
 from typing import Any
@@ -761,3 +755,37 @@ class TestControlRegistryExtension:
         assert len(entries) == 15
         delay = next(entry for entry in entries if str(entry["id"].value) == "delay")
         assert delay["version"] == "1.1.0"
+
+
+def _block_parameter(block_id: str, name: str) -> dict[str, Any]:
+    from wavecore.mcp.tools import discover
+
+    entry = discover.get_block(block_id)
+    params = entry.get("parameter_schema", entry.get("parameters"))
+    found: dict[str, Any] = next(param for param in params if param["name"] == name)
+    return found
+
+
+class TestGetBlockServesTheNewRuleKeys:
+    """get_block serves the server's declared rules beyond type (REQ-3.4.2.2, REQ-5.2.7.3)."""
+
+    def test_ping_minimum_replies_is_capped_at_count(self) -> None:
+        assert _block_parameter("ping", "min_replies")["maximum_field"] == "count"
+
+    @pytest.mark.parametrize("block_id", ["json-parser", "xml-parser"])
+    def test_parser_queries_declare_outputs_in_individual_mode(self, block_id: str) -> None:
+        queries = _block_parameter(block_id, "queries")
+
+        assert queries["declares_outputs"] is True
+        assert queries["declares_outputs_when"] == {
+            "field": "output_mode",
+            "values": ["individual"],
+        }
+
+    @pytest.mark.parametrize("block_id", ["json-parser", "xml-parser"])
+    def test_parser_results_shows_in_combined_mode(self, block_id: str) -> None:
+        from wavecore.mcp.tools import discover
+
+        outputs = {out["name"]: out for out in discover.get_block(block_id)["output_schema"]}
+
+        assert outputs["results"]["show_when"] == {"field": "output_mode", "values": ["combined"]}

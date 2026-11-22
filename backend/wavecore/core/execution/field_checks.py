@@ -1,7 +1,4 @@
-"""The one save-time field check every Block shares: plugin, control and Function Block.
-
-REQ-3.1.1.5, REQ-3.1.2.4, REQ-3.1.2.11, REQ-3.4.2.2, REQ-3.5.0.3.
-"""
+"""Save-time field check (REQ-3.1.1.5, REQ-3.1.2.4, REQ-3.1.2.11, REQ-3.4.2.2, REQ-3.5.0.3)."""
 
 from __future__ import annotations
 
@@ -33,7 +30,11 @@ from wavecore.core.variables.value_checks import (
     number_value_problem,
     typed_value_numbers,
 )
-from wavecore.models.plugins import get_param_attr, is_param_required
+from wavecore.models.plugins import (
+    get_param_attr,
+    is_conditionally_required,
+    is_param_required,
+)
 
 
 @dataclass(frozen=True)
@@ -125,8 +126,7 @@ def _is_skipped(field: Any, value: Any) -> bool:
 
 
 def _null_findings(field: Any, name: str, block_id: str) -> list[FieldFinding]:
-    """A null on a setting with a default, which the run refuses naming it (REQ-3.1.3.21); a
-    Required one with no default is missing, and a secret holding null is owed."""
+    """A null with a default is refused (REQ-3.1.3.21); without one, missing, or owed if secret."""
     if (
         get_param_attr(field, "default") is None
         or get_param_attr(field, "secret", False)
@@ -351,8 +351,7 @@ def _required_finding(
 
 
 def _entry_slots(name: str, value: Any) -> Iterator[tuple[str, Any, str]]:
-    """Each map value or list row of a field, and each entry of a list or map a map value holds:
-    its flag key, its text and how it is named."""
+    """Each map value or list row of a field, nested ones included: its flag key, text and name."""
     if isinstance(value, dict):
         for key, entry in value.items():
             yield f"{name}.{key}", entry, f"'{key}' in '{name}'"
@@ -425,8 +424,7 @@ def _is_literal(
 
 
 def name_rule_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
-    """The rule's message for a name, or None: the pattern in full as ASCII, the prefixes, then
-    the reserved names."""
+    """The rule's message for a name, or None: full ASCII pattern, prefixes, then reserved names."""
     if not (isinstance(item, str) and re.fullmatch(rule["pattern"], item, re.ASCII)):
         message = rule["message"]
     else:
@@ -438,8 +436,7 @@ def name_rule_refusal(rule: Mapping[str, Any], item: Any) -> str | None:
 
 
 def name_rule_refusals(rule: Mapping[str, Any], items: Iterable[Any]) -> Iterator[str]:
-    """Each refusal of the rule over the names in order, once each; a rule with a repeated
-    message also refuses a name listed again."""
+    """Each refusal of the rule over the names, once each; some rules also refuse a repeat."""
     seen: set[str] = set()
     reported: set[str] = set()
     for item in items:
@@ -476,8 +473,7 @@ def _place_value(
 
 
 def _element_kind(field: Any, value: Any) -> str | None:
-    """The shape element types describe at a place: the literal's own, else the setting's single
-    declared array or map type."""
+    """The shape types at a place: the literal's own, else the setting's one array or map type."""
     if isinstance(value, list):
         return "array"
     if isinstance(value, dict):
@@ -514,6 +510,66 @@ def _element_type_findings(
                 f"Invalid element types for setting '{place}' of block '{block_id}': {problem}"
             )
             yield FieldFinding("INVALID_ELEMENT_TYPES", message, None, place)
+
+
+def _ceiling_finding(
+    field: Any,
+    fields_by_name: Mapping[str, Any],
+    values: Mapping[str, Any],
+    *,
+    block_id: str,
+    sources: Collection[str],
+    flagged: Collection[str],
+) -> FieldFinding | None:
+    """A number above the value of the setting its ``maximum_field`` names (REQ-3.4.2.2)."""
+    name = str(get_param_attr(field, "name", ""))
+    other = get_param_attr(field, "maximum_field")
+    cap_field = fields_by_name.get(str(other))
+    if cap_field is None or values.get(name) is None or {name, other} & {*sources, *flagged}:
+        return None
+    shown_when = get_param_attr(field, "show_when")
+    if shown_when is not None and (
+        get_param_attr(shown_when, "field") in sources
+        or not is_conditionally_required(shown_when, values, list(fields_by_name.values()))
+    ):
+        return None
+    cap_value = values.get(other)
+    if cap_value is None:
+        cap_value = get_param_attr(cap_field, "default")
+    cap = None if cap_value is None else _exact_number(cap_value, _declared_types(cap_field))
+    value = values[name]
+    exact = _exact_number(value, _declared_types(field))
+    if cap is None or exact is None or exact <= cap:
+        return None
+    limit = plain_number_text(cap)
+    shown = value if isinstance(value, str) else plain_number_text(value)
+    return FieldFinding(
+        "SETTING_ABOVE_MAXIMUM",
+        f"Setting '{name}' of block '{block_id}' must be at most the value of setting "
+        f"'{other}' ({limit}), got {shown}",
+        f"Provide a value of at most {limit}",
+        name,
+    )
+
+
+def _ceiling_findings(
+    fields: Sequence[Any],
+    values: Mapping[str, Any],
+    *,
+    block_id: str,
+    sources: Collection[str],
+    flagged: Collection[str],
+) -> Iterator[FieldFinding]:
+    """Each ceiling breach; a field or cap with its own finding shows only that finding."""
+    fields_by_name = {str(get_param_attr(field, "name", "")): field for field in fields}
+    for field in fields:
+        if get_param_attr(field, "maximum_field") is None:
+            continue
+        found = _ceiling_finding(
+            field, fields_by_name, values, block_id=block_id, sources=sources, flagged=flagged
+        )
+        if found is not None:
+            yield found
 
 
 def check_block_fields(
@@ -559,6 +615,15 @@ def check_block_fields(
                 )
             )
             findings.extend(_name_findings(field, name, values[name]))
+    findings.extend(
+        _ceiling_findings(
+            fields,
+            values,
+            block_id=block_id,
+            sources=sources,
+            flagged={finding.field for finding in findings},
+        )
+    )
     findings.extend(unknown_field_findings(fields, values, block_id=block_id))
     for name in declared_names:
         findings.extend(_blank_entry_findings(name, values.get(name), expression_fields))

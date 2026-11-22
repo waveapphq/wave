@@ -1,10 +1,4 @@
-/**
- * WorkflowCanvas Component - REQ-3.1.1.1 Drag-and-drop interface
- *
- * React Flow canvas for visual workflow building.
- * Handles palette drops, node placement, and edge creation.
- * Always shows Start node, auto-connects when dropping near free outputs.
- */
+/** WorkflowCanvas: the React Flow canvas for building a workflow (REQ-3.1.1.1). */
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -15,6 +9,7 @@ import {
   ReactFlowProvider,
   SelectionMode,
   useReactFlow,
+  useStoreApi,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -30,10 +25,10 @@ import {
   QUICK_ADD_BUILTINS,
   type QuickAddItem,
 } from '@/features/workbench/lib/quick-add-catalog'
-import { WorkflowNode } from '../workflow-node'
+import { WorkflowNode } from '../workflow-node/node'
 import { StartNodeFlow } from '../empty-state/start-node-flow'
 import { OnboardingNodeFlow } from '../empty-state/onboarding-node-flow'
-import { NoteNode } from '../note-node'
+import { NoteNode } from '../note-node/note-node'
 import { ElementConfigModal } from '@/features/workbench/common/element-config'
 import { FunctionBlockWindow } from '@/features/functions/canvas/function-config-modal'
 import { FunctionLifecycleDialogs } from '@/features/functions/canvas/function-lifecycle-dialogs'
@@ -43,7 +38,7 @@ import { InteractionsHintPopover } from '../chrome/interactions-hint-bar'
 import { HintPopoverToggle } from '../chrome/hint-bar-toggle'
 import { CanvasReadOnlyProvider, useCanvasReadOnly } from '../read-only-context'
 
-import { AUTO_PAN_SPEED, isBlockFullyVisible, useThemeSafe } from './canvas-constants'
+import { AUTO_PAN_SPEED, getSourceHandleCenter, isBlockFullyVisible, useThemeSafe } from './canvas-constants'
 import { GhostEdge } from './ghost-edge'
 import { useCanvasNodes } from './use-canvas-nodes'
 import { useCanvasEdges } from './use-canvas-edges'
@@ -128,8 +123,7 @@ function DirtySheetDeleteDialog() {
   )
 }
 
-/** Drilling while a config sheet has unsaved edits asks first (scope
- *  changes reset sheet form state). */
+/** Drilling with unsaved config sheet edits asks first, since a scope change resets the sheet. */
 function DirtySheetDrillDialog() {
   const pendingDrillAction = useWorkflowStore((s) => s.pendingDrillAction)
   const confirmPendingDrill = useWorkflowStore((s) => s.confirmPendingDrill)
@@ -183,14 +177,9 @@ interface WorkflowCanvasInnerProps {
   className?: string
   executionStatus?: string
   onReset?: () => void
-  /** Live workbench session id - threaded into the canvas context menu so
-   *  toggle items can PATCH a running engine. Undefined when no live session. */
+  /** Live workbench session id, so context-menu toggles can PATCH a running engine. */
   sessionId?: string
-  /**
-   * Paint-only mode for the historical test canvas. Disables drag,
-   * connect, drop, context menus, keyboard shortcuts, and the config
-   * modal so the canvas shows a static snapshot.
-   */
+  /** Paint-only mode for the history canvas: no drag, connect, drop, menus, shortcuts or config. */
   readOnly?: boolean
 }
 
@@ -209,9 +198,7 @@ const EMPTY_READONLY_HANDLERS = {
   onNodeDragStop: undefined,
 } as const
 
-/**
- * Inner canvas component (needs ReactFlowProvider)
- */
+/** Inner canvas component (needs ReactFlowProvider). */
 function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, readOnly = false }: Readonly<WorkflowCanvasInnerProps>) {
   const isExecuting = executionStatus === 'running' || executionStatus === 'paused'
   const interactionLocked = readOnly || isExecuting
@@ -249,6 +236,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
 
   // Quick-add popover (REQ-4.2.5, CANVAS-223..226)
   const { screenToFlowPosition } = useReactFlow()
+  const rfStoreApi = useStoreApi()
   const toast = use(ToastContext)
   const { isOpen: quickAddOpen, setIsOpen: setQuickAddOpen } = useQuickAddShortcut({
     disabled: interactionLocked,
@@ -274,9 +262,18 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
         viewportCenter,
         drilledFunctionIds,
         isPlacementVisible: (position) => isBlockFullyVisible(position, topLeft, bottomRight),
+        resolveHandleCenter: (nodeId, sourceHandle) => {
+          const internalNode = rfStoreApi.getState().nodeLookup.get(nodeId)
+          if (!internalNode) return null
+          // With no handle named, the anchor's own center (CANVAS-249).
+          const located = sourceHandle
+            ? internalNode
+            : { measured: internalNode.measured, internals: { positionAbsolute: internalNode.internals.positionAbsolute } }
+          return getSourceHandleCenter(located, sourceHandle)
+        },
       })
     },
-    [screenToFlowPosition, validate, toast, drilledFunctionIds],
+    [screenToFlowPosition, rfStoreApi, validate, toast, drilledFunctionIds],
   )
 
   // Edge connection and relocation
@@ -343,9 +340,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
     reactFlowWrapperRef: reactFlowWrapper,
   })
 
-  // Compose drag-stop: proximity auto-connect runs first (its commit is
-  // suppressed by the open drag operation), then endDragOperation closes
-  // the drag and emits the single post-drag history entry.
+  // Proximity auto-connect runs first, then endDragOperation writes the single history entry.
   const composedNodeDragStop = useCallback(
     (event: React.MouseEvent, node: Parameters<typeof handleNodeDragStop>[1]) => {
       handleNodeDragStop(event, node)
@@ -361,11 +356,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
   const bgColor = resolvedTheme === 'dark' ? '#09090B' : '#FAFAFA'
   const gridColor = resolvedTheme === 'dark' ? '#27272A' : '#E4E4E7'
 
-  // Set tabIndex and keydown listener programmatically to avoid SonarQube
-  // flagging event handlers on non-interactive elements (role="application"
-  // makes this interactive but static analysis cannot detect that).
-  // Skipped entirely in read-only mode: the history canvas has no
-  // keyboard actions to dispatch.
+  // tabIndex and keydown are set in code for static analysis; read-only mode has no keyboard actions.
   useEffect(() => {
     if (readOnly) return
     const el = reactFlowWrapper.current
@@ -378,16 +369,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
     return () => el.removeEventListener('keydown', onKeyDown)
   }, [handleKeyDown, readOnly])
 
-  // Memoize the handler bundle so identity is stable across renders.
-  // Without this, every render rebuilds the object and React Flow sees
-  // fresh function refs for onConnect/onDrop/onNodeDrag/etc., which
-  // triggers its internal pointer/drag effect to re-register
-  // listeners. If a re-register lands mid-drag (proximity/snap state
-  // updates fire a handful of renders per second during a drag),
-  // d3-drag drops pointer capture and the edge never commits -
-  // surfaced as the flaky "dropped an edge but it didn't stick"
-  // behavior. The inner handlers are `useCallback`d upstream so the
-  // dep list keeps memo hits across renders.
+  // A stable handler bundle keeps React Flow from re-registering drag listeners mid-drag.
   const interactiveHandlers = useMemo(
     () =>
       readOnly
@@ -566,10 +548,7 @@ function WorkflowCanvasInner({ className, executionStatus, onReset, sessionId, r
   )
 }
 
-/**
- * WorkflowCanvas Component
- * Wraps inner canvas with ReactFlowProvider
- */
+/** WorkflowCanvas: wraps the inner canvas in a ReactFlowProvider. */
 interface WorkflowCanvasProps {
   className?: string
   executionStatus?: string

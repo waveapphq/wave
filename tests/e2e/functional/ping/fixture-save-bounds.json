@@ -1,0 +1,550 @@
+{
+  "name": "Ping save bounds",
+  "version": "1.0.0",
+  "description": "Ping settings the save accepts beside its Minimum replies ceiling: Minimum replies equal to Count, a stored Minimum replies the Pass when rule does not use, an unset Count read as 4, and Minimum replies or Count from an expression, which the run refuses inside a Try/Catch.",
+  "workflow": {
+    "nodes": [
+      {
+        "id": "fdec3606-bb0b-44f5-9be7-53f850ff7706",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 60
+        },
+        "data": {
+          "label": "Equal to Count",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Equal to Count",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail",
+              "count": 2,
+              "pass_when": "min_replies",
+              "min_replies": 2
+            },
+            "outputBindings": {
+              "success": "p_equal_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f38541e8-7da0-4765-a68f-51ac8b64a96b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "data": {
+          "label": "Rule off",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Rule off",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail",
+              "count": 2,
+              "pass_when": "any",
+              "min_replies": 5
+            },
+            "outputBindings": {
+              "success": "p_ruleoff_ok"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "0b83d53a-5439-429e-bedf-40a036459157",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 240
+        },
+        "data": {
+          "label": "Count default",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Count default",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail",
+              "pass_when": "min_replies",
+              "min_replies": 4
+            },
+            "outputBindings": {
+              "success": "p_default_ok",
+              "summary": "p_default_summary"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "f319d051-84ca-4efa-8ee3-489b1226c629",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 330
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Saved proof",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-bounds equal-ok={p_equal_ok} ruleoff-ok={p_ruleoff_ok} default-ok={p_default_ok} default-sent={p_default_summary[0]['sent']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "e4a46356-29c7-4d0b-bc89-b706c1dbe0e7",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 420
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Replies from expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "p_rexpr_error",
+              "caught": "p_rexpr_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "fe84e311-6f5c-47cd-9ea0-2b3468f9155f",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 510
+        },
+        "data": {
+          "label": "Replies expression",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Replies expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "min_replies"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail",
+              "count": 2,
+              "pass_when": "min_replies",
+              "min_replies": "want_replies"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "d3455cef-3710-420e-b97c-9c5865370048",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 600
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Replies caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-bounds replies-expr {p_rexpr_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "6eaaeca6-21b8-4b3b-aad5-9c8ed653fb24",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 690
+        },
+        "data": {
+          "label": "Try/Catch",
+          "elementType": "try-catch-finally",
+          "nodeType": "control",
+          "category": "flow",
+          "version": "1.0.0",
+          "description": "Count from expression",
+          "hasNewerVersion": false,
+          "expressionFields": [],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "enable_catch": true,
+              "enable_finally": false
+            },
+            "outputBindings": {
+              "error": "p_cexpr_error",
+              "caught": "p_cexpr_caught"
+            },
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 200,
+          "height": 62
+        }
+      },
+      {
+        "id": "dae88def-8a42-4632-aff3-65629be6b2ed",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 780
+        },
+        "data": {
+          "label": "Count expression",
+          "elementType": "ping",
+          "nodeType": "plugin",
+          "category": "network",
+          "version": "1.0.0",
+          "description": "Count expression",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "count"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "host": "127.0.0.1",
+              "interval": 0.2,
+              "packet_size": 56,
+              "timeout": 10,
+              "stream_output": false,
+              "ip_version": "auto",
+              "dont_fragment": false,
+              "on_error": "fail",
+              "count": "ping_count",
+              "pass_when": "min_replies",
+              "min_replies": 3
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "a4aef0bf-ea8a-4e19-b79a-33102996508c",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 870
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Count caught",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "f\"ping-bounds count-expr {p_cexpr_error['message']}\"",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      },
+      {
+        "id": "bdb72aa0-d538-4aa5-a074-6f332aa2278b",
+        "type": "workflowNode",
+        "position": {
+          "x": 400,
+          "y": 960
+        },
+        "data": {
+          "label": "Log",
+          "elementType": "log",
+          "nodeType": "plugin",
+          "category": "system",
+          "version": "1.0.0",
+          "description": "Done",
+          "hasNewerVersion": false,
+          "expressionFields": [
+            "message"
+          ],
+          "templateFields": [],
+          "config": {
+            "values": {
+              "message": "'ping-bounds-done'",
+              "level": "INFO"
+            },
+            "outputBindings": {},
+            "profileBindings": []
+          }
+        },
+        "measured": {
+          "width": 120,
+          "height": 62
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "62fa91e3-0f7d-4f90-b47a-61a2c4b4109f",
+        "source": "start-node",
+        "target": "fdec3606-bb0b-44f5-9be7-53f850ff7706",
+        "type": "default"
+      },
+      {
+        "id": "d2261986-9c35-4e7e-9633-7784eb708d6b",
+        "source": "fdec3606-bb0b-44f5-9be7-53f850ff7706",
+        "target": "f38541e8-7da0-4765-a68f-51ac8b64a96b",
+        "type": "default"
+      },
+      {
+        "id": "0b7d17da-dea1-4910-835f-a289d6aa93de",
+        "source": "f38541e8-7da0-4765-a68f-51ac8b64a96b",
+        "target": "0b83d53a-5439-429e-bedf-40a036459157",
+        "type": "default"
+      },
+      {
+        "id": "5e0ae8d5-ba09-4eb8-8070-d2a531e40cc1",
+        "source": "0b83d53a-5439-429e-bedf-40a036459157",
+        "target": "f319d051-84ca-4efa-8ee3-489b1226c629",
+        "type": "default"
+      },
+      {
+        "id": "724fb388-a99b-4b50-a3ec-06325d831ea0",
+        "source": "f319d051-84ca-4efa-8ee3-489b1226c629",
+        "target": "e4a46356-29c7-4d0b-bc89-b706c1dbe0e7",
+        "type": "default"
+      },
+      {
+        "id": "72ba4ad7-0b03-4f85-aea5-774583b2c692",
+        "source": "e4a46356-29c7-4d0b-bc89-b706c1dbe0e7",
+        "target": "fe84e311-6f5c-47cd-9ea0-2b3468f9155f",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "a036a391-36a2-4206-991e-234419f7765a",
+        "source": "e4a46356-29c7-4d0b-bc89-b706c1dbe0e7",
+        "target": "d3455cef-3710-420e-b97c-9c5865370048",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "ff6f5334-7436-4c36-ab0c-0769df5277ea",
+        "source": "e4a46356-29c7-4d0b-bc89-b706c1dbe0e7",
+        "target": "6eaaeca6-21b8-4b3b-aad5-9c8ed653fb24",
+        "type": "default",
+        "sourceHandle": "then"
+      },
+      {
+        "id": "a911a403-75de-409c-8993-fda76e3a2d27",
+        "source": "6eaaeca6-21b8-4b3b-aad5-9c8ed653fb24",
+        "target": "dae88def-8a42-4632-aff3-65629be6b2ed",
+        "type": "default",
+        "sourceHandle": "try"
+      },
+      {
+        "id": "aba0e3d8-c65b-4cfe-8f51-5cd1f31e25f8",
+        "source": "6eaaeca6-21b8-4b3b-aad5-9c8ed653fb24",
+        "target": "a4aef0bf-ea8a-4e19-b79a-33102996508c",
+        "type": "default",
+        "sourceHandle": "catch"
+      },
+      {
+        "id": "689fb519-6838-4f10-99a0-c75db324fdee",
+        "source": "6eaaeca6-21b8-4b3b-aad5-9c8ed653fb24",
+        "target": "bdb72aa0-d538-4aa5-a074-6f332aa2278b",
+        "type": "default",
+        "sourceHandle": "then"
+      }
+    ]
+  },
+  "variables": {
+    "p_equal_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_ruleoff_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_default_ok": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_default_summary": {
+      "value": [],
+      "type": "table",
+      "scope": "test"
+    },
+    "want_replies": {
+      "value": 5,
+      "type": "integer",
+      "scope": "test"
+    },
+    "ping_count": {
+      "value": 1,
+      "type": "integer",
+      "scope": "test"
+    },
+    "p_rexpr_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "p_rexpr_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    },
+    "p_cexpr_error": {
+      "value": {},
+      "type": "map",
+      "scope": "test"
+    },
+    "p_cexpr_caught": {
+      "value": false,
+      "type": "boolean",
+      "scope": "test"
+    }
+  },
+  "metadata": {
+    "tags": [],
+    "suite_id": null,
+    "parent_suite": null
+  }
+}

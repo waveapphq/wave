@@ -1,16 +1,4 @@
-"""Unit tests for the one save-time field check every Block shares.
-
-Requirements tested:
-- REQ-3.1.1.5: every Block checks its fields one way (required, type, allowed values,
-  bounds, unknown field, a blank {x} entry)
-- REQ-3.4.2.2 / REQ-3.5.0.3: plugin and control parameter definitions drive the check
-- REQ-3.1.2.11: allowed values are typed (String, Integer or Float)
-- REQ-3.1.3.14: a save stores each literal number of a number field in its wire form
-- REQ-3.1.3.19: typed list, map and table entries of a setting follow the rule by their types,
-  and every element-type record names only the six element types
-- REQ-3.1.3.21: a required data field that accepts null takes a stored null
-- REQ-3.4.1.14: a blank {x} entry inside a Variable Setter list or map row is required
-"""
+"""Shared field check (REQ-3.1.1.5, REQ-3.4.2.2, REQ-3.5.0.3, REQ-3.1.2.11, REQ-3.1.3.14)."""
 
 from collections.abc import Iterable, Mapping, Sequence
 from decimal import Decimal
@@ -717,8 +705,7 @@ def _null_setting(name: str, *, block_id: str = "f") -> Seen:
 
 
 class TestNullSettings:
-    """A setting given null fails and names it, unless it takes null or is optional with no
-    default (REQ-3.1.3.21)."""
+    """A setting given null fails and names it (REQ-3.1.3.21)."""
 
     def test_an_optional_setting_with_a_default_given_null_is_refused(self) -> None:
         field = {"name": "timeout", "type": "integer", "default": 30}
@@ -965,8 +952,7 @@ class TestNameRules:
 
 
 class TestBlockedNamePrefixes:
-    """A name that fits the pattern is refused when it starts with a blocked prefix, with the
-    prefix's own message; a name outside the pattern gets only the pattern's message."""
+    """A name that fits the pattern is refused when it starts with a blocked prefix."""
 
     _RULE = {
         "pattern": "[A-Za-z_]+",
@@ -1013,8 +999,7 @@ class TestBlockedNamePrefixes:
 
 
 class TestReservedAndRepeatedNames:
-    """A name that passes the pattern and the prefixes is refused when it is reserved, then when
-    it is listed again, each with the rule's own message; each refusal is reported once."""
+    """A name that passes the pattern and the prefixes is refused when it is reserved."""
 
     _RULE = {
         "pattern": "[A-Za-z_]+",
@@ -1387,8 +1372,7 @@ class TestRequiredAcceptsNull:
 
 
 class TestEntrySlotsTwoLevels:
-    """A blank {x} entry inside a Setter list or map row has nothing to fall back on
-    (REQ-3.4.1.14)."""
+    """A blank {x} entry in a Setter row is refused (REQ-3.4.1.14)."""
 
     @pytest.mark.parametrize("blank", ["  ", "", None], ids=["spaces", "empty", "null"])
     def test_a_blank_flagged_item_of_a_list_held_by_a_map_entry_is_required(
@@ -1466,8 +1450,7 @@ def _type_findings(
 
 
 class TestElementTypeFindings:
-    """Every place of a Block's element-type record names only the six element types
-    (REQ-3.1.3.19)."""
+    """An element-type record names only the six types (REQ-3.1.3.19)."""
 
     def test_an_unknown_type_in_a_map_record_is_refused(self) -> None:
         found = _type_findings(
@@ -1585,3 +1568,133 @@ class TestElementTypeFindings:
                 "ids",
             )
         ]
+
+
+def _ping_fields() -> list[dict[str, Any]]:
+    from wavecore.plugins.ping import PingPlugin
+
+    fields: list[dict[str, Any]] = PingPlugin().metadata["parameters"]
+    return fields
+
+
+def _ping(values: Mapping[str, Any], *, expression_fields: Iterable[str] = ()) -> list[Seen]:
+    return _check(
+        _ping_fields(),
+        {"host": "gateway.local", **values},
+        block_id="ping",
+        expression_fields=expression_fields,
+    )
+
+
+def _above_count(count: int, value: str) -> Seen:
+    return (
+        "SETTING_ABOVE_MAXIMUM",
+        f"Setting 'min_replies' of block 'ping' must be at most the value of setting 'count' "
+        f"({count}), got {value}",
+        f"Provide a value of at most {count}",
+        "min_replies",
+    )
+
+
+_CAPPED = [
+    {"name": "high", "type": "integer", "default": 10},
+    {"name": "low", "type": "integer", "maximum_field": "high"},
+]
+
+
+class TestFieldRelativeCeiling:
+    """Ping's Minimum replies may not exceed Count under At least N replies (REQ-3.4.2.2)."""
+
+    def test_minimum_replies_above_count_is_refused(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": 4, "min_replies": 5}) == [
+            _above_count(4, "5")
+        ]
+
+    def test_minimum_replies_equal_to_count_passes(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": 4, "min_replies": 4}) == []
+
+    def test_minimum_replies_below_count_passes(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": 10, "min_replies": 3}) == []
+
+    def test_an_unset_count_compares_with_its_default_of_four(self) -> None:
+        assert _ping({"pass_when": "min_replies", "min_replies": 5}) == [_above_count(4, "5")]
+        assert _ping({"pass_when": "min_replies", "min_replies": 4}) == []
+
+    @pytest.mark.parametrize("rule", ["any", "all", "min_rate"])
+    def test_another_pass_rule_skips_the_ceiling(self, rule: str) -> None:
+        values: dict[str, Any] = {"pass_when": rule, "count": 4, "min_replies": 5}
+        if rule == "min_rate":
+            values["min_rate"] = 50
+
+        assert _ping(values) == []
+
+    def test_an_unset_pass_rule_is_any_and_skips_the_ceiling(self) -> None:
+        assert _ping({"count": 4, "min_replies": 5}) == []
+
+    @pytest.mark.parametrize(
+        ("values", "expression"),
+        [
+            pytest.param(
+                {"pass_when": "rule", "count": 4, "min_replies": 5}, "pass_when", id="pass-when"
+            ),
+            pytest.param(
+                {"pass_when": "min_replies", "count": 4, "min_replies": "wanted"},
+                "min_replies",
+                id="min-replies",
+            ),
+            pytest.param(
+                {"pass_when": "min_replies", "count": "sent", "min_replies": 5},
+                "count",
+                id="count",
+            ),
+        ],
+    )
+    def test_an_expression_on_any_of_the_three_skips_the_ceiling(
+        self, values: dict[str, Any], expression: str
+    ) -> None:
+        assert _ping(values, expression_fields=[expression]) == []
+
+    def test_a_count_below_its_minimum_shows_only_its_own_finding(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": 0, "min_replies": 2}) == [
+            (
+                "SETTING_BELOW_MINIMUM",
+                "Setting 'count' of block 'ping' must be at least 1, got 0",
+                "Provide a value of at least 1",
+                "count",
+            )
+        ]
+
+    def test_a_count_above_its_maximum_shows_only_its_own_finding(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": 1001, "min_replies": 1002}) == [
+            (
+                "SETTING_ABOVE_MAXIMUM",
+                "Setting 'count' of block 'ping' must be at most 1000, got 1001",
+                "Provide a value of at most 1000",
+                "count",
+            )
+        ]
+
+    def test_a_count_of_the_wrong_type_shows_only_its_own_finding(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": "many", "min_replies": 5}) == [
+            _wrong_type("count", "integer", "string", block_id="ping")
+        ]
+
+    def test_digit_text_is_compared_as_its_number(self) -> None:
+        assert _ping({"pass_when": "min_replies", "count": "4", "min_replies": "5"}) == [
+            _above_count(4, "5")
+        ]
+
+    def test_the_ceiling_holds_for_any_field_that_declares_one(self) -> None:
+        assert _check(_CAPPED, {"high": 3, "low": 4}) == [
+            (
+                "SETTING_ABOVE_MAXIMUM",
+                "Setting 'low' of block 'f' must be at most the value of setting 'high' (3), "
+                "got 4",
+                "Provide a value of at most 3",
+                "low",
+            )
+        ]
+        assert _check(_CAPPED, {"low": 11})[0][1] == (
+            "Setting 'low' of block 'f' must be at most the value of setting 'high' (10), got 11"
+        )
+        assert _check(_CAPPED, {"low": 10}) == []

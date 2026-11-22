@@ -1,11 +1,9 @@
-"""Carrying geometry across a revision: which Blocks are the same, and where they go.
-
-A Block is recognized by what it is - kind, name and settings - within the same
-section of the same construct, never by its place in the list (REQ-5.2.7.4).
-"""
+"""Carrying geometry across a revision (REQ-5.2.7.4)."""
 
 import copy
 from typing import Any
+
+import pytest
 
 
 def match(
@@ -443,8 +441,7 @@ def note(node_id: str, **size: float) -> dict[str, Any]:
 
 
 class TestCarryCanvasSettings:
-    """What a person sets on the canvas and a recipe cannot say stays with the Block it was
-    set on, as its place and hand-set width do."""
+    """Canvas-only settings stay with their Block, as its place and width do."""
 
     def test_a_recognized_block_keeps_how_it_masks_its_secrets(self) -> None:
         previous = straight(set_on_the_canvas(block("o1", "A")))
@@ -516,3 +513,18 @@ class TestCarryCanvasSettings:
 
         kept = revised["nodes"][1]
         assert (kept.get("width"), kept.get("height")) == (345, 200)
+
+    @pytest.mark.parametrize(
+        ("width", "height"), [(160, 90), (120, 60), (300, 200)], ids=["160", "120", "300"]
+    )
+    def test_a_note_keeps_every_width_a_person_gave_it(self, width: int, height: int) -> None:
+        # REQ-5.2.7.4: a Note has no generated width, so a stored 160 is a person's too.
+        previous = straight(block("o1", "A"))
+        previous["nodes"].append(note("o-note", width=width, height=height))
+        revised = straight(block("n1", "A"))
+        revised["nodes"].append(note("n-note"))
+
+        carry(previous, revised)
+
+        kept = revised["nodes"][1]
+        assert (kept.get("width"), kept.get("height")) == (width, height)

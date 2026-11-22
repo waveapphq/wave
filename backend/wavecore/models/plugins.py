@@ -1,8 +1,4 @@
-"""
-WAVE Plugin Models
-
-Plugin metadata, parameters, output fields, and plugin/block plugin models.
-"""
+"""WAVE plugin models: metadata, parameters, output fields and block plugins."""
 
 import re
 from collections.abc import Mapping, Sequence
@@ -52,7 +48,6 @@ class PluginParameter(BaseModel):
     enum_values: list[str | int | float] | None = None
     trim: bool = False
     variable_ref: bool = False
-    # Declared only; each plugin's own validate() owns the refusal and its wording.
     minimum: float | None = None
     maximum: float | None = None
     # Null marks (REQ-3.4.2.2): the whole value, a {{ }} piece printing null.
@@ -128,11 +123,7 @@ class BlockMetadata(BaseModel):
 
 
 class Plugin(BaseModel):
-    """
-    Plugin model (REQ-6.2.1).
-
-    Represents a reusable executor providing specific functionality.
-    """
+    """Plugin model (REQ-6.2.1): a reusable executor."""
 
     id: str
     version: str
@@ -189,11 +180,7 @@ class Plugin(BaseModel):
 
 
 class BlockPlugin(BaseModel):
-    """
-    Plugin reference within a block.
-
-    Represents a plugin instance that is part of a block's composition.
-    """
+    """A plugin instance that is part of a block's composition."""
 
     plugin_id: str
     plugin_version: str

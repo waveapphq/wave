@@ -212,3 +212,38 @@ keeps every untouched block in place and leaves no two blocks overlapping
 - After step 1, a fresh build, and after steps 2 and 3 made with `amend_test_from_recipe`, the canvas draws every Block one row under the Block before it in its lane and on its column, with no Block between them; each lane of an If one row under the If, in a column of its own, left to right; the Block after a lane one row under its parent, with the lane one 80 px gutter left of it; no two Blocks overlapping; the wires of that flow; and every box at its stored place and width. "Fail test" sits one row right under "Alert On-Call" and "Wait for healthy" is not under the failure branch (REQ-5.2.7.4).
 - With a tab that holds the test and a watching tab, `amend_test_live_from_recipe` with step 2 and then step 3 saves exactly the layout `amend_test_from_recipe` saves for the same recipe on a twin test, and both tabs draw it in the same order (REQ-5.2.7.4, REQ-5.2.7.18).
 - In both tabs each watched change first glides the Blocks that make room: the canvas reads `data-mirror-glide="moving"` while every one of them is drawn between its old and its new place, the other Blocks hold still, and no new Block appears until the glide ends; then the new Blocks appear one at a time, in flow order, each at its final place (WATCH-9, REQ-5.2.7.18).
+
+## V-MCP-RECIPE-PING-BOUNDS-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-ping-bounds-functional.spec.ts`; shared code: `recipe-tool-helpers.ts`; fixture: none (each recipe is built in the spec; the amend target is saved through `POST /tests`; every Test is deleted after).
+- A Ping with Pass when At least N replies, Count 4 and Minimum replies 5 is refused by `validate_recipe`, `create_test_from_recipe` and `amend_test_from_recipe` with one finding, `SETTING_ABOVE_MAXIMUM` at `flow[0]`: "Setting 'min_replies' of block 'ping' must be at most the value of setting 'count' (4), got 5", fix "Provide a value of at most 4"; nothing is stored and the amended Test keeps its Ping. Equal to Count, another Pass when rule and an expression on either setting pass; an unset Count compares with 4; a Count below 1 shows only its own finding (REQ-3.4.2.2).
+
+## V-MCP-RECIPE-START-LINE-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-start-line-functional.spec.ts`; fixture: none (one Test from `create_test_from_recipe`, one from `build_test_from_recipe`, each with a 15 s Delay before its last Block so a run plays long enough to measure; both deleted after).
+- Start's bottom handle and the first Block's top handle share one x within 1 px: in the edit canvas, for the built Test, after a save and a reload, and in each read-only view of the Test: a second tab watching the first one, both tabs mirroring a run `start_execution` started while it plays, the finished run's history canvas, and the holding tab's own Run while it plays (REQ-5.2.7.4, CANVAS-248).
+
+## V-MCP-RECIPE-NOTE-SIZE-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-note-size-functional.spec.ts`; fixture: none (each Test is made with `create_test_from_recipe`, the hand-set Note sizes are written with `PUT /tests/{id}`; every Test is deleted after).
+- An amend keeps a Note resized to 160 px wide and one resized to 300 x 200 px; the Block after a wired four-line and an eight-line Note sits on whole 140 px rows below it, the rows its estimated height plus 32 px needs, and starts at least 32 px below its drawn bottom, on create, after an amend and after a save and a reload (REQ-5.2.7.4).
+
+## V-MCP-RECIPE-FUNCTION-LIBRARY-NAME-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-function-library-name-functional.spec.ts`; fixture: none (a library Function is published with `POST /functions`, the Test is made with `create_test_from_recipe`; both deleted after).
+- A recipe-built Shared Function Block, labeled apart from its library Function, stores the library name; its window shows `From library: <name>`, its Changelog and Documentation dialogs are titled with the name and the link opens the library on it; an amend writes the name again on a Block that lost it; the same after a window edit, a save and a reload, and in a watching tab's read-only window; once the Function is deleted the banner reads `Function '<name>' is no longer available in the library` (REQ-3.1.1.5).
+
+## V-MCP-RECIPE-PARSER-INDIVIDUAL-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-parser-individual-functional.spec.ts`; fixture: none (each recipe is built in the spec; the hand-built Test is saved through `POST /tests`; every Test is deleted after).
+- A JSON Parser and an XML Parser in Individual mode capture two queries each into the variables of the same name: `validate_recipe` accepts it, `create_test_from_recipe` binds each query to itself and declares each variable with its query type, `build_test_from_recipe` stores the same Blocks, and a tracked run logs `order=1042 status=shipped sku=AB-7 qty=3`. A hand-built Individual-mode Test reads back expressible and amends. `CAPTURE_NOT_SELF_BOUND`, `INVALID_OUTPUT_BINDING_TYPE`, `UNKNOWN_CAPTURE_OUTPUT` (results in Individual mode, a query in Combined mode), `DECLARED_OUTPUT_CLASH` (`success`, `errors`) `INVALID_DECLARED_OUTPUT` and `DUPLICATE_DECLARED_OUTPUT` (a query name written twice, on a JSON Parser and on an XML Parser, at `flow[0].settings.queries.status` with fix "Remove the repeated name") refuse with their exact texts and store nothing (REQ-5.2.7.3).
+
+## V-MCP-GET-RECIPE-GUIDE-FUNCTIONAL
+
+- Spec: `v-mcp-get-recipe-guide-functional.spec.ts`; fixture: none.
+- `get_recipe_guide` serves the parser paragraph word for word in the declared-outputs text, which names `13-json-parser-individual`; that example parses a literal document in Individual mode, captures `order_id` (integer) and `status` (string) by name, and `validate_recipe` accepts it with no finding (REQ-5.2.7.3, REQ-5.2.7.7).
+
+## V-MCP-RECIPE-DECLARED-OUTPUTS-KEPT-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-declared-outputs-kept-functional.spec.ts`; fixture: none (each recipe is built in the spec; the hand-built Shell Script Test is saved through `POST /tests` in `beforeAll`; every Test is deleted after).
+- A Shell Script and a Python capture their `script_variables` exports into variables of other names: `validate_recipe` accepts it, `create_test_from_recipe` stores the bindings and the Secret mark on `TOKEN` and declares each undeclared target a string, and `get_test_recipe` reads back the captures and `secret_outputs`. An invalid export name, a fixed output name, a repeated name and a capture of a name the list does not export refuse with their exact texts at the entry they name. A Combined-mode JSON Parser, written out or by default, captures `results` into a map variable. A hand-built Shell Script Test reads back and amends with its bindings and Secret export kept (REQ-5.2.7.3, REQ-3.4.2.2).

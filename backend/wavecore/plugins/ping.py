@@ -172,6 +172,7 @@ class PingPlugin(PluginBase):
                     "type": "integer",
                     "default": 1,
                     "minimum": 1,
+                    "maximum_field": "count",
                     "required_when": dict(_BY_REPLIES),
                     "show_when": dict(_BY_REPLIES),
                     "description": "How many requests must be answered for the block to pass.",
@@ -254,8 +255,7 @@ class PingPlugin(PluginBase):
         }
 
     async def validate(self, params: dict[str, Any]) -> None:
-        """Refuse a misconfigured block: what is missing, then what is the wrong kind of
-        value, then what is out of range - checking only the settings in effect (PING-3)."""
+        """Refuse a misconfigured block: missing, wrong kind, out of range, in order (PING-3)."""
         if not str(_setting(params, "host", "")).strip():
             raise ValueError("Missing required parameter: host")
         rule = _choice(params, "pass_when")

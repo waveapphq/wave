@@ -1,11 +1,4 @@
-"""Deterministic recursive column layout for compiled workflows.
-
-Pure function of the flow's structure: the same nodes and edges always
-produce identical positions. Child flows occupy centered columns beneath
-their construct; continuation resumes on the parent centerline below the
-deepest child row. The walker's rows, the row step and the crowding rule are
-shared with the layout of a changed workflow.
-"""
+"""Deterministic recursive column layout for compiled workflows."""
 
 import math
 import re
@@ -56,11 +49,7 @@ class Lane:
 
 @dataclass(frozen=True)
 class Row:
-    """One node of a flow as the layout reads it.
-
-    ``lanes`` are its non-empty sections in handle order. ``anchored`` is set when they pack
-    left of a continuation exit; ``beside`` when its one lane runs beside the rows after it.
-    """
+    """One node of a flow as the layout reads it, its non-empty lanes in handle order."""
 
     node_id: str
     lanes: tuple[Lane, ...]
@@ -260,7 +249,7 @@ class _Layouter:
             width = self._width(node_id)
             self.positions[node_id] = {"x": _num(centerline - width / 2), "y": _num(y)}
             if child_chains:
-                child_y = y + RHYTHM_Y
+                child_y = y + row_step(self._size(node_id)[1])
                 sections, anchored = self._sections(child_chains)
                 rest = chain[index + 1 :]
                 if rest and self._beside(node_id, child_chains):
@@ -275,7 +264,7 @@ class _Layouter:
                     left += sub_width + GUTTER_X
                 y = next_y
             else:
-                y += RHYTHM_Y
+                y += row_step(self._size(node_id)[1])
         return y
 
     def top_chains(self, nodes: list[dict[str, Any]]) -> list[_Chain]:

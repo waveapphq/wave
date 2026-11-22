@@ -64,9 +64,7 @@ from wavecore.core.variables.usage import (
 from wavecore.models.enums import ControlId
 from wavecore.models.plugins import ENGINE_DISPATCHED_ELEMENT_TYPES
 
-# libyaml's C-accelerated loader where available; fall back to pure Python
-# otherwise. Every publish and every library listing reads these files, so the
-# 5-7x speedup shows up directly in the Functions surfaces.
+# libyaml's C-accelerated loader where available; fall back to pure Python otherwise.
 _YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 _INDEX_FILENAME = "index.yaml"
@@ -159,13 +157,7 @@ def _compose_definition(
     created_at: str = "",
     updated_at: str = "",
 ) -> dict[str, Any]:
-    """Build the dict shape that ``load_function`` / ``load_version`` return.
-
-    The returned dict carries the entry-wide identity (id, name, version
-    timestamps), the per-version body (inputs, outputs, dependencies,
-    workflow) plus the version-scoped metadata (description, tags, changelog,
-    details, published_at) merged into a single map for callers.
-    """
+    """Build the dict shape that ``load_function`` / ``load_version`` return."""
     raw_definition = payload.get("definition")
     definition: Mapping[str, Any] = raw_definition if isinstance(raw_definition, Mapping) else {}
     raw_metadata = payload.get("metadata")
@@ -320,13 +312,7 @@ def save_new_version(
     *,
     name: str,
 ) -> str:
-    """Write a new immutable version yaml and update the entry index.
-
-    The version is validated as strict semver before any filesystem write so it
-    can never escape the versions directory. A published (id, version) record is
-    write-once: a duplicate raises ``ConflictException`` and the bytes never
-    change. Returns the version yaml's ETag.
-    """
+    """Write a new immutable version yaml and update the entry index."""
     return _persist_version(
         function_id, version, definition, metadata, name=name, allow_replace=False
     )
@@ -340,12 +326,7 @@ def save_or_replace_version(
     *,
     name: str,
 ) -> str:
-    """Write or replace a version yaml and union it into the entry index.
-
-    Unlike ``save_new_version`` an existing (id, version) is overwritten in
-    place instead of rejected, so an import overwrite upserts the incoming
-    versions while versions held only in the library survive.
-    """
+    """Write or replace a version yaml and union it into the entry index."""
     return _persist_version(
         function_id, version, definition, metadata, name=name, allow_replace=True
     )
@@ -401,12 +382,7 @@ def list_versions(function_id: str) -> dict[str, Any]:
 
 
 def list_version_records(function_id: str) -> list[dict[str, Any]]:
-    """Return every stored version record ``[{version, definition, metadata}, ...]``.
-
-    Used by export to serialize the full history (separate body + metadata per
-    version). Returns ``[]`` for an unknown Function; callers validate existence
-    separately and surface the 404.
-    """
+    """Return every stored version record ``[{version, definition, metadata}, ...]``."""
     index = _read_index(function_id) or {}
     records: list[dict[str, Any]] = []
     for version in index.get("available_versions") or []:
@@ -450,11 +426,7 @@ def delete_function_file(function_id: str) -> None:
 
 
 def delete_version(function_id: str, version: str) -> None:
-    """Remove a single version yaml from a Function and rewrite the index.
-
-    Raises ``FunctionNotFoundError`` for an unknown function id or version. Removes the
-    function directory entirely if the last version is being deleted.
-    """
+    """Remove a single version yaml from a Function and rewrite the index."""
     index = _read_index(function_id)
     if index is None:
         raise FunctionNotFoundError(f"Function '{function_id}' not found")
@@ -529,10 +501,7 @@ def _validate_param(param: Mapping[str, Any], kind: str, errors: list[str]) -> N
 
 
 def validate_structural(definition: Mapping[str, Any]) -> list[str]:
-    """Return a list of structural validation error messages.
-
-    Empty list means the definition is structurally valid.
-    """
+    """Return a list of structural validation error messages."""
     errors: list[str] = []
     name = definition.get("name", "")
     if not isinstance(name, str) or not name.strip():
@@ -587,11 +556,7 @@ def detect_circular_deps(
 def scan_dependents(
     function_id: str, version: str | None = None
 ) -> dict[str, list[dict[str, str]]]:
-    """Walk Tests and Functions storage looking for references to function_id.
-
-    When ``version`` is given, only references pinned to that exact version
-    (``data.functionVersion``) match; a version-less reference is excluded.
-    """
+    """Walk Tests and Functions storage looking for references to function_id."""
     tests = _scan_test_dependents(function_id, version)
     functions = _scan_function_dependents(function_id, version)
     return {"tests": tests, "functions": functions}
@@ -641,11 +606,7 @@ def _bucket_function_dependents(function_id: str, bucket: _VersionBucket) -> Non
 def scan_dependents_by_version(
     function_id: str,
 ) -> dict[str, dict[str, list[dict[str, str]]]]:
-    """Single-pass dependents scan bucketed by the version each reference pins.
-
-    Returns ``{version: {"tests": [...], "functions": [...]}}`` from one walk of
-    the Tests + Functions store, instead of one walk per version.
-    """
+    """Single-pass dependents scan bucketed by the version each reference pins."""
     by_version: dict[str, dict[str, list[dict[str, str]]]] = {}
 
     def _bucket(version: str) -> dict[str, list[dict[str, str]]]:
@@ -703,21 +664,12 @@ def _entity_references_function_node(
     )
 
 
-# ---------------------------------------------------------------------------
 # Save-validation dimensions - dimension validators + aggregator.
-# ---------------------------------------------------------------------------
 
 
 @dataclass
 class ValidationIssue:
-    """One validation finding from a dimension validator.
-
-    ``node_id`` / ``node_label`` carry the internal node the issue is tied to
-    (when one exists) so the surface layer can prefix the message with the
-    user-visible name. The text in ``message`` is parameter-shaped and does
-    NOT embed the node identity, matching the canonical save-pipeline error
-    format (the outside `_validate_test_data` path).
-    """
+    """One validation finding from a dimension validator."""
 
     code: str
     message: str
@@ -726,6 +678,7 @@ class ValidationIssue:
     node_label: str | None = None
     function_id: str | None = None
     function_version: str | None = None
+    fix_action: str | None = None
 
 
 _EXTERNAL_SCOPES = ("regression", "suite", "system")
@@ -871,8 +824,7 @@ def _declared_items(definition: Mapping[str, Any], key: str) -> list[Mapping[str
 
 
 def _named_declaration_problems(definition: Mapping[str, Any]) -> list[tuple[str, str]]:
-    """The declaration and value rules a Test variable follows, for each input, output and
-    local."""
+    """The declaration and value rules a Test variable follows, for each input, output and local."""
     return [
         problem
         for key, kind in DECLARATION_LISTS
@@ -906,13 +858,7 @@ def _validate_references(
     plugin_registry: Any = None,
     function_registry: Mapping[str, Any] | None = None,
 ) -> list[ValidationIssue]:
-    """Dimension 2: every plugin / Function reference resolves.
-
-    ``plugin_registry`` is reserved for future overrides; ``None`` falls back
-    to the global registry (matches the production wiring). The
-    ``function_registry`` is supplied by the caller and contains known
-    Published Functions keyed by id.
-    """
+    """Dimension 2: every plugin / Function reference resolves."""
     del plugin_registry
     registry = function_registry or {}
     issues: list[ValidationIssue] = []
@@ -992,12 +938,7 @@ def _reference_issues_for_node(
 
 
 def _node_display_name(node: Mapping[str, Any]) -> str:
-    """Return the user-facing label for a node, falling back to its id.
-
-    Validators surface this in error messages so users see ``Log_1`` instead
-    of ``node-1779383867313-vzh88ic`` (canvas-generated ids are invisible to
-    the user).
-    """
+    """Return the user-facing label for a node, falling back to its id."""
     data = _node_data(node)
     label = data.get("label")
     if isinstance(label, str) and label.strip():
@@ -1055,10 +996,7 @@ def _validate_binding_completeness(
     function_registry: Mapping[str, Any] | None = None,
     required_function_inputs: bool = True,
 ) -> list[ValidationIssue]:
-    """Dimension 3: every unmuted Block's stored values pass the one field check (REQ-3.1.1.5).
-
-    ``required_function_inputs`` off leaves a Function Block's Required inputs to the run.
-    """
+    """Dimension 3: every unmuted Block's stored values pass the one field check (REQ-3.1.1.5)."""
     registry = function_registry or {}
     issues: list[ValidationIssue] = []
     for node in _iter_workflow_nodes(definition):
@@ -1077,6 +1015,7 @@ def _validate_binding_completeness(
                 message=finding.message,
                 node_id=node_id,
                 node_label=display,
+                fix_action=finding.fix,
             )
             for finding in check_block_fields(
                 fields,
@@ -1092,8 +1031,7 @@ def _validate_binding_completeness(
 
 
 def _validate_rows(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Every unmuted Block's Setter rows, condition items, control structure and column indexes
-    pass the one save check, a Setter row by its variable's declared type (REQ-3.1.3.14)."""
+    """Setter rows, condition items, structure and columns pass the save check (REQ-3.1.3.14)."""
     declared_types = types_of_function(definition, every_input=True)
     issues: list[ValidationIssue] = []
     for node in _iter_workflow_nodes(definition):
@@ -1104,7 +1042,11 @@ def _validate_rows(definition: Mapping[str, Any]) -> list[ValidationIssue]:
         display = _node_display_name(node)
         issues.extend(
             ValidationIssue(
-                code=finding.code, message=finding.message, node_id=node_id, node_label=display
+                code=finding.code,
+                message=finding.message,
+                node_id=node_id,
+                node_label=display,
+                fix_action=finding.fix,
             )
             for finding in block_row_findings(data, declared_types)
         )
@@ -1112,8 +1054,7 @@ def _validate_rows(definition: Mapping[str, Any]) -> list[ValidationIssue]:
 
 
 def _validate_block_metadata(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Dimension 4: unknown control types, Block metadata, expressions that change data and
-    loop signal targets."""
+    """Dimension 4: control types, Block metadata, read-only expressions, loop signal targets."""
     control_ids = {control_id.value for control_id in ControlId}
     nodes = _iter_workflow_nodes(definition)
     displays = {str(node.get("id", "") or ""): _node_display_name(node) for node in nodes}
@@ -1318,10 +1259,7 @@ def _validate_flow_consistency(
     definition: Mapping[str, Any],
     removed_retry_wires: Iterable[Mapping[str, Any]] = (),
 ) -> list[ValidationIssue]:
-    """Dimension 7: unreachable nodes and structurally-broken control constructs.
-
-    ``removed_retry_wires`` are the Watch retry wires the save's lane rule took out of this flow.
-    """
+    """Dimension 7: unreachable nodes and structurally-broken control constructs."""
     nodes = _iter_workflow_nodes(definition)
     edges = _iter_workflow_edges(definition)
     node_ids = {n.get("id") for n in nodes}
@@ -1377,11 +1315,7 @@ def _profile_alias_names(definition: Mapping[str, Any]) -> set[str]:
 
 
 def _function_scope_names(definition: Mapping[str, Any]) -> set[str]:
-    """Every name a Function body may legally reference: its declared inputs,
-    outputs, local variables, and any profile aliases bound on its body nodes.
-
-    The canvas persists `variables` as an array of `{name, type, value}` (same
-    shape as inputs/outputs), so it is collected the same way."""
+    """Every name a Function body may legally reference."""
     names = _declared_param_names(definition.get("inputs"))
     names |= _declared_param_names(definition.get("outputs"))
     names |= _declared_param_names(definition.get("variables"))
@@ -1414,13 +1348,7 @@ def _unresolved_reference(ref: str, **where: str) -> ValidationIssue:
 
 
 def _validate_body_reference_scope(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Dimension 8: a Function body only sees its own scope.
-
-    Every expression-field reference must resolve to a declared input, output,
-    local variable, profile alias, or a Python builtin. An unresolved bare name
-    is flagged with scope-aware wording so a no-code author knows the name must
-    be declared inside the Function - it is not inherited from the Test.
-    """
+    """Dimension 8: a Function body only sees its own scope."""
     scope = _function_scope_names(definition)
     issues: list[ValidationIssue] = []
     for node in _iter_workflow_nodes(definition):
@@ -1429,8 +1357,7 @@ def _validate_body_reference_scope(definition: Mapping[str, Any]) -> list[Valida
 
 
 def _validate_computed_declarations(definition: Mapping[str, Any]) -> list[ValidationIssue]:
-    """Dimension 9: an Expression / Template output or local reads only the Function's own
-    names and never itself (REQ-3.1.2.4)."""
+    """Dimension 9: an Expression or Template reads only the Function's own names (REQ-3.1.2.4)."""
     scope = _function_scope_names(definition)
     issues = [
         _unresolved_reference(ref)
@@ -1450,13 +1377,7 @@ def validate_function_for_save(
     required_function_inputs: bool = True,
     removed_retry_wires: Iterable[Mapping[str, Any]] = (),
 ) -> list[ValidationIssue]:
-    """Aggregate every save-validation dimension.
-
-    No dimension writes to disk (a nested Shared Function Block's pinned version
-    may be read), so this is safe to call from both the Function save endpoints
-    and the Test save pipeline when a Function instance lives inside the Test's
-    workflow. ``removed_retry_wires`` are the Watch retry wires the save took out of the flow.
-    """
+    """Aggregate every save-validation dimension."""
     registry = function_registry or {}
     aggregate: list[ValidationIssue] = []
     aggregate.extend(_validate_structural(definition))

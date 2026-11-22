@@ -1,14 +1,7 @@
-"""Stage-1 recipe validation against the live catalogs.
-
-Gates unknown blocks and unknown setting names (the platform save pipeline
-would silently drop or ignore them), checks setting types and enums, syntax-
-checks every expression and template, verifies captures, profiles, function
-references, construct shapes, and loop targets. Variable-reference analysis
-stays with the platform (stage 2).
-"""
+"""Stage-1 recipe validation against the live catalogs."""
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, NamedTuple
@@ -70,6 +63,9 @@ from wavecore.core.recipes.typed_elements import (
     stored_elements,
 )
 from wavecore.core.table_values import realizes_as_table
+from wavecore.core.utf8_text import written_keys
+from wavecore.core.variables.declared_types import binds_to, output_binding_type_message
+from wavecore.models.plugins import is_conditionally_required
 from wavecore.plugins._file_paths import (
     has_wildcard,
     resolve_plugin_matches,
@@ -161,6 +157,122 @@ class BlockEntry:
     output_name_params: tuple[str, ...] = ()
     # Outputs the schema marks secret: the Secret boxes a new block opens with (K8SCON-4).
     secret_outputs: tuple[str, ...] = ()
+    output_show_when: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+
+# The setting that types a map's declared outputs, and the types it may name (REQ-3.4.1.16).
+_DECLARED_OUTPUT_TYPES_SETTING = "query_output_types"
+_DECLARED_OUTPUT_TYPES = frozenset({"string", "integer", "float", "boolean"})
+
+
+@dataclass(frozen=True)
+class DeclaredName:
+    """One name a declaring setting gives: its place under the setting and the name."""
+
+    place: str
+    name: Any
+
+
+@dataclass(frozen=True)
+class StepOutputs:
+    """The outputs one Block step has under its settings (REQ-5.2.7.3)."""
+
+    fixed: dict[str, str]
+    declared: dict[str, str]
+    # Declared names captured only into the variable of the same name: a map's keys.
+    self_bound: frozenset[str]
+    names: dict[str, list[DeclaredName]]
+    declaring_param: str | None
+
+    @property
+    def outputs(self) -> dict[str, str]:
+        return {**self.fixed, **self.declared}
+
+
+def _condition_state(
+    condition: Mapping[str, Any],
+    values: Mapping[str, Any],
+    sources: Collection[str],
+    entry: BlockEntry,
+) -> bool | None:
+    """Whether a show_when-shaped condition holds; None when its field is not a literal."""
+    if condition.get("field") in sources:
+        return None
+    return is_conditionally_required(condition, values, list(entry.parameters.values()))
+
+
+def _declared_names(value: Any) -> list[DeclaredName]:
+    """A list setting's items, or a map setting's keys, as declared output names."""
+    if isinstance(value, list):
+        return [DeclaredName(f"[{index}]", item) for index, item in enumerate(value)]
+    if isinstance(value, dict):
+        return [DeclaredName(f".{key}", key) for key in written_keys(value)]
+    return []
+
+
+def _declared_type(
+    param: str, key: str, values: Mapping[str, Any], sources: Collection[str]
+) -> str:
+    """A map key's output type: its typing entry; string when unset or either is not literal."""
+    typing = values.get(_DECLARED_OUTPUT_TYPES_SETTING)
+    entry = typing.get(key) if isinstance(typing, dict) else None
+    literal = {f"{param}.{key}", f"{_DECLARED_OUTPUT_TYPES_SETTING}.{key}"}.isdisjoint(sources)
+    if literal and isinstance(entry, str) and entry in _DECLARED_OUTPUT_TYPES:
+        return entry
+    return "string"
+
+
+def _hidden_output(
+    shown_when: Mapping[str, Any] | None,
+    gate_fields: Collection[str],
+    values: Mapping[str, Any],
+    sources: Collection[str],
+    entry: BlockEntry,
+) -> bool:
+    """An output the gate of a declaring setting hides: the run gives it only in the other mode."""
+    if shown_when is None or shown_when.get("field") not in gate_fields:
+        return False
+    return _condition_state(shown_when, values, sources, entry) is False
+
+
+def step_outputs(
+    entry: BlockEntry, values: Mapping[str, Any], sources: Collection[str] = ()
+) -> StepOutputs:
+    """A step's fixed and declared outputs; the Expression and Template `sources` declare none."""
+    names: dict[str, list[DeclaredName]] = {}
+    declared: dict[str, str] = {}
+    self_bound: set[str] = set()
+    gate_fields: set[str] = set()
+    declaring_param: str | None = None
+    for param in entry.output_name_params:
+        condition = entry.parameters[param].get("declares_outputs_when")
+        if condition is not None:
+            gate_fields.add(str(condition.get("field")))
+            if not _condition_state(condition, values, sources, entry):
+                continue
+        declaring_param = param
+        value = None if param in sources else values.get(param)
+        names[param] = _declared_names(value)
+        for item in names[param]:
+            if not isinstance(item.name, str):
+                continue
+            if isinstance(value, dict):
+                declared[item.name] = _declared_type(param, item.name, values, sources)
+                self_bound.add(item.name)
+            else:
+                declared[item.name] = "string"
+    fixed = {
+        name: output_type
+        for name, output_type in entry.outputs.items()
+        if not _hidden_output(entry.output_show_when.get(name), gate_fields, values, sources, entry)
+    }
+    return StepOutputs(
+        fixed,
+        {name: kind for name, kind in declared.items() if name not in fixed},
+        frozenset(self_bound),
+        names,
+        declaring_param,
+    )
 
 
 def _as_dict(item: Any) -> dict[str, Any]:
@@ -259,6 +371,9 @@ def _schema_entry(
         },
         output_name_params=_declaring_params(parameters),
         secret_outputs=_schema_secret_outputs(outputs),
+        output_show_when={
+            str(out["name"]): dict(out["show_when"]) for out in outputs if out.get("show_when")
+        },
     )
 
 
@@ -439,9 +554,7 @@ def _type_accepts(expected: str, value: Any) -> bool:
 
 
 def value_form(value: Any) -> tuple[str, Any]:
-    """A written value's form and what it holds: `expr`, `template` or `literal` for the
-    one-key mapping of that name, else `plain` and the value itself. A plain string holding
-    {{ }} is `plain` here; where a template is allowed it reads as one (REQ-5.2.7.3)."""
+    """A written value's form and what it holds (REQ-5.2.7.3)."""
     if isinstance(value, dict) and len(value) == 1:
         ((key, inner),) = value.items()
         if key in _FORM_KEYS:
@@ -463,8 +576,7 @@ def _template_place_form(value: Any) -> tuple[str, Any]:
 
 
 def _written_view(value: Any) -> Any:
-    """A whole value as the type check reads it: a {template} as its text, a {literal} as what
-    it holds; an {expr} stays as written."""
+    """A whole value as the type check reads it."""
     kind, inner = value_form(value)
     return inner if kind in ("template", "literal") else value
 
@@ -478,8 +590,7 @@ def _entry_item(item: Any, *, template_place: bool) -> Any:
 def _literal_elements(
     value: dict[str, Any] | list[Any], *, template_place: bool = False
 ) -> dict[str, Any] | list[Any]:
-    """A written map without its {expr} entries and a list with each value mode read as null;
-    a {literal} entry as what it holds."""
+    """A written map without its {expr} entries and a list with each value mode read as null."""
     if isinstance(value, dict):
         return {
             key: _entry_item(item, template_place=template_place)
@@ -505,8 +616,7 @@ def _entry_view(value: Any) -> Any:
 
 
 def _recipe_place(field_place: str) -> str:
-    """A stored dotted place in step-path form: `branches.1.time_limit` as
-    `branches[1].time_limit`."""
+    """A stored dotted place in step-path form."""
     return re.sub(r"\.(\d+)(?=\.|$)", r"[\1]", field_place)
 
 
@@ -537,8 +647,7 @@ def _article(word: str) -> str:
 
 
 def _entries(value: dict[Any, Any] | list[Any], path: str, place: str) -> list[_RowEntry]:
-    """Each entry of a map or list at its step path and place; a list entry's key is its
-    index."""
+    """Each entry of a map or list at its step path and place; a list entry's key is its index."""
     if isinstance(value, dict):
         return [
             _RowEntry(key, f"{path}.{key}", f"{place}.{key}", item) for key, item in value.items()
@@ -589,6 +698,17 @@ def is_template_value(value: Any) -> bool:
     return isinstance(value, str) and _TEMPLATE_PATTERN.search(value) is not None
 
 
+def _recipe_sources(settings: Mapping[str, Any]) -> set[str]:
+    """The Expression and Template places of a step's written settings, whole or per map entry."""
+    sources: set[str] = set()
+    for name, value in settings.items():
+        if _template_place_form(value)[0] in ("expr", "template"):
+            sources.add(str(name))
+        elif isinstance(value, dict) and value_form(value)[0] == "plain":
+            sources.update(f"{name}.{key}" for key, item in value.items() if is_expr_value(item))
+    return sources
+
+
 class _Validator:
     def __init__(self, doc: RecipeDoc, testdata_dirs: list[str] | None = None) -> None:
         self.doc = doc
@@ -601,9 +721,7 @@ class _Validator:
         # The declared types of the flow being walked: the Test's, or a local Function's.
         self._declared_types: dict[str, str] = {}
 
-    # ------------------------------------------------------------------
     # Shared helpers
-    # ------------------------------------------------------------------
 
     def _secret_names(self) -> set[str]:
         return {
@@ -615,8 +733,7 @@ class _Validator:
     def _warn_secret_derivation(
         self, expression: str, step_path: str, target: str | None = None
     ) -> None:
-        """Masking covers a secret's exact bytes, not values built from it, so the
-        author is told rather than blocked (the derivation may well be intended)."""
+        """Masking covers a secret's exact bytes, not values built from it."""
         if target is not None and self.doc.variables.get(target, {}).get("secret"):
             return
         from wavecore.core.variables.computed import extract_expression_names
@@ -667,8 +784,7 @@ class _Validator:
                 self._check_expression(inner, step_path, target=target, masked=masked)
 
     def _check_condition_list(self, conditions: Any, step_path: str) -> None:
-        """One condition or a list of them: conditions, `and` / `or` between two of them, and
-        groups holding the same grammar (REQ-3.5.1.5)."""
+        """One condition or a list of them (REQ-3.5.1.5)."""
         items = conditions if isinstance(conditions, list) else [conditions]
         if _misplaced_marker(items):
             self.findings.append(
@@ -708,8 +824,7 @@ class _Validator:
         )
 
     def _check_compare_to(self, condition: dict[str, Any], step_path: str) -> None:
-        """A compare-to value takes the value forms; a template only on a text compare-to.
-        An operator that takes no value drops it, so it is never checked."""
+        """A compare-to value takes the value forms; a template only on a text compare-to."""
         operator = condition.get("operator")
         if "value" not in condition or (isinstance(operator, str) and operator in UNARY_OPERATORS):
             return
@@ -807,9 +922,7 @@ class _Validator:
     def _profile_exists(self, name: str) -> bool:
         return name in self._profile_fields()
 
-    # ------------------------------------------------------------------
     # Settings against a catalog entry
-    # ------------------------------------------------------------------
 
     def _relay(self, found: FieldFinding, step_path: str) -> None:
         """One shared field-check finding at the setting it names."""
@@ -862,8 +975,7 @@ class _Validator:
     def _check_nested_expressions(
         self, value: Any, path: str, place: str, *, masked: bool = False
     ) -> None:
-        """The entries of a setting (a map entry, a list item, a list row's field) take
-        {expr}; a template there is plain text, and no value mode goes deeper (REQ-5.2.7.3)."""
+        """The entries of a setting take {expr} (REQ-5.2.7.3)."""
         if isinstance(value, dict):
             entries = [(f"{path}.{key}", f"{place}.{key}", item) for key, item in value.items()]
         elif isinstance(value, list):
@@ -979,12 +1091,13 @@ class _Validator:
         step_path: str,
         block_id: str,
         param: str,
-        names: list[Any],
-        fixed_outputs: set[str],
+        names: list[DeclaredName],
+        fixed_outputs: Collection[str],
     ) -> None:
         seen: set[str] = set()
-        for index, item in enumerate(names):
-            path = f"{step_path}.settings.{param}[{index}]"
+        for declared in names:
+            item = declared.name
+            path = f"{step_path}.settings.{param}{declared.place}"
             if not isinstance(item, str) or re.fullmatch(VARIABLE_NAME_PATTERN, item) is None:
                 self.findings.append(
                     finding(
@@ -1017,6 +1130,34 @@ class _Validator:
                     )
                 )
             seen.add(item)
+
+    def _check_self_bound_capture(
+        self, outputs: StepOutputs, owner_label: str, capture: Any, step_path: str
+    ) -> None:
+        """A map-declared output binds only to the variable of its name, of a fitting type."""
+        if not isinstance(capture, dict):
+            return
+        for output_name, target in capture.items():
+            output = str(output_name)
+            if output not in outputs.self_bound:
+                continue
+            path = f"{step_path}.capture.{output}"
+            if target != output:
+                self.findings.append(
+                    finding(
+                        path,
+                        "CAPTURE_NOT_SELF_BOUND",
+                        f"Block '{owner_label}' output '{output}' must be captured into "
+                        f"variable '{output}'",
+                        f"Capture it as {output}: {output}",
+                    )
+                )
+                continue
+            output_type = outputs.declared[output]
+            variable_type = self._declared_types.get(output)
+            if variable_type is not None and not binds_to(output_type, variable_type):
+                message = output_binding_type_message(output, output_type, output, variable_type)
+                self.findings.append(finding(path, "INVALID_OUTPUT_BINDING_TYPE", message, None))
 
     def _check_capture(
         self,
@@ -1092,9 +1233,7 @@ class _Validator:
                     )
                 )
 
-    # ------------------------------------------------------------------
     # Variables
-    # ------------------------------------------------------------------
 
     def _check_variables(self) -> None:
         self._check_declarations(self.doc.variables, "variables", "variable")
@@ -1111,8 +1250,7 @@ class _Validator:
             path = f"{prefix}.{name}"
             declared_type = declaration.get("type") if isinstance(declaration, dict) else None
             self.findings.extend(_shared_declaration_findings(str(name), declared_type, kind, path))
-            # A type alone is a complete declaration: the variable holds null
-            # until a value is authored or a Block writes it at run time.
+            # A type alone is a complete declaration.
             if not isinstance(declared_type, str) or not declared_type:
                 self._invalid_declaration(name, path)
             elif declared_type in DECLARED_TYPES:
@@ -1151,10 +1289,7 @@ class _Validator:
     def _check_declared_value(
         self, name: str, declared: str, value: Any, path: str, noun: str = "Variable"
     ) -> None:
-        """A literal must match the type it is declared with; null fits every type
-        (REQ-3.1.3.20). An expression's type is only known once it evaluates, so it
-        is not checked here. A declared number follows the one number rule, its exact
-        text included."""
+        """A literal must match its declared type, and null fits every type (REQ-3.1.3.20)."""
         if value is None or (declared == "table" and realizes_as_table(value)):
             return
         number_type = _NUMBER_TYPES.get(declared)
@@ -1293,9 +1428,7 @@ class _Validator:
             )
         )
 
-    # ------------------------------------------------------------------
     # Steps
-    # ------------------------------------------------------------------
 
     def _use_step_keyword(self, block_id: str, keyword: str, step_path: str) -> None:
         self.findings.append(
@@ -1358,15 +1491,17 @@ class _Validator:
         raw_settings = step.get("settings")
         settings = raw_settings if isinstance(raw_settings, dict) else {}
         self._check_settings(entry, settings, step_path, element_types=step.get("element_types"))
-        outputs = dict(entry.outputs)
-        declaring_param: str | None = None
-        for param in entry.output_name_params:
-            declaring_param = param
-            names = _written_view(settings.get(param))
-            if isinstance(names, list):
-                self._check_declared_outputs(step_path, entry.id, param, names, set(entry.outputs))
-                outputs.update({name: "string" for name in names if isinstance(name, str)})
+        found = step_outputs(
+            entry,
+            {str(name): _written_view(value) for name, value in settings.items()},
+            _recipe_sources(settings),
+        )
+        for param, names in found.names.items():
+            self._check_declared_outputs(step_path, entry.id, param, names, set(found.fixed))
+        outputs = found.outputs
+        declaring_param = found.declaring_param
         self._check_capture(outputs, entry.id, step.get("capture"), step_path, declaring_param)
+        self._check_self_bound_capture(found, entry.id, step.get("capture"), step_path)
         if "secret_outputs" in step and not self._check_secret_outputs(
             step["secret_outputs"], outputs, owner, step_path, declaring_param
         ):
@@ -1572,8 +1707,7 @@ class _Validator:
     def _check_construct_fields(
         self, keyword: str, value: Mapping[str, Any], step_path: str
     ) -> None:
-        """A construct's settings through the shared field check, named by their recipe key
-        and reported at it (REQ-5.2.7.3)."""
+        """A construct's settings through the shared field check (REQ-5.2.7.3)."""
         entry = self.catalog[CONTROL_FIELDS[keyword].control_id]
         for key, stored, written in recipe_field_places(keyword, value):
             self._check_setting_value(
@@ -1741,8 +1875,7 @@ class _Validator:
     def _check_set_row(
         self, row: str, assigned: Any, path: str, secret: bool, entry_types: Any
     ) -> None:
-        """One Variable Setter row: a value form per row and per first-level entry
-        (REQ-3.4.1.14)."""
+        """One Variable Setter row (REQ-3.4.1.14)."""
         kind, inner = _template_place_form(assigned)
         if kind == "expr":
             self._check_expression(inner, path, target=row, masked=secret)
@@ -1868,8 +2001,7 @@ class _Validator:
             )
 
     def _check_identity(self, keyword: str, holder: Any, step_path: str) -> None:
-        """A step's `description` (text of at most 64 characters) and `disabled` (true or
-        false), the save's own rules (REQ-3.1.2.4)."""
+        """A step's `description` and `disabled`, the save's own rules (REQ-3.1.2.4)."""
         if not isinstance(holder, Mapping):
             return
         if "description" in holder:
@@ -1991,8 +2123,7 @@ class _Validator:
         )
 
     def _check_input_item(self, item: Mapping[str, Any], path: str) -> None:
-        """An input follows the input declaration rules and takes a plain default only, of
-        its type; a choice list's default and a secret's are judged by their own rules."""
+        """An input follows the input declaration rules and takes a plain default only."""
         name = item.get("name")
         self.findings.extend(_input_declaration_findings(item, path))
         if "expr" in item or "template" in item:

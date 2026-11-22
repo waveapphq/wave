@@ -10,6 +10,7 @@ the documentation half of PING-11, which a unit test covers).
 |------|---------|--------|
 | `v-plugin-ping-local-functional.spec.ts` | `fixture.json` | Every permutation on the WAVE server |
 | `v-plugin-ping-remote-functional.spec.ts` | `fixture-remote.json` | The block runs on the remote host |
+| `v-plugin-ping-save-bounds-functional.spec.ts` | `fixture-save-bounds.json` | Every save refuses Minimum replies above Count; what the ceiling leaves alone saves and runs |
 
 ## Prerequisites
 
@@ -105,3 +106,21 @@ the documentation half of PING-11, which a unit test covers).
   remote host too.
 - **WAVE side:** the same Host pinged from WAVE fails with `Cannot resolve host
   'netcat-target'` and Reason `Unresolved`. That pair is the remote proof.
+
+## Validation - save bounds
+
+- **API saves:** a Test save, a Local Function body inside a Test and a
+  library Function save of a Ping with Pass when At least N replies, Count 4
+  and Minimum replies 5 answer 422 with `SETTING_ABOVE_MAXIMUM` `Setting
+  'min_replies' of block 'ping' must be at most the value of setting 'count'
+  (4), got 5`; an unset Count names its default 4.
+- **Canvas Save:** a Test file edited by hand to hold that Ping (stored through
+  the admin bulk route) opens, a Log edit makes it dirty, and Save shows
+  `Cannot Save Test` with the same text; the reloaded Test holds no edit.
+- **What saves:** Minimum replies equal to Count, a Minimum replies that Pass
+  when Any reply does not use, an unset Count with Minimum replies 4, and
+  Minimum replies or Count from an expression. The fixture validates with zero
+  errors and runs: the three literal Blocks pass, the unset Count sends 4
+  requests, and the two expressions fail their Blocks at the run with
+  `Parameter 'min_replies' must be between 1 and <count>`, each caught by its
+  Try/Catch; the run ends on `ping-bounds-done`.

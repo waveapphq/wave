@@ -1,12 +1,4 @@
-"""Canvas -> recipe readback: invert the compiler, flag inexpressible wiring and settings.
-
-Reconstructs a recipe from an emitted test_data by walking the graph the same
-way the layout engine does (construct handles, then-egress, ingress rejoins),
-inverting each ``_emit_*`` shape. Secret values are never surfaced. A near-tree
-predicate flags graphs a recipe cannot express (orphans, cycles, cross-branch
-edges, unstructured joins), and the walk reports each stored setting no recipe
-form carries, so the amend loop refuses them.
-"""
+"""Canvas -> recipe readback: invert the compiler, flag inexpressible wiring and settings."""
 
 from collections import defaultdict
 from collections.abc import Mapping
@@ -29,6 +21,7 @@ from wavecore.core.recipes.validator import (
     is_template_value,
     load_block_catalog,
     remote_execution_entry,
+    step_outputs,
     value_form,
 )
 from wavecore.core.secrets.cipher import is_secret_envelope
@@ -82,14 +75,12 @@ def _identity(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _is_form_shaped(value: Any) -> bool:
-    """A map whose only key is `expr`, `template` or `literal`: plain data a compile would read
-    as that form."""
+    """A map whose only key is `expr`, `template` or `literal`."""
     return isinstance(value, dict) and value_form(value)[0] != "plain"
 
 
 def _plain_readback(value: Any, *, template_place: bool) -> Any:
-    """Plain stored data in the shortest form that compiles back to itself: text holding
-    `{{ }}` in a template place and data shaped like a form as `{literal: ...}`."""
+    """Plain stored data in the shortest form that compiles back to itself."""
     if template_place and is_template_value(value):
         return {"literal": value}
     if _is_form_shaped(value):
@@ -135,9 +126,12 @@ class _Flags:
         }
         self.placed: set[tuple[str, str]] = set()
 
+    def sources(self) -> set[str]:
+        """Every Expression and Template place, read or not."""
+        return {place for places in self.marks.values() for place in places}
+
     def kind(self, place: str, *, template: bool = True) -> str:
-        """The mode the Block holds at ``place``; reading it consumes the mark. Where a
-        template has no recipe form, a template mark stays unread."""
+        """The mode the Block holds at ``place``; reading it consumes the mark."""
         for kind, places in self.marks.items():
             if place in places and (template or kind == "expr"):
                 self.placed.add((kind, place))
@@ -211,23 +205,18 @@ def _declared_secret_outputs(data: dict[str, Any]) -> set[str] | None:
 
 
 def _block_secret_outputs(
-    entry: BlockEntry | None, values: dict[str, Any], stored: Any
+    entry: BlockEntry | None, values: dict[str, Any], stored: Any, flags: _Flags
 ) -> list[str] | None:
     """A block's stored Secret outputs, None when absent or equal to its schema's (K8SCON-4)."""
     if entry is None or not isinstance(stored, list):
         return None
-    known = set(entry.outputs)
-    for param in entry.output_name_params:
-        declared = values.get(param)
-        if isinstance(declared, list):
-            known.update(name for name in declared if isinstance(name, str))
+    known = step_outputs(entry, values, flags.sources()).outputs
     marked = [name for name in stored if name in known]
     return None if set(marked) == set(entry.secret_outputs) else marked
 
 
 def _secret_setter_row(place: str, value: Any, flags: _Flags) -> Any:
-    """A secret Setter row reads back without its value; an expression or a template names
-    its inputs, so it reads back as written."""
+    """A secret Setter row reads back without its value."""
     kind = flags.kind(place)
     flags.consume_under(place)
     if kind == "plain" or is_secret_envelope(value):
@@ -303,9 +292,7 @@ class _Walker:
         # Each enclosing loop's node id and its label, else its block name.
         self.loop_stack: list[tuple[str, str]] = []
 
-    # ------------------------------------------------------------------
     # Graph walk
-    # ------------------------------------------------------------------
 
     def flow(self) -> list[dict[str, Any]]:
         starts = [str(e["target"]) for e in self.edges if str(e["source"]) == START_NODE_ID]
@@ -429,9 +416,7 @@ class _Walker:
         exit_target = str(then_edge["target"]) if then_edge is not None else None
         return self._build_then_step(elem, node, section_steps), exit_target
 
-    # ------------------------------------------------------------------
     # Field-loss report
-    # ------------------------------------------------------------------
 
     def _lose(self, node: dict[str, Any], what: str) -> None:
         self.losses.append({"what": what, "where": str(node.get("id") or "")})
@@ -443,8 +428,7 @@ class _Walker:
     def _control_settings(
         self, node: dict[str, Any], elem: str, values: dict[str, Any], flags: _Flags
     ) -> dict[str, Any]:
-        """A control's own settings in their recipe form; a stored value its field list does
-        not declare has no recipe place and is reported (REQ-5.2.7.6)."""
+        """A control's own settings in their recipe form (REQ-5.2.7.6)."""
         entry = self.catalog.get(elem)
         declared = set(entry.parameters) if entry is not None else set(values)
         settings: dict[str, Any] = {}
@@ -463,9 +447,7 @@ class _Walker:
         settings = self._control_settings(node, elem, values, flags)
         return dict(readback_keys(CONTROL_STEP_KEYWORDS[elem], settings))
 
-    # ------------------------------------------------------------------
     # Leaf steps
-    # ------------------------------------------------------------------
 
     def _values(self, data: dict[str, Any]) -> dict[str, Any]:
         """A Block's values, digit text in each number place read back as that number."""
@@ -518,8 +500,7 @@ class _Walker:
         data: dict[str, Any],
         config: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """A step or construct mapping with the Block's own label, description and disabled
-        mark when it has them, and its capture when ``config`` is given."""
+        """A step or construct mapping with the Block's own label."""
         result = dict(step)
         label = self._custom_label(data)
         if label is not None:
@@ -555,7 +536,7 @@ class _Walker:
         capture = dict(config.get("outputBindings") or {})
         if capture:
             step["capture"] = capture
-        marked = _block_secret_outputs(entry, values, config.get("outputSecretFields"))
+        marked = _block_secret_outputs(entry, values, config.get("outputSecretFields"), flags)
         if marked is not None:
             step["secret_outputs"] = marked
         return self._with_bindings_and_types(step, data, config)
@@ -573,8 +554,7 @@ class _Walker:
         return step
 
     def _setter_row(self, row: str, value: Any, flags: _Flags) -> Any:
-        """One Setter row in the value forms it compiles from: the row's own mode, else each
-        first-level entry's (REQ-3.4.1.14)."""
+        """One Setter row in the value forms it compiles from (REQ-3.4.1.14)."""
         place = f"{_SETTER_PLACE}.{row}"
         kind = flags.kind(place)
         if kind != "plain" or not isinstance(value, dict | list):
@@ -617,8 +597,7 @@ class _Walker:
         return self._with_identity(step, data)
 
     def _jump_target(self, node: dict[str, Any], elem: str, values: dict[str, Any]) -> Any:
-        """A Break / Continue target: `{}` for the innermost loop, else the enclosing loop's
-        label or block name (REQ-3.5.1.2, REQ-3.5.1.3)."""
+        """A Break / Continue target (REQ-3.5.1.2, REQ-3.5.1.3)."""
         target = str(values.get("target_loop") or "")
         ids = [node_id for node_id, _name in self.loop_stack]
         if target not in ids:
@@ -753,9 +732,7 @@ class _Walker:
             _inexpressible_items(inner_walker.nodes, inner_walker.edges, inner_walker.visited)
         )
 
-    # ------------------------------------------------------------------
     # Construct step builders
-    # ------------------------------------------------------------------
 
     def _build_rejoin_step(
         self, elem: str, node: dict[str, Any], branch_steps: dict[str, list[dict[str, Any]]]
@@ -977,13 +954,10 @@ class _Walker:
         result["body"] = body
         return result
 
-    # ------------------------------------------------------------------
     # Value inversion
-    # ------------------------------------------------------------------
 
     def _setting_entries(self, name: str, value: Any, flags: _Flags) -> Any:
-        """A plain setting whose first-level entries and row fields may each hold an
-        expression; any other string inside it is plain text."""
+        """A plain setting whose first-level entries and row fields may each hold an expression."""
         if not isinstance(value, dict | list):
             return _plain_readback(value, template_place=True)
         if isinstance(value, dict):
@@ -1080,8 +1054,7 @@ class _Walker:
     def _decompile_conditions(
         self, node: dict[str, Any], items: list[Any], place: str
     ) -> list[Any]:
-        """A stored condition list in its recipe form: `and` left out, `or` written, groups
-        as `{group: [...]}`; a list the run would not read whole is reported."""
+        """A stored condition list in its recipe form."""
         written: list[Any] = []
         joined = True
         for index, item in enumerate(items):
@@ -1109,9 +1082,7 @@ class _Walker:
             self._lose(node, what)
 
 
-# ---------------------------------------------------------------------------
 # Inexpressibility predicate (near-tree)
-# ---------------------------------------------------------------------------
 
 
 def _cycle_from(
@@ -1231,9 +1202,7 @@ def _inexpressible_items(
     return items
 
 
-# ---------------------------------------------------------------------------
 # Public entry
-# ---------------------------------------------------------------------------
 
 
 def _decompile_variables(variables: dict[str, Any]) -> dict[str, Any]:
@@ -1288,8 +1257,7 @@ def decompile_test_data(test_data: dict[str, Any]) -> dict[str, Any]:
     recipe: dict[str, Any] = {"test": {"name": str(test_data.get("name") or "Untitled Test")}}
     version = test_data.get("version")
     if version:
-        # Amendment compares this against the stored test so a readback that has
-        # been superseded cannot silently overwrite the newer content.
+        # Amend compares this with the stored test so a stale readback cannot overwrite it.
         recipe["test"]["version"] = str(version)
     description = test_data.get("description")
     if description:

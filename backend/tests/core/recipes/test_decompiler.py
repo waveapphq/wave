@@ -1,8 +1,4 @@
-"""Canvas -> recipe readback: per-construct round-trip, secret omission, inexpressibility
-predicate and field-loss report.
-
-Every test defers the decompiler import.
-"""
+"""Canvas -> recipe readback."""
 
 from typing import Any
 
@@ -568,9 +564,7 @@ class TestRoundTripFidelity:
         assert_round_trip(make_recipe(flow, variables=WAIT_VARIABLES))
 
     def test_wait_until_with_an_empty_retry_lane(self) -> None:
-        # An empty lane is Retry mode, not Watch. If the readback dropped
-        # `retry: []` the node would come back as a Watch with a different
-        # handle set, and the wired egress would move.
+        # An empty lane is Retry mode, not Watch.
         flow = [
             {"wait_until": {"that": ["pod_phase == 'Running'"], "timeout": 30000, "retry": []}},
             LOG_STEP,
@@ -1239,8 +1233,7 @@ class TestWaitUntilReadback:
         assert self._readback()["that"] == ["pod_phase == 'Running'"]
 
     def test_a_single_condition_stays_a_list(self) -> None:
-        # `that` is Assert's vocabulary; Assert's list never collapses, and a
-        # scalar here would be the one condition set in the format that does.
+        # `that` is Assert's vocabulary.
         value = self._readback()["that"]
         assert isinstance(value, list)
 
@@ -1267,8 +1260,7 @@ class TestWaitUntilReadback:
         assert self._readback()["fail_current_scope"] is False
 
     def test_the_mode_is_never_written_out(self) -> None:
-        # Presence of `retry` already carries the mode; a `mode` key would be a
-        # second source of truth the compiler would have to reconcile.
+        # Presence of `retry` already carries the mode.
         assert "mode" not in self._readback()
 
     def test_a_watch_node_reads_back_without_a_retry_key(self) -> None:
@@ -1311,8 +1303,7 @@ class TestWaitUntilReadback:
         assert steps[1] == LOG_READBACK
 
     def test_a_watch_continuation_reads_back_as_the_next_sibling_step(self) -> None:
-        # A Watch node leaves by its unnamed default handle; if the readback
-        # only followed a `then` edge everything after it would vanish.
+        # A Watch node leaves by its unnamed default handle.
         steps = readback_flow(
             [{"wait_until": {"that": ["pod_phase == 'Running'"], "timeout": 30000}}, LOG_STEP],
             WAIT_VARIABLES,
@@ -1594,9 +1585,7 @@ class TestExpressibility:
 
 
 class TestReadbackDetails:
-    """Readback branches over hand-built graphs: profile bindings, expression
-    variables, and defensive handling of malformed stored data (a readback is
-    best-effort and never destructive)."""
+    """Readback branches over hand-built graphs."""
 
     def test_expression_variable_survives_readback(self) -> None:
         recipe = make_recipe(
@@ -1793,8 +1782,7 @@ def _node_values(test_data: dict[str, Any], element_type: str) -> dict[str, Any]
 
 
 class TestReadbackOfNumberText:
-    """A number stored as its exact digit text reads back as a plain YAML number written as
-    stored; text that breaks the rule, and text in a text field, stays quoted (REQ-3.1.3.14)."""
+    """A number stored as exact digit text reads back as a plain number (REQ-3.1.3.14)."""
 
     def stored_test(self) -> dict[str, Any]:
         flow = [
@@ -1914,8 +1902,7 @@ class TestReadbackOfNumberText:
 
 
 class TestElementTypesReadback:
-    """A readback writes every element in its stored form with complete element_types
-    (REQ-3.1.3.19), and compiling it again stores the same Test."""
+    """A readback writes each element in its stored form (REQ-3.1.3.19)."""
 
     def recipe(self) -> str:
         variables = {
@@ -2042,8 +2029,7 @@ def _without_ids(variables: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 class TestLocalFunctionVariablesReadback:
-    """A local Function's own variables read back with it, so a readback that says
-    expressible holds the whole Function (REQ-5.2.7.3)."""
+    """A local Function's own variables read back with it (REQ-5.2.7.3)."""
 
     def stored_test(self, variables: list[dict[str, Any]]) -> dict[str, Any]:
         functions = [{"name": "tally", "inputs": [], "outputs": [], "flow": [LOG_STEP]}]
@@ -2114,8 +2100,7 @@ class TestLocalFunctionVariablesReadback:
 
 
 class TestTableReadback:
-    """A table stored with its column types reads back in that form, and compiling the
-    readback stores the same table (REQ-3.5.5.4)."""
+    """A table stored with its column types reads back in that form (REQ-3.5.5.4)."""
 
     def test_a_stored_table_reads_back_and_compiles_to_the_same_value(self) -> None:
         grid = {
@@ -2210,8 +2195,7 @@ def declared_inputs_recipe() -> str:
 
 
 class TestFunctionInputDeclarationReadback:
-    """An enum input and a Required input's default read back as stored, and the readback
-    compiles to the same declaration (REQ-3.1.2.10, REQ-3.1.2.11, REQ-5.2.7.6)."""
+    """Enum inputs and Required defaults read back as stored (REQ-3.1.2.10, REQ-5.2.7.6)."""
 
     def test_a_stored_declaration_reads_back_as_written(self) -> None:
         recipe = make_recipe(
@@ -2344,8 +2328,7 @@ def _function_block(test_data: dict[str, Any]) -> dict[str, Any]:
 
 
 class TestFunctionStepSecretOutputsReadback:
-    """A Function step's Secret outputs read back only when they differ from what its Function
-    declares secret, and a compile of the readback holds the same choice (SECUI-11)."""
+    """A Function step's Secret outputs read back only when changed (SECUI-11)."""
 
     @staticmethod
     def stored_test(**step: Any) -> dict[str, Any]:
@@ -2445,8 +2428,7 @@ def readback_steps(recipe: str) -> list[Any]:
 
 
 class TestFunctionStepReadback:
-    """A Function Block reads back as a `function` step in the block step form, with its
-    settings, element types, capture, label and version (REQ-5.2.7.6, REQ-3.1.3.19)."""
+    """A Function Block reads back as a `function` step (REQ-5.2.7.6, REQ-3.1.3.19)."""
 
     def test_a_local_function_block_reads_back_as_a_function_step(self) -> None:
         step = {
@@ -2550,8 +2532,7 @@ def hand_built_settings(element_type: str, values: dict[str, Any]) -> Any:
 
 
 class TestChoiceValueReadback:
-    """A readback writes every choice and true / false value a Block holds, one equal to
-    its default included, and only the free-entry settings the Block holds (REQ-5.2.7.6)."""
+    """A readback writes every choice and true / false value a Block holds (REQ-5.2.7.6)."""
 
     def test_a_choice_the_step_left_out_reads_back_written(self) -> None:
         assert readback_flow([LOG_STEP]) == [LOG_READBACK]
@@ -2581,8 +2562,7 @@ class TestChoiceValueReadback:
 
 
 class TestArgumentRowReadback:
-    """Argument lists keep their stored record rows, each row's expression included, at
-    compile and at readback (REQ-5.2.7.6)."""
+    """Argument lists keep their stored record rows (REQ-5.2.7.6)."""
 
     def test_script_arguments_are_record_rows(self) -> None:
         arguments = [{"value": "--env"}, {"value": {"expr": "env_name"}}]
@@ -2621,8 +2601,7 @@ def _block_node(test_data: dict[str, Any]) -> dict[str, Any]:
 
 
 class TestBlockSecretOutputsReadback:
-    """A block's Secret outputs read back only when they differ from its schema's boxes, and
-    a compile of the readback stores the same choice (SECUI-4, K8SCON-4)."""
+    """A block's Secret outputs read back only when changed (SECUI-4, K8SCON-4)."""
 
     @staticmethod
     def stored_test(**extra: Any) -> dict[str, Any]:
@@ -2675,9 +2654,7 @@ class TestBlockSecretOutputsReadback:
         assert "secret_outputs" not in self.readback_step(test_data)
 
 
-# ---------------------------------------------------------------------------
 # Control fields, value forms and the field-loss report (REQ-5.2.7.6)
-# ---------------------------------------------------------------------------
 
 
 def _strip_ids(value: Any) -> Any:
@@ -3221,8 +3198,7 @@ CONTROL_FIELD_FLOWS = [
 
 
 class TestControlFieldRoundTrip:
-    """Every control field a person sets in a window reads back and compiles to the same Block:
-    values, flags, element types, capture, label, description and disabled (REQ-5.2.7.6)."""
+    """Every control field set in a window round-trips (REQ-5.2.7.6)."""
 
     @pytest.mark.parametrize("flow", CONTROL_FIELD_FLOWS)
     def test_compile_readback_compile_keeps_every_control_field(self, flow: list[Any]) -> None:
@@ -3368,8 +3344,7 @@ RECIPE_CONDITION_FORMS = [
 
 
 class TestConditionReadback:
-    """A condition list reads back in the recipe form it compiles from: `or` markers, groups and
-    every compare-to value form; one condition unwrapped, a list kept (REQ-5.2.7.6)."""
+    """A condition list reads back in the recipe form it compiles from (REQ-5.2.7.6)."""
 
     @pytest.mark.parametrize(("stored", "expected"), STORED_CONDITION_CASES)
     def test_a_stored_condition_list_reads_back_in_its_recipe_form(
@@ -3489,8 +3464,7 @@ SETTER_ROUND_TRIP_VARIABLES: dict[str, Any] = {
 
 
 class TestSetterReadback:
-    """A Variable Setter reads back row by row in the value forms it compiles from, with its
-    Secret rows listed and their values left out (REQ-5.2.7.6, REQ-3.1.3.18)."""
+    """A Variable Setter reads back row by row (REQ-5.2.7.6, REQ-3.1.3.18)."""
 
     def test_a_template_row_reads_back_as_its_template(self) -> None:
         node = setter_node(
@@ -3668,8 +3642,7 @@ class TestSetterReadback:
 
 
 class TestAssertReadback:
-    """An Assert reads back with its capture in both modes, and a split Assert with no path
-    wired keeps its mode (REQ-5.2.7.6)."""
+    """An Assert reads back with its capture in both modes (REQ-5.2.7.6)."""
 
     def test_a_single_assert_reads_back_with_its_capture(self) -> None:
         flow = [{"assert": {"that": ["x == 1"], "capture": {"passed": "ok"}}}, LOG_STEP]
@@ -3744,8 +3717,7 @@ HOSTS_VARIABLE: dict[str, Any] = {"hosts": {"type": "array", "value": ["alpha"]}
 
 
 class TestLoopReadback:
-    """A loop reads back with its count-mode step and collection type, and a jump to an outer
-    loop names it by label or block name (REQ-5.2.7.6, REQ-3.5.1.15)."""
+    """A loop reads back with its step and collection type (REQ-5.2.7.6, REQ-3.5.1.15)."""
 
     def test_a_count_mode_step_reads_back(self) -> None:
         flow = [{"for": {"count": 6, "step": 2, "body": [LOG_STEP]}}, LOG_STEP]
@@ -3811,9 +3783,7 @@ class TestLoopReadback:
 
 
 class TestValueFormReadback:
-    """A stored value reads back in the shortest form that compiles to the same value and
-    mode: `{literal}` for text that must keep its braces or data shaped like a form,
-    `{template}` for a template with no markers (REQ-5.2.7.6)."""
+    """A stored value reads back in its shortest round-trip form (REQ-5.2.7.6)."""
 
     def test_a_plugin_literal_setting_holding_braces_reads_back_as_a_literal(self) -> None:
         readback = readback_of(
@@ -3856,8 +3826,7 @@ IDENTITY: dict[str, Any] = {"description": "Checks the banner", "disabled": True
 
 
 class TestStepIdentityReadback:
-    """A Block's description and disabled mark read back beside a block or Setter step and
-    inside a construct's mapping, and compile back onto the Block (REQ-5.2.7.6)."""
+    """A Block's description and disabled mark round-trip (REQ-5.2.7.6)."""
 
     def test_a_block_step_carries_its_description_and_disabled(self) -> None:
         node = log_node("log-1", message="hi")
@@ -3935,8 +3904,7 @@ def _undeclared_loop_field() -> tuple[dict[str, Any], dict[str, str]]:
 
 
 class TestFieldLossReport:
-    """A stored value the recipe format cannot express is named in `inexpressible`, so the
-    readback is never expressible and amend refuses the Test (REQ-5.2.7.6)."""
+    """A stored value the recipe format cannot express is named in `inexpressible` (REQ-5.2.7.6)."""
 
     @pytest.mark.parametrize(
         ("element_type", "values", "place"),
@@ -4270,3 +4238,86 @@ class TestFieldLossReport:
         http["data"]["templateFields"] = ["body"]
 
         self._only_the_loop_is_reported(http)
+
+
+INDIVIDUAL_PARSERS = {
+    "json-parser": (
+        "JSON Parser",
+        "json_content",
+        '{"id": 7, "status": "open"}',
+        {"order_id": "$.id", "status": "$.status"},
+    ),
+    "xml-parser": (
+        "XML Parser",
+        "xml_content",
+        "<order><id>7</id><status>open</status></order>",
+        {"order_id": "/order/id", "status": "/order/status"},
+    ),
+}
+
+
+def hand_built_parser_test(block: str, **config: Any) -> dict[str, Any]:
+    """A canvas-built Test: an Individual-mode parser whose queries bind to their own names."""
+    label, content_key, content, queries = INDIVIDUAL_PARSERS[block]
+    node = make_node(
+        "node-1",
+        element_type=block,
+        values={
+            content_key: content,
+            "queries": queries,
+            "output_mode": "individual",
+            "query_output_types": {"order_id": "integer"},
+        },
+    )
+    node["data"]["label"] = label
+    node["data"]["config"]["outputBindings"] = {"order_id": "order_id", "status": "status"}
+    node["data"]["config"].update(config)
+    test_data = make_test_data([node], [make_edge("start-node", "node-1")])
+    test_data["variables"] = {
+        "order_id": {"type": "integer", "value": None},
+        "status": {"type": "string", "value": None},
+    }
+    return test_data
+
+
+@pytest.mark.parametrize("block", sorted(INDIVIDUAL_PARSERS))
+class TestIndividualParserReadback:
+    """A hand-built Individual parser round-trips through readback and amend (REQ-5.2.7.3)."""
+
+    def test_the_readback_is_expressible_and_compiles_clean(self, block: str) -> None:
+        readback = decompile(hand_built_parser_test(block))
+
+        assert readback["expressible"] is True
+        assert readback["inexpressible"] == []
+        compile_clean(readback["recipe"])
+
+    def test_the_recompile_is_the_same_block(self, block: str) -> None:
+        stored = hand_built_parser_test(block)
+
+        second = compile_clean(decompile(stored)["recipe"])["test_data"]
+
+        (node,) = second["workflow"]["nodes"]
+        stored_config = stored["workflow"]["nodes"][0]["data"]["config"]
+        assert node["data"]["elementType"] == block
+        assert node["data"]["config"]["values"] == stored_config["values"]
+        assert node["data"]["config"]["outputBindings"] == stored_config["outputBindings"]
+        assert second["variables"]["order_id"]["type"] == "integer"
+        assert second["variables"]["status"]["type"] == "string"
+
+    def test_the_recipe_round_trip_keeps_the_block(self, block: str) -> None:
+        readback = decompile(hand_built_parser_test(block))
+
+        assert_round_trip(readback["recipe"])
+
+    def test_a_secret_query_output_reads_back(self, block: str) -> None:
+        readback = decompile(hand_built_parser_test(block, outputSecretFields=["status"]))
+
+        (step,) = yaml.safe_load(readback["recipe"])["flow"]
+        assert step["secret_outputs"] == ["status"]
+        second = compile_clean(readback["recipe"])["test_data"]
+        assert second["workflow"]["nodes"][0]["data"]["config"]["outputSecretFields"] == ["status"]
+
+    def test_the_amend_has_a_readback_form(self, block: str) -> None:
+        from wavecore.core.recipes.amend import readback_form
+
+        assert readback_form(hand_built_parser_test(block)) is not None

@@ -1,11 +1,4 @@
-"""Function service layer.
-
-Wraps `_storage.py` with the business rules required by the API surface:
-- structural + circular-dep validation enforced on every write
-- ETag-aware update flow with explicit If-Match handling
-- dependents enumeration and cascade-aware deletion
-- batch CRUD with per-item error reporting
-"""
+"""Function service layer."""
 
 from __future__ import annotations
 
@@ -101,14 +94,7 @@ def _library_index(summaries: Iterable[Mapping[str, Any]]) -> dict[str, dict[str
 
 
 def load_library_index() -> dict[str, dict[str, Any]]:
-    """Read every Published Function from disk and index it by id.
-
-    Each entry carries ``available_versions`` so the save-validation pipeline
-    can distinguish ``MISSING_FUNCTION_ID`` from ``MISSING_FUNCTION_VERSION``
-    without re-reading the index. Shared by Function-save validation and the
-    embedded Local-Function-body validator in the Test save pipeline (so
-    nested Shared references resolve against the library).
-    """
+    """Read every Published Function from disk and index it by id."""
     return _library_index(_storage.list_function_summaries())
 
 
@@ -123,13 +109,7 @@ def load_reference_index() -> dict[str, set[str]]:
 
 
 def resolve_version_contract(function_id: str, version: str) -> dict[str, Any] | None:
-    """Resolve a Published Function's pinned-version input/output contract.
-
-    Returns ``{"inputs": [...], "outputs": [...]}`` read from the specific
-    pinned version (never the latest), or ``None`` when the id or version is
-    unknown. Feeds the canonical pipeline's binding/type checks for top-level
-    Shared instances (REQ-3.1.2.4).
-    """
+    """Resolve a Published Function's pinned-version input/output contract (REQ-3.1.2.4)."""
     try:
         definition = _storage.load_version(function_id, version)
     except LookupError:
@@ -183,13 +163,7 @@ def _raise_structural(errors: Sequence[str]) -> None:
 
 
 class SaveValidationError(Exception):
-    """Raised when validation rejects a Function save.
-
-    ``errors`` carries the per-dimension issue list verbatim (each entry has
-    ``code``, ``message``, and ``severity`` keys). Routes convert this to a
-    HTTP 422 envelope. Warning-severity issues are filtered out by callers
-    before raising so warnings persist on save.
-    """
+    """Raised when validation rejects a Function save."""
 
     def __init__(self, errors: list[dict[str, Any]]) -> None:
         self.errors = errors
@@ -231,8 +205,7 @@ def refuse_invalid_body(
     context: str = "save",
     removed_retry_wires: RemovedByFlow | None = None,
 ) -> None:
-    """The create checks past the name: a circle of Functions, then every error of the flow
-    and of each Function body it holds, as a Test ``context`` checks its own."""
+    """The create checks past the name."""
     from wavecore.api.services.tests.service import nested_function_errors
 
     _refuse_circle(function_id, definition)
@@ -256,8 +229,7 @@ def refuse_invalid_body(
 
 
 def _put_flow_on_lanes(workflow: Any) -> tuple[RemovedByFlow, list[dict[str, Any]]]:
-    """The lane rule on a library Function's flow and every body in it: the retry wires it
-    took out, by flow, and their repair records as a Test save answers them."""
+    """The lane rule on a library Function's flow and every body in it."""
     from wavecore.api.services.tests.service import removed_wire_repairs
 
     removed = put_flow_wires_on_lanes(workflow)
@@ -294,6 +266,7 @@ def _refuse_errors(
             "node_label": issue.node_label,
             "function_id": issue.function_id,
             "function_version": issue.function_version,
+            "fix_action": issue.fix_action,
         }
         for issue in issues
         if issue.severity == "error"
@@ -395,10 +368,7 @@ def get_function(function_id: str) -> tuple[dict[str, Any], str]:
 
 
 def read_version(function_id: str, version: str) -> tuple[dict[str, Any], str]:
-    """One version as a read shows it (SECUI-11, REQ-3.1.3.17), with its ETag.
-
-    An unknown Function id or version raises ``FunctionNotFoundError``.
-    """
+    """One version as a read shows it (SECUI-11, REQ-3.1.3.17), with its ETag."""
     definition = _storage.load_version(function_id, version)
     return read_definition_secrets(definition), _storage.compute_etag(definition)
 
@@ -466,14 +436,7 @@ def add_function_version(
     details: str,
     repairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Write a new immutable library version from a client-supplied draft.
-
-    Test-independent edit-mode publish: validates the draft against its source
-    version (changelog required, valid semver, source exists, target not a
-    duplicate, target is an allowed bump, body passes the create checks) then
-    persists via save_new_version.
-    Returns ``{function_id, version}``; the wires the save removed go into ``repairs`` when given.
-    """
+    """Write a new immutable library version from a client-supplied draft."""
     if not changelog.strip():
         msg = "Changelog is required for edit-mode publish"
         raise UnprocessableEntityException(message=msg, details=_details_payload([msg]))
@@ -496,9 +459,7 @@ def add_function_version(
         msg = f"Target version '{target_version}' already exists in the library"
         raise ConflictException(message=msg, details=_details_payload([msg]))
 
-    # No backports is PER-MAJOR: a target must advance past the latest version of
-    # its OWN major line; other major lines do not constrain it. This also blocks
-    # a pre-release of an already-released version within the line (2.0.0-dev1 < 2.0.0).
+    # No backports: a target must pass the latest version of its own major line.
     target_major = target_core[0]
     line_head = _versioning.latest_in_major(existing, target_major)
     if line_head is not None and _versioning.version_precedence_key(
@@ -580,11 +541,7 @@ def get_dependents_by_version(function_id: str) -> dict[str, Any]:
 
 
 def delete_function_version(function_id: str, version: str) -> None:
-    """Remove a single published version; never blocked by usage.
-
-    Deleting the last remaining version removes the whole Function. Raises
-    ``NotFoundException`` for an unknown Function id or version.
-    """
+    """Remove a single published version; never blocked by usage."""
     try:
         _storage.delete_version(function_id, version)
     except _storage.FunctionNotFoundError as exc:

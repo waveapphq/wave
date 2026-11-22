@@ -1,9 +1,4 @@
-"""Author tools: get_recipe_guide, validate_recipe, create_test_from_recipe.
-
-REQ-5.2.7.9. Recipe problems come back as data findings, creation persists
-ONLY through the strict save pipeline, and every packaged worked example must
-compile clean (drift guard).
-"""
+"""Author tools: get_recipe_guide, validate_recipe, create_test_from_recipe (REQ-5.2.7.9)."""
 
 import re
 from collections.abc import Callable, Generator
@@ -54,6 +49,7 @@ EXAMPLE_NAMES = [
     "10-python",
     "11-sql",
     "12-opensearch",
+    "13-json-parser-individual",
 ]
 
 NAME_CONFLICT_FIX = (
@@ -68,8 +64,7 @@ def _registries(seed_registries: None) -> None:
 
 @pytest.fixture
 def isolated_config() -> Generator[Any, None, None]:
-    """The config singleton is process-wide; a test that writes to it must drop it
-    afterwards or the next test inherits the mutation."""
+    """The config singleton is process-wide."""
     from wavecore.api.config import loader
 
     yield loader.get_config()
@@ -99,6 +94,7 @@ def author() -> Any:
 def example_recipe(name: str) -> str:
     """The packaged worked example's recipe text, by file stem."""
     examples = {ex["name"]: ex["recipe"] for ex in author().get_recipe_guide()["examples"]}
+    assert name in examples, f"the guide serves no example {name!r}"
     return str(examples[name])
 
 
@@ -115,10 +111,7 @@ def guide_section(heading: str) -> str:
 
 
 def guide_paragraphs(heading: str, needle: str) -> str:
-    """Every paragraph of a guide section carrying ``needle``, whitespace normalized.
-
-    The guide is hard-wrapped, so a needle is matched against the normalized text.
-    """
+    """Every paragraph of a guide section carrying ``needle``, whitespace normalized."""
     parts = [" ".join(part.split()) for part in guide_section(heading).split("\n\n")]
     found = [part for part in parts if needle in part]
     assert found, f"no paragraph under {heading!r} carries {needle!r}"
@@ -605,8 +598,7 @@ class TestGetRecipeGuide:
             assert example["recipe"].strip()
 
     def test_the_guide_documents_the_wait_until_container(self) -> None:
-        # A guide that advertises the leaf shorthand teaches authors to write definitions
-        # the platform rejects.
+        # The leaf shorthand writes definitions the platform rejects.
         guide = author().get_recipe_guide()["guide"]
         assert "- wait_until:" in guide
         assert "wait_until: {condition:" not in guide
@@ -662,11 +654,11 @@ class TestGetRecipeGuide:
 
     @pytest.mark.parametrize("example_name", EXAMPLE_NAMES)
     def test_every_packaged_example_compiles_clean(self, example_name: str) -> None:
-        # Drift guard: the guide is versioned with the server; an example
-        # that stops compiling is a contract break, not a docs nit.
+        # Drift guard: the guide is versioned with the server.
         from wavecore.core.recipes.compiler import compile_recipe
 
         examples = {ex["name"]: ex["recipe"] for ex in author().get_recipe_guide()["examples"]}
+        assert example_name in examples, f"the guide serves no example {example_name!r}"
         recipe_text = examples[example_name]
         _seed_example_prerequisites(recipe_text)
         result = compile_recipe(recipe_text)
@@ -675,8 +667,7 @@ class TestGetRecipeGuide:
         assert result["test_data"] is not None
 
     def test_remote_example_body_blocks_are_remotable(self) -> None:
-        # REQ-3.4.1.3: a body block that is not remotable runs on WAVE, so an
-        # example that puts one there teaches the wrong locus.
+        # REQ-3.4.1.3: a body block that is not remotable runs on WAVE.
         from wavecore.mcp.tools import discover
 
         body_ids = [
@@ -1015,8 +1006,7 @@ def _keys_anywhere(item: Any) -> set[str]:
 
 
 class TestPackagedFunctionsExample:
-    """Example 04 writes its Function Blocks as `- function:` steps with `settings`
-    (REQ-5.2.7.3, REQ-3.1.2.10)."""
+    """Example 04 writes Function Blocks as `function` steps (REQ-5.2.7.3, REQ-3.1.2.10)."""
 
     def _document(self) -> dict[str, Any]:
         return dict(yaml.safe_load(example_recipe("04-functions")))
@@ -1394,16 +1384,14 @@ class TestCreateTestFromRecipe:
         assert stored_test_ids() == before
 
     def test_non_mapping_recipe_document_creates_nothing(self) -> None:
-        # A recipe that parses to a non-dict has no variables to resolve; the
-        # secret-file pre-pass returns it unchanged and compilation rejects it.
+        # A recipe that parses to a non-dict has no variables to resolve.
         before = stored_test_ids()
         result = author().create_test_from_recipe("- just a list item\n")
         assert result["created"] is False
         assert stored_test_ids() == before
 
     def test_branch_rejoin_edges_survive_persistence(self) -> None:
-        # Guard: the save pipeline's multi-edge autofix must not strip the
-        # converging edges a construct's continuation step rides on.
+        # The multi-edge autofix must keep the edges a continuation step converges on.
         from wavecore.api.services.tests import service as test_service
 
         recipe = make_recipe(
@@ -1772,8 +1760,7 @@ BOOLEAN_INPUT_NO_DEFAULT_FINDING = {
 
 
 class TestFunctionInputDeclarations:
-    """An enum input and a Required input's default pass the recipe and Test save checks and
-    read back as written (REQ-3.1.2.10, REQ-3.1.2.11)."""
+    """Enum inputs and Required defaults save and read back (REQ-3.1.2.10, REQ-3.1.2.11)."""
 
     def test_the_created_test_reads_the_inputs_back_as_written(self) -> None:
         created = author().create_test_from_recipe(
@@ -2181,9 +2168,7 @@ def loop_recipe(body: list[dict[str, Any]], name: str) -> str:
 
 
 class TestAmendRecognizesEachBlock:
-    """REQ-5.2.7.4: an amend recognizes an untouched Block by what it is, never by its place
-    in the list; the changed test reads in flow order, and a Block the change does not need to
-    move keeps its exact position."""
+    """REQ-5.2.7.4: an amend recognizes an untouched Block by what it is."""
 
     def test_a_fresh_create_of_the_nested_flow_overlaps_nothing(self) -> None:
         test_id = created_test(release_recipe(RELEASE_BODY, name="Release Fresh"))
@@ -2422,8 +2407,7 @@ def cases_recipe(cases: list[tuple[int, list[Any]]], name: str) -> str:
 
 
 class TestAmendKeepsTheFlowOrder:
-    """After a change the test reads in flow order the way a fresh build does: each Block under
-    the Block before it, each branch in its own column, nothing overlapping."""
+    """After a change the test reads in flow order the way a fresh build does."""
 
     def test_the_storyboard_reads_in_order_after_each_change(self) -> None:
         seed_profiles()
@@ -2492,8 +2476,7 @@ def ids_by_label(workflow: dict[str, Any]) -> dict[str, str]:
 
 
 class TestAmendKeepsEachBlocksId:
-    """A Block the amendment recognizes keeps its id in the saved test, and a new one gets an
-    id no Block of the test had, so nothing else that names a Block is confused."""
+    """A Block the amendment recognizes keeps its id in the saved test."""
 
     def test_a_recognized_block_keeps_its_stored_id(self) -> None:
         test_id = created_test(make_recipe([ALPHA, CHARLIE], name="Ids Kept"))
@@ -2794,8 +2777,7 @@ class TestSecretFileReferences:
     def test_value_from_file_without_a_configured_root_names_the_deployment(
         self, monkeypatch: Any, isolated_config: Any
     ) -> None:
-        """An unconfigured deployment is not a missing file: saying 'not found'
-        sent authors hunting for a file they could never have placed."""
+        """An unconfigured deployment is not a missing file."""
         monkeypatch.delenv("WAVE_MCP_SECRETS_DIR", raising=False)
         isolated_config.set("security.secrets_input_dir", "", validate=False)
         recipe = make_recipe(
@@ -2835,8 +2817,7 @@ API_KEY_ACTION_ITEM = {
 
 
 class TestCaptureFilledSecretsOweNothing:
-    """A secret a capture fills is written by the run, so no person owes its value;
-    a declare-empty secret nothing writes still does (REQ-5.2.7.3)."""
+    """A secret a capture fills is written by the run, so no person owes its value (REQ-5.2.7.3)."""
 
     @pytest.mark.parametrize("example_name", ["06-k8s-smoke", "07-helm-lifecycle"])
     def test_creating_a_served_example_owes_no_session_secret(self, example_name: str) -> None:
@@ -2910,8 +2891,7 @@ class TestCaptureFilledSecretsOweNothing:
 
 
 class TestMarkedCapturePromotesADeclaredVariable:
-    """A create through a recipe makes a plain variable a marked output fills secret, warns,
-    and owes no value for it (SECUI-12, REQ-3.1.2.9)."""
+    """A marked output makes a plain variable secret, with a warning (SECUI-12)."""
 
     def test_the_created_test_stores_it_secret_with_the_warning(self) -> None:
         from wavecore.api.services.tests import service as test_service
@@ -2937,8 +2917,7 @@ class TestMarkedCapturePromotesADeclaredVariable:
 
 
 class TestAmendStalenessGuard:
-    """A readback carries the version it was taken from; amending from a
-    superseded one is refused."""
+    """A readback carries the version it was taken from."""
 
     def test_readback_carries_the_version(self) -> None:
         author().create_test_from_recipe(simple_recipe("Stale Readback Source"))
@@ -2971,9 +2950,7 @@ class TestAmendStalenessGuard:
 
 
 class TestSecretsInputDirectoryConfiguration:
-    """The secrets input directory is a deployment setting, so it is configurable
-    like every other one, and an unconfigured deployment says so plainly instead
-    of blaming the caller's file name."""
+    """The secrets input directory is a deployment setting."""
 
     def test_root_comes_from_configuration_not_only_the_environment(
         self, monkeypatch: Any, tmp_path: Path, isolated_config: Any
@@ -3277,8 +3254,7 @@ class TestNewSSHBlocksGetTheDefaultHostKeyAction:
 
 
 class TestConstructStepsGetTheirCreationValues:
-    """A construct step created through MCP holds its control's choice-list and true / false
-    values, like any Block (FIELD-8, REQ-5.2.7.3)."""
+    """A construct step holds its choice-list values (FIELD-8, REQ-5.2.7.3)."""
 
     def _stored_values(self, recipe: str) -> dict[str, dict[str, Any]]:
         from wavecore.api.services.tests import service as test_service
@@ -3693,8 +3669,7 @@ def choice_inputs_recipe(name: str) -> str:
 
 
 class TestChoiceValuesReadBack:
-    """A readback lists every stored choice value, so a choice the recipe left out reads
-    back written (FIELD-8, REQ-5.2.7.6)."""
+    """A readback lists every stored choice value (FIELD-8, REQ-5.2.7.6)."""
 
     def test_a_choice_left_out_of_the_recipe_reads_back_written(self) -> None:
         step = {"block": "http-client", "settings": {"url": "http://shop.local"}}
@@ -3782,3 +3757,309 @@ class TestRecipeHoldingTextUtf8CannotWrite:
 
         assert result["created"] is True, result["findings"]
         assert test_service.get_test(result["test_id"])["name"] == "Ok 😀"
+
+
+def ping_recipe(name: str, **settings: Any) -> str:
+    step = {"block": "ping", "settings": {"host": "gateway.local", **settings}}
+    return make_recipe([step], name=name)
+
+
+PING_ABOVE_COUNT = {
+    "step": "flow[0]",
+    "code": "SETTING_ABOVE_MAXIMUM",
+    "severity": "error",
+    "problem": (
+        "Setting 'min_replies' of block 'ping' must be at most the value of setting 'count' "
+        "(4), got 5"
+    ),
+    "fix": "Provide a value of at most 4",
+}
+
+
+class TestPingMinimumRepliesCeilingOnRecipeTools:
+    """REQ-3.4.2.2: every recipe tool returns the save's Ping ceiling finding at the step path."""
+
+    def test_validate_returns_the_finding(self) -> None:
+        recipe = ping_recipe("Ping Over", pass_when="min_replies", count=4, min_replies=5)
+
+        result = author().validate_recipe(recipe)
+
+        assert result["valid"] is False
+        assert find_finding(result["findings"], "SETTING_ABOVE_MAXIMUM") == PING_ABOVE_COUNT
+
+    def test_validate_compares_an_unset_count_with_four(self) -> None:
+        result = author().validate_recipe(
+            ping_recipe("Ping Default Count", pass_when="min_replies", min_replies=5)
+        )
+
+        assert find_finding(result["findings"], "SETTING_ABOVE_MAXIMUM") == PING_ABOVE_COUNT
+
+    def test_validate_keeps_the_fix_for_a_ping_inside_a_local_function(self) -> None:
+        ping = {
+            "block": "ping",
+            "settings": {
+                "host": "gateway.local",
+                "pass_when": "min_replies",
+                "count": 2,
+                "min_replies": 3,
+            },
+        }
+        functions = [{"name": "pinger", "flow": [ping]}]
+        recipe = make_recipe([{"function": "pinger"}], name="Ping In Function", functions=functions)
+
+        result = author().validate_recipe(recipe)
+
+        assert find_finding(result["findings"], "SETTING_ABOVE_MAXIMUM") == {
+            **PING_ABOVE_COUNT,
+            "step": "functions[pinger].flow[0]",
+            "problem": (
+                "Setting 'min_replies' of block 'ping' must be at most the value of setting "
+                "'count' (2), got 3"
+            ),
+            "fix": "Provide a value of at most 2",
+        }
+
+    def test_validate_accepts_minimum_replies_equal_to_count(self) -> None:
+        recipe = ping_recipe("Ping Equal", pass_when="min_replies", count=4, min_replies=4)
+
+        assert author().validate_recipe(recipe)["valid"] is True
+
+    def test_create_refuses_it_and_stores_nothing(self) -> None:
+        before = stored_test_ids()
+        recipe = ping_recipe("Ping Over Create", pass_when="min_replies", count=4, min_replies=5)
+
+        result = author().create_test_from_recipe(recipe)
+
+        assert result["created"] is False
+        assert find_finding(result["findings"], "SETTING_ABOVE_MAXIMUM") == PING_ABOVE_COUNT
+        assert stored_test_ids() == before
+
+    def test_amend_refuses_it_and_keeps_the_test(self) -> None:
+        from wavecore.api.services.tests import service as test_service
+
+        name = "Ping Over Amend"
+        test_id = created_test(ping_recipe(name, pass_when="min_replies", count=4, min_replies=4))
+
+        result = author().amend_test_from_recipe(
+            test_id, ping_recipe(name, pass_when="min_replies", count=4, min_replies=5)
+        )
+
+        assert result["amended"] is False
+        assert find_finding(result["findings"], "SETTING_ABOVE_MAXIMUM") == PING_ABOVE_COUNT
+        stored = test_service.get_test(test_id)
+        assert stored is not None
+        assert stored["version"] == "1.0.0"
+
+
+PARSER_GUIDE_TEXT = (
+    "The JSON Parser and the XML Parser declare outputs through `queries` while "
+    "`output_mode` is `individual`: each query name is an output, typed by its "
+    "`query_output_types` entry, or string when that entry is unset or the query is an "
+    "expression, and `results` is not an output then. Capture a query only into the variable "
+    "of the same name, as `<query>: <query>`. In `combined` mode, capture `results`."
+)
+
+
+class TestParserOutputsInTheGuide:
+    """REQ-5.2.7.3, REQ-5.2.7.7: the guide and example 13 show parser declared outputs."""
+
+    def test_the_declared_outputs_paragraph_holds_the_parser_text(self) -> None:
+        paragraph = guide_paragraphs(
+            "### Blocks (plugins and controls)", "The JSON Parser and the XML Parser"
+        )
+
+        assert PARSER_GUIDE_TEXT in paragraph
+        assert "declares_outputs" in paragraph
+        assert "13-json-parser-individual" in paragraph
+
+    def _example(self) -> dict[str, Any]:
+        document: dict[str, Any] = yaml.safe_load(example_recipe("13-json-parser-individual"))
+        return document
+
+    def test_example_13_parses_a_literal_document_in_individual_mode(self) -> None:
+        steps = [step for step in self._example()["flow"] if step.get("block") == "json-parser"]
+
+        assert len(steps) == 1
+        settings = steps[0]["settings"]
+        assert settings["output_mode"] == "individual"
+        assert isinstance(settings["json_content"], str)
+        assert set(settings["queries"]) == {"order_id", "status"}
+        assert steps[0]["capture"] == {"order_id": "order_id", "status": "status"}
+
+    def test_example_13_declares_order_id_integer_and_status_string(self) -> None:
+        from wavecore.core.recipes.compiler import compile_recipe
+
+        result = compile_recipe(example_recipe("13-json-parser-individual"))
+
+        assert [f for f in result["findings"] if f["severity"] == "error"] == []
+        variables = result["test_data"]["variables"]
+        assert variables["order_id"]["type"] == "integer"
+        assert variables["status"]["type"] == "string"
+
+    def test_example_13_validates_clean(self) -> None:
+        result = author().validate_recipe(example_recipe("13-json-parser-individual"))
+
+        assert result["valid"] is True, result["findings"]
+
+
+def json_parser_recipe(name: str, **extra: Any) -> str:
+    step: dict[str, Any] = {
+        "block": "json-parser",
+        "settings": {
+            "json_content": '{"id": 7, "status": "open"}',
+            "queries": {"order_id": "$.id", "status": "$.status"},
+            "output_mode": "individual",
+            "query_output_types": {"order_id": "integer"},
+        },
+        "capture": {"order_id": "order_id", "status": "status"},
+        **extra,
+    }
+    return make_recipe([step], name=name)
+
+
+class TestIndividualParserOnRecipeTools:
+    """REQ-5.2.7.3: a self-bound Individual parser validates, stores its query types, amends."""
+
+    def test_validate_accepts_it(self) -> None:
+        result = author().validate_recipe(json_parser_recipe("Parser Validate"))
+
+        assert result == {"valid": True, "test_name": "Parser Validate", "findings": []}
+
+    def test_validate_refuses_a_query_name_written_twice(self) -> None:
+        recipe = (
+            "test:\n"
+            "  name: Parser Repeat\n"
+            "flow:\n"
+            "  - block: json-parser\n"
+            "    settings:\n"
+            "      json_content: '{\"a\": 1}'\n"
+            "      output_mode: individual\n"
+            "      queries: {q: $.a, q: $.b}\n"
+        )
+
+        result = author().validate_recipe(recipe)
+
+        assert result["valid"] is False
+        assert find_finding(result["findings"], "DUPLICATE_DECLARED_OUTPUT") == {
+            "step": "flow[0].settings.queries.q",
+            "code": "DUPLICATE_DECLARED_OUTPUT",
+            "problem": "Setting 'queries' of block 'json-parser' declares 'q' more than once",
+            "fix": "Remove the repeated name",
+            "severity": "error",
+        }
+
+    def test_create_stores_the_captures_and_types_the_variables(self) -> None:
+        from wavecore.api.services.tests import service as test_service
+
+        test_id = created_test(json_parser_recipe("Parser Create"))
+
+        stored = test_service.get_test(test_id)
+        assert stored is not None
+        (node,) = stored["workflow"]["nodes"]
+        assert node["data"]["config"]["outputBindings"] == {
+            "order_id": "order_id",
+            "status": "status",
+        }
+        assert stored["variables"]["order_id"]["type"] == "integer"
+        assert stored["variables"]["status"]["type"] == "string"
+
+    def test_amend_changes_it(self) -> None:
+        test_id = created_test(json_parser_recipe("Parser Amend"))
+        revised = make_recipe(
+            [
+                yaml.safe_load(json_parser_recipe("Parser Amend"))["flow"][0],
+                log_step("After the parse"),
+            ],
+            name="Parser Amend",
+        )
+
+        workflow = amended_workflow(test_id, revised)
+
+        assert len(workflow["nodes"]) == 2
+
+
+def library_function_flow(name: str) -> list[dict[str, Any]]:
+    return [{"function": name, "version": "1.0.0", "settings": {}}]
+
+
+class TestSharedFunctionBlockLibraryName:
+    """REQ-3.1.1.5: a recipe-made or amended Shared Function Block stores its library name."""
+
+    def test_create_stores_the_library_name(self) -> None:
+        create_library_function("lib_probe")
+        test_id = created_test(make_recipe(library_function_flow("lib_probe"), name="Lib Create"))
+
+        (node,) = stored_workflow(test_id)["nodes"]
+
+        assert node["data"].get("originalLibraryName") == "lib_probe"
+
+    def test_amend_restamps_a_block_that_lost_it(self) -> None:
+        from wavecore.core.recipes.compiler import compile_recipe
+
+        create_library_function("lib_restamp")
+        flow = library_function_flow("lib_restamp")
+        compiled = compile_recipe(make_recipe(flow, name="Lib Amend"))["test_data"]
+        for node in compiled["workflow"]["nodes"]:
+            node["data"].pop("originalLibraryName", None)
+        test_id = _write_test_with_workflow("Lib Amend", compiled["workflow"])
+
+        workflow = amended_workflow(
+            test_id, make_recipe([*flow, log_step("After the Function")], name="Lib Amend")
+        )
+
+        (function_node,) = [n for n in workflow["nodes"] if n["data"]["elementType"] == "function"]
+        assert function_node["data"].get("originalLibraryName") == "lib_restamp"
+
+
+FOUR_LINE_NOTE = "one\ntwo\nthree\nfour"
+EIGHT_LINE_NOTE = "\n".join(f"line {index}" for index in range(1, 9))
+# Lines x 22.75 + 18 + 33, rounded up.
+NOTE_HEIGHTS = {FOUR_LINE_NOTE: 142, EIGHT_LINE_NOTE: 233}
+
+
+def is_note(node: dict[str, Any]) -> bool:
+    return bool(node["data"]["elementType"] == "note")
+
+
+def note_recipe(name: str, text: str, *tail: dict[str, Any]) -> str:
+    return make_recipe([ALPHA, {"note": text}, BRAVO, *tail], name=name)
+
+
+def gap_below_note(workflow: dict[str, Any], note_height: float) -> float:
+    (note,) = [node for node in workflow["nodes"] if is_note(node)]
+    (bravo,) = [node for node in workflow["nodes"] if node["data"]["label"] == BRAVO_LABEL]
+    return float(bravo["position"]["y"] - (note["position"]["y"] + note_height))
+
+
+class TestAmendKeepsNoteSizes:
+    """REQ-5.2.7.4: an amend keeps a Note's size, and the next Block never crowds it."""
+
+    @pytest.mark.parametrize(
+        "size", [{"width": 160, "height": 90}, {"width": 300, "height": 200}], ids=["160", "300"]
+    )
+    def test_a_resized_note_keeps_its_size_through_an_amend(self, size: dict[str, int]) -> None:
+        name = f"Note Size {size['width']}"
+        test_id = created_test(note_recipe(name, "Read me"))
+        store_geometry(test_id, is_note, **size)
+
+        workflow = amended_workflow(test_id, note_recipe(name, "Read me", CHARLIE))
+
+        (note,) = [node for node in workflow["nodes"] if is_note(node)]
+        assert (note.get("width"), note.get("height")) == (size["width"], size["height"])
+
+    @pytest.mark.parametrize("text", [FOUR_LINE_NOTE, EIGHT_LINE_NOTE], ids=["four", "eight"])
+    def test_the_block_after_a_wired_note_starts_32_px_below_it_on_create(self, text: str) -> None:
+        test_id = created_test(note_recipe(f"Note Gap {len(text)}", text))
+
+        assert gap_below_note(stored_workflow(test_id), NOTE_HEIGHTS[text]) >= 32
+
+    @pytest.mark.parametrize("text", [FOUR_LINE_NOTE, EIGHT_LINE_NOTE], ids=["four", "eight"])
+    def test_the_block_after_a_wired_note_starts_32_px_below_it_after_an_amend(
+        self, text: str
+    ) -> None:
+        name = f"Note Amend Gap {len(text)}"
+        test_id = created_test(note_recipe(name, text))
+
+        workflow = amended_workflow(test_id, note_recipe(name, text, CHARLIE))
+
+        assert gap_below_note(workflow, NOTE_HEIGHTS[text]) >= 32

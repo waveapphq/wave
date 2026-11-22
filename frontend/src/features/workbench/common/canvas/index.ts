@@ -1,8 +1,4 @@
-/**
- * Canvas Components - Public API
- *
- * Core canvas components for the visual workflow builder.
- */
+/** Canvas components: public API. */
 
 // Bars
 /* v8 ignore next - COV-V8-004: V8 doesn't properly track barrel re-export coverage */
@@ -14,9 +10,6 @@ export type { WorkflowStatus } from './canvas-action-bar/index'
 /* v8 ignore start - COV-V8-004: V8 doesn't properly track barrel re-export coverage */
 // Panels
 export { CollapsiblePanel } from './chrome/collapsible-panel'
-
-// Empty State
-export { StartNode } from './empty-state/start-node'
 
 // Loading
 export { CanvasLoadingOverlay } from './chrome/canvas-loading-overlay'

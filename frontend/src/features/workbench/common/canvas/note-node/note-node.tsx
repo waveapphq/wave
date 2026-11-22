@@ -19,6 +19,7 @@ import { formatShortcut } from '@/lib/platform'
 import { controlDefault } from '@/features/workbench/lib/node-parameters'
 import { useIngressCount } from '@/features/workbench/common/canvas/workflow-node/use-node-actions'
 import { InputHandles } from '@/features/workbench/common/canvas/workflow-node/input-handles'
+import { NOTE_MIN_WIDTH } from '@/features/workbench/common/canvas/workflow-node/node-width'
 import { getNoteColorPreset } from './note-color-presets'
 import {
   NoteColorPicker,
@@ -395,7 +396,7 @@ function NoteNodeComponent({ id, data, selected }: Readonly<NodeProps>) {
           </div>
 
           <NodeResizer
-            minWidth={120}
+            minWidth={NOTE_MIN_WIDTH}
             minHeight={60}
             isVisible={!!selected || isEditing}
             lineClassName="!border-[3px] !border-transparent !z-20"

@@ -1,14 +1,10 @@
-/**
- * StartNodeFlow Component - React Flow Start Node
- *
- * Entry point node for workflow execution in React Flow.
- * Always visible, not draggable, positioned at top center.
- */
+/** StartNodeFlow: the always visible, fixed entry node of a workflow. */
 
 import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Play, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { START_NODE_WIDTH } from '../workflow-canvas/canvas-constants'
 
 interface StartNodeFlowData {
   hasConnection?: boolean
@@ -19,10 +15,7 @@ interface StartNodeFlowProps {
   data: StartNodeFlowData
 }
 
-/**
- * Start node for React Flow canvas
- * Shows pulsing animation when no outgoing connection exists
- */
+/** Start node; it pulses while it has no outgoing link. */
 export const StartNodeFlow = memo(function StartNodeFlow({ data }: Readonly<StartNodeFlowProps>) {
   const shouldPulse = !data.hasConnection
   const proximitySource = !!data.proximitySource
@@ -32,8 +25,9 @@ export const StartNodeFlow = memo(function StartNodeFlow({ data }: Readonly<Star
       data-testid="start-node"
       data-variant="success"
       data-animate={shouldPulse ? 'pulse' : undefined}
+      style={{ width: START_NODE_WIDTH }}
       className={cn(
-        'flex items-center gap-2 px-4 py-2.5',
+        'flex items-center justify-center gap-2 py-2.5',
         'rounded-lg border-2',
         'bg-green-500/10 border-green-500',
         shouldPulse && 'animate-pulse'

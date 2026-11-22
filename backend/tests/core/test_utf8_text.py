@@ -1,9 +1,4 @@
-"""Text UTF-8 cannot write: the one walk, its fast path and the YAML reader (REQ-4.6.9).
-
-Every door into WAVE asks this module where parsed data first holds a lone
-surrogate. Raw text with no form of a surrogate in it is never walked, and YAML
-is read so that one character written as two escapes is that one character.
-"""
+"""Text UTF-8 cannot write: the one walk, its fast path and the YAML reader (REQ-4.6.9)."""
 
 import datetime
 from decimal import Decimal
@@ -237,6 +232,40 @@ class TestLoadExactYaml:
 
     def test_load_yaml_keeps_the_yaml_number_forms(self) -> None:
         assert utf8_text.load_yaml("a: 0x1F\nb: 2.5\n") == {"a": 31, "b": 2.5}
+
+    @pytest.mark.parametrize(
+        "text",
+        ["q: {a: 1, b: 2, a: 3, a: 4}", "q:\n  a: 1\n  b: 2\n  a: 3\n  a: 4\n"],
+        ids=["flow", "block"],
+    )
+    def test_a_repeated_key_keeps_its_last_value_and_is_named(self, text: str) -> None:
+        loaded = utf8_text.load_exact_yaml(text)["q"]
+
+        assert loaded == {"a": 4, "b": 2}
+        assert utf8_text.written_keys(loaded) == ["a", "b", "a", "a"]
+
+    def test_a_map_without_a_repeated_key_names_each_key_once(self) -> None:
+        loaded = utf8_text.load_exact_yaml("q: {a: 1, b: 2}")
+
+        assert type(loaded["q"]) is dict
+        assert utf8_text.written_keys(loaded["q"]) == ["a", "b"]
+
+    def test_a_merged_key_written_again_is_not_a_repeat(self) -> None:
+        loaded = utf8_text.load_exact_yaml("base: &b {a: 1}\nq:\n  <<: *b\n  a: 2\n")
+
+        assert loaded["q"] == {"a": 2}
+        assert utf8_text.written_keys(loaded["q"]) == ["a"]
+
+    def test_an_unhashable_key_is_still_refused_as_yaml(self) -> None:
+        with pytest.raises(yaml.YAMLError):
+            utf8_text.load_exact_yaml("q: {[a]: 1, [a]: 2}")
+
+    def test_a_repeated_key_is_written_again_when_dumped(self) -> None:
+        loaded = utf8_text.load_exact_yaml("q: {a: 1, a: 2}")
+        again = utf8_text.load_exact_yaml(utf8_text.dump_exact_yaml(loaded))
+
+        assert again == {"q": {"a": 2}}
+        assert utf8_text.written_keys(again["q"]) == ["a", "a"]
 
 
 class TestDumpExactYaml:

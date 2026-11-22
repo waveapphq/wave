@@ -1,9 +1,4 @@
-/**
- * OnboardingNodeFlow Component - React Flow Onboarding Placeholder
- *
- * Placeholder node shown when canvas is empty.
- * Connected to Start node with a dashed edge.
- */
+/** OnboardingNodeFlow: the empty canvas placeholder, linked from Start by a dashed edge. */
 
 import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
@@ -13,9 +8,7 @@ import { useWorkflowStore } from '@/features/workbench/stores/workflow-store'
 type OnboardingNodeFlowProps = Record<string, never>
 
 export const OnboardingNodeFlow = memo(function OnboardingNodeFlow() {
-  // When drilled into an empty local Function, the inner canvas reuses this
-  // placeholder. Adapt the copy so the user knows they're populating the
-  // Function's body, not the parent Test.
+  // Inside an empty local Function the copy names the Function's body, not the parent Test.
   const insideFunction = useWorkflowStore((s) => s.drillPath.length > 0)
   return (
     <div
@@ -25,12 +18,7 @@ export const OnboardingNodeFlow = memo(function OnboardingNodeFlow() {
         'flex flex-col items-center gap-3 p-4',
         'rounded-lg border-2 border-dashed',
         'border-muted-foreground/30 bg-muted/20',
-        // Fixed width: keeps the node's horizontal center deterministic
-        // so the React Flow edge from Start (also centered at x=0) runs
-        // as a straight vertical line. `min-w-*` would let content
-        // re-flow the width and shift the center off x=0, which makes
-        // the smoothstep edge introduce a step-bend with visible gaps
-        // near the bend radii.
+        // Fixed 220 px at x -110 centers it on x 0 under the 100 px Start, so the edge runs straight.
         'w-[220px]'
       )}
     >

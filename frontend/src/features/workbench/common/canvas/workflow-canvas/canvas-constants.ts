@@ -1,24 +1,18 @@
-/**
- * Canvas Constants, Utility Functions, and Shared Types
- *
- * Extracted from canvas.tsx for modularity.
- */
+/** Canvas constants, utility functions and shared types. */
 
 import { useTheme } from '@/design-system/theme-provider'
 import { secureRandomId } from '@/lib/utils'
 
 // Start node configuration
 export const START_NODE_ID = 'start-node'
-// Start node width ~100px, so offset by 50 to center at x=0
-export const START_NODE_POSITION = { x: -50, y: 0 }
+// Start is drawn at a fixed width so its center is x 0, the flow's main line (CANVAS-248).
+export const START_NODE_WIDTH = 100
+export const START_NODE_POSITION = { x: -START_NODE_WIDTH / 2, y: 0 }
 
 // Onboarding placeholder configuration
 export const ONBOARDING_NODE_ID = 'onboarding-placeholder'
-// x=-115 places the onboarding node so its center lines up with the
-// Start node's center, keeping the connecting smoothstep edge a
-// straight vertical line with no step-bend. See
-// `empty-state/onboarding-node-flow.tsx` for the actual rendered width.
-export const ONBOARDING_NODE_POSITION = { x: -115, y: 100 }
+// Centers the 220 px placeholder on x 0, under Start, so the edge between them is straight.
+export const ONBOARDING_NODE_POSITION = { x: -110, y: 100 }
 export const GHOST_EDGE_ID = 'ghost-edge'
 
 // Distance for auto-connecting when dragging elements (palette drop, node drag proximity)
@@ -29,8 +23,7 @@ export const EDGE_SNAP_THRESHOLD = 15
 export const BORDER_TRIGGER_RANGE = 30
 // px per frame. React Flow's stock 15 outruns BORDER_TRIGGER_RANGE and pulls the target away.
 export const AUTO_PAN_SPEED = 4
-// Nominal block size, for deciding whether a placement clears the viewport edges
-// before the node is measured.
+// Nominal block size, to check a placement against the viewport before the node is measured.
 export const BLOCK_FOOTPRINT = { width: 200, height: 80 }
 
 interface Point {
@@ -38,8 +31,7 @@ interface Point {
   y: number
 }
 
-/** Whether a block placed at `position` sits wholly inside the visible canvas.
- *  The whole block has to clear the edges, not just its top-left corner. */
+/** Whether a block placed at `position` sits wholly inside the visible canvas. */
 export function isBlockFullyVisible(position: Point, topLeft: Point, bottomRight: Point): boolean {
   if (position.x < topLeft.x) return false
   if (position.y < topLeft.y) return false
@@ -47,10 +39,38 @@ export function isBlockFullyVisible(position: Point, topLeft: Point, bottomRight
   return position.y + BLOCK_FOOTPRINT.height <= bottomRight.y
 }
 
-/**
- * Check if connecting source -> target would create a cycle.
- * BFS from target following existing edges to see if source is reachable.
- */
+interface HandleBound {
+  id?: string | null
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** The parts of a React Flow internal node that locate its source handles. */
+export interface HandleMeasuredNode {
+  internals: {
+    positionAbsolute: Point
+    handleBounds?: { source?: ReadonlyArray<HandleBound> | null } | null
+  }
+  measured?: { width?: number; height?: number }
+}
+
+/** Flow position of the named source handle, else the first one, else the node's bottom center. */
+export function getSourceHandleCenter(node: HandleMeasuredNode, handleId?: string | null): Point {
+  const nodePos = node.internals.positionAbsolute
+  const handles = node.internals.handleBounds?.source
+  const named = handleId ? handles?.find((h) => h.id === handleId) : undefined
+  const handle = named ?? handles?.[0]
+  if (handle) {
+    return { x: nodePos.x + handle.x + handle.width / 2, y: nodePos.y + handle.y + handle.height / 2 }
+  }
+  const width = node.measured?.width ?? 120
+  const height = node.measured?.height ?? 50
+  return { x: nodePos.x + width / 2, y: nodePos.y + height }
+}
+
+/** Whether linking source to target would create a cycle. */
 export function wouldCreateCycle(
   sourceId: string,
   targetId: string,
@@ -74,10 +94,7 @@ export function wouldCreateCycle(
   return false
 }
 
-/**
- * Compute shortest distance from a point to a node's bounding rectangle.
- * Returns 0 if the point is inside the rectangle.
- */
+/** Shortest distance from a point to a node's box; 0 inside it. */
 export function distToNodeBounds(
   px: number, py: number,
   nodeX: number, nodeY: number, nodeW: number, nodeH: number
