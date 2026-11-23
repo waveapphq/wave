@@ -276,7 +276,7 @@ def _switch_step(**extra: Any) -> dict[str, Any]:
 
 
 class TestSwitchConstructKeys:
-    """Switch takes condition-guarded cases; the value-matching keys are gone."""
+    """Switch takes condition-guarded cases and no value-matching keys."""
 
     def test_condition_guarded_switch_parses_clean(self) -> None:
         doc, findings = parse(make_recipe([_switch_step(default=[LOG_STEP])]))

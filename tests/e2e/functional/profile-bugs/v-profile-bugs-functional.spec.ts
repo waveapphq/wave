@@ -1,7 +1,7 @@
 /**
  * V-PROFILE-BUGS-FUNCTIONAL: profile usage, structure lock, environment delete and alias rules end to end.
  *
- * Each test covers one of these rules:
+ * The tests cover these rules:
  *
  *   1. Cannot delete a profile that's bound by a test element.
  *   2. Cannot rename/add/delete params on a profile in use by a test.
@@ -11,9 +11,8 @@
  *   6. Profile parameter type dropdown does not offer "Number".
  *   7. Autocomplete inside f-string interpolation works for cpr./system.
  *   8. Typed profile types (database, ssh, ...) take a number or its exact digit text.
- *   9. Profile aliases never appear in the var-setter NAME field.
- *  10. Profile alias input uses the shared NameField (with counter).
- *  11. Cross-namespace conflict (var <-> alias) detected in both directions.
+ *   9. A saved profile binding keeps the alias the var-setter NAME filter keys on.
+ *  10. A save where a variable shadows a bound alias is refused (ALIAS_NAME_CONFLICT).
  *
  * Tests use BACKEND_PORT directly to seed/cleanup state and drive the UI
  * for the user-facing assertions.
@@ -154,7 +153,7 @@ async function deleteTest(request: APIRequestContext, id: string) {
 // Suite
 // ---------------------------------------------------------------------------
 
-test.describe('V-PROFILE-BUGS: 11 profile-related bug fixes', () => {
+test.describe('V-PROFILE-BUGS: profile usage, structure lock, environment delete and alias rules', () => {
   test.beforeAll(async ({ request }) => {
     await ensureEnvironment(request)
   })
@@ -209,7 +208,7 @@ test.describe('V-PROFILE-BUGS: 11 profile-related bug fixes', () => {
   // API-level assertions: the FE test suite covers the UI gating; here we
   // pin down the BE contract that the FE relies on.
   // -------------------------------------------------------------------------
-  test('Bugs 2+3: API blocks structural changes but accepts value-only updates when in use', async ({
+  test('API blocks structural changes but accepts value-only updates when in use', async ({
     request,
   }) => {
     const envId = await createEnv(request, 'PB-env-23')
@@ -270,7 +269,7 @@ test.describe('V-PROFILE-BUGS: 11 profile-related bug fixes', () => {
   // env delete allowed when profiles use it
   // type-to-confirm modal cascades cleanup
   // -------------------------------------------------------------------------
-  test('Bugs 4+5: delete env in use opens type-to-confirm; cascades to profiles', async ({
+  test('delete env in use opens type-to-confirm; cascades to profiles', async ({
     page,
     request,
   }) => {
@@ -314,7 +313,7 @@ test.describe('V-PROFILE-BUGS: 11 profile-related bug fixes', () => {
   })
 
   // -------------------------------------------------------------------------
-  // Number type is gone from the param dropdown
+  // The param dropdown offers no Number type
   // -------------------------------------------------------------------------
   test('parameter type dropdown lists Integer/Float and not Number', async ({
     page,
@@ -472,14 +471,13 @@ test.describe('V-PROFILE-BUGS: 11 profile-related bug fixes', () => {
   })
 
   // -------------------------------------------------------------------------
-  // alias input uses shared NameField (validated client-side).
-  // alias <-> variable cross-namespace conflict, both directions.
+  // A variable that shadows a bound alias.
   //
   // The FE unit suite drives the dialog UI; this test pins down the BE
   // contract that the FE relies on. The validate-test endpoint flags the
   // ALIAS_NAME_CONFLICT code when a variable shadows a bound alias.
   // -------------------------------------------------------------------------
-  test('Bugs 10+11: server-side validate flags variable/alias name collision', async ({
+  test('server-side validate flags variable/alias name collision', async ({
     request,
   }) => {
     const envId = await createEnv(request, 'PB-env-1011')

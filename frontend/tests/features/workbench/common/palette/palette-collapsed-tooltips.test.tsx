@@ -58,7 +58,7 @@ describe('PaletteCollapsed bottom icons', () => {
     })
   })
 
-  it('does NOT render the legacy "New Block" or "Blocks Library" tooltip strings anywhere', async () => {
+  it('does NOT render the "New Block" or "Blocks Library" tooltip strings anywhere', async () => {
     const user = userEvent.setup()
     renderCollapsed()
     await user.hover(screen.getByTestId('palette-icon-add'))

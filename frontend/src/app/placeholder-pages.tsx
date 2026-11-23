@@ -14,7 +14,6 @@ export function UserPage(): ReactNode {
 // WorkbenchPage implementation is in workbench-container.tsx (re-exported as WorkbenchPage from index.ts)
 
 // Profile pages
-// ProfilesListPage was replaced by ProfilesListContainer
 
 export function ProfileDetailPage(): ReactNode {
   return <div data-testid="profile-detail-page">Profile Detail</div>

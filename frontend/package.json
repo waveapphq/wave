@@ -1,6 +1,6 @@
 {
   "name": "wave-frontend",
-  "version": "1.0.0-alpha61",
+  "version": "1.0.0-alpha62",
   "description": "WAVE Frontend - Workflow Automation and Validation Engine",
   "type": "module",
   "scripts": {

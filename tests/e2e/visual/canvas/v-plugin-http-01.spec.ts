@@ -161,7 +161,7 @@ test.describe('V-PLUGIN-HTTP-01: HTTP Client Config Modal', () => {
 
   test('V-PLUGIN-HTTP-01-S4: four group headers visible', async ({ page }) => {
     // Timeouts & Retries, Response, TLS / Certificates,
-    // Connection - the "Security" decoy is gone
+    // Connection - no "Security" group
     await page.goto('/workbench')
     await waitForCanvasLoad(page)
     const modal = await addHttpNodeAndOpenConfig(page)

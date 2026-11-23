@@ -107,7 +107,7 @@ const SETTER: PaletteDragSpec = { term: 'var setter', testId: 'palette-item-vari
 const DECLARES = /^Function '.*' declares (input|output) '.*' but no block (uses|writes) it$/
 
 // ---------------------------------------------------------------------------
-// Messages (blueprint-backend.md section 2.4)
+// Messages
 // ---------------------------------------------------------------------------
 
 /** The run-log WARN for an input no block uses (REQ-3.1.2.7). */

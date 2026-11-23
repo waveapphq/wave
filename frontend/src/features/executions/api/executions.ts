@@ -170,10 +170,7 @@ function mapStatus(apiStatus: string): ExecutionStatus {
       return 'skipped'
     default:
       // Unknown status: surface it as the server's value rather than
-      // silently claiming the run is still running. The list used to
-      // fall back to 'running' here, which is why a regression-halted
-      // run (status='skipped') showed up in the list as Running even
-      // after the backend had settled it as skipped.
+      // silently claiming the run is still running.
       return apiStatus.toLowerCase() as ExecutionStatus
   }
 }

@@ -245,7 +245,7 @@ test.describe('V-CTRL-WAIT-01: Wait Until canvas node', () => {
     await seedAndOpen(page, RETRY_NODES, startEdge('wait-retry'))
 
     for (const handle of ['retry', 'then']) {
-      // The browser's own popup is gone; the app's tooltip replaced it.
+      // No browser title popup; the app's tooltip carries the text.
       await expect(lane(page, 'wait-retry', handle)).not.toHaveAttribute('title')
     }
 

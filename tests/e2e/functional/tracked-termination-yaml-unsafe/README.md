@@ -1,14 +1,13 @@
-# Tracked Termination - YAML-Unsafe Variable Regression
+# Tracked Termination - YAML-Unsafe Variable
 
-Regression test for the architectural bug where a single user plugin returning a YAML-unsafe value (specifically lxml's `_ElementUnicodeResult` - a `str` subclass) would stall the terminal callback and leave a tracked execution frozen at `status: running` forever.
+Guards that a user plugin returning a YAML-unsafe value (lxml's `_ElementUnicodeResult`, a `str` subclass) still lets a tracked execution reach a terminal status.
 
-## The bug this prevents
+## What it guards
 
 1. XML Parser's XPath `//item[1]/text()` returns an lxml `_ElementUnicodeResult` (a `str` subclass).
-2. Engine stored that value as a variable.
-3. When the test completed, the terminal callback tried to persist the session snapshot via `yaml.safe_dump`, which refuses `str` subclasses.
-4. `RepresenterError('cannot represent an object', 'Alpha')` propagated up and was swallowed as a `WARN`.
-5. The execution record was never transitioned from `running` to `passed`.
+2. The engine stores that value as a variable.
+3. When the test completes, the terminal callback persists the session snapshot; `_yaml_safe` turns the value into a plain `str` before the dump.
+4. The execution record moves from `running` to `passed`.
 
 ## What the test does
 

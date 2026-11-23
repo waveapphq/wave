@@ -22,6 +22,7 @@ import { leaveExpressionEditor } from './code-editor'
 import { setRowExpression } from './config-sheet'
 import { BACKEND_URL, E2E_ENV_NAME } from './config'
 import { getLogEntries, type LogEntry } from './log-reader'
+import { SWITCH_TO_EXPRESSION_TITLE, answerSwitch, switchWarning } from './value-field'
 import { openEditWindow, saveWindow, setWindowValue, variableRow, type WindowValue } from './variable-create'
 
 export const undoBtn = (page: Page): Locator =>
@@ -241,8 +242,7 @@ export async function saveBlockSheet(sheet: Locator): Promise<void> {
   await expect(sheet).toHaveCount(0)
 }
 
-/** Switch a Block setting to an expression (when it is not one yet), replace its text in one
- *  input so quote and bracket pairing leaves it alone, and Save the sheet. */
+/** Set a Block setting's expression in one input, so bracket pairing leaves it alone. */
 export async function setBlockExpression(
   page: Page,
   blockId: string,
@@ -253,6 +253,12 @@ export async function setBlockExpression(
   const editor = sheet.locator(`[data-testid="param-input-${setting}"] .cm-content`)
   if (!(await editor.isVisible())) {
     await sheet.locator(`[data-testid="param-row-${setting}"] [data-testid="expression-toggle"]`).click()
+    const warning = switchWarning(page)
+    await expect(editor.or(warning)).toBeVisible()
+    if (await warning.isVisible()) {
+      await expect(warning).toHaveAccessibleName(SWITCH_TO_EXPRESSION_TITLE)
+      await answerSwitch(page, 'Clear')
+    }
   }
   await expect(editor).toBeVisible()
   await editor.click()

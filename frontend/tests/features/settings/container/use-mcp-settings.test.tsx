@@ -426,7 +426,7 @@ describe('useMcpSettings', () => {
       expect(view.result.current.staged).toEqual({ ...DEFAULT_STAGED, port: '9001', enabled: true })
     })
 
-    it('no longer exposes load, loading or the old action names', async () => {
+    it('exposes no load, loading or other action names', async () => {
       const { result } = await renderActiveHook()
 
       for (const name of REMOVED_NAMES) {

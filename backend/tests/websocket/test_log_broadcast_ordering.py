@@ -12,13 +12,16 @@ import asyncio
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Generator
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 from wavecore.api.services import log_streaming_service
 from wavecore.api.services.executions import _storage as exec_storage
 from wavecore.core.secrets.registry import SecretRegistry
+
+if TYPE_CHECKING:
+    from wavecore.api.websocket.manager import WebSocketManager
 
 SECRET_VALUE = "s3cr3t-t0ken-99"
 
@@ -96,7 +99,7 @@ async def _clean_log_state() -> AsyncGenerator[None, None]:
 @pytest.fixture
 def manager() -> Generator[_FakeManager, None, None]:
     fake = _FakeManager()
-    log_streaming_service.set_broadcast_manager(fake)  # type: ignore[arg-type]
+    log_streaming_service.set_broadcast_manager(cast("WebSocketManager", fake))
     yield fake
     log_streaming_service.clear_broadcast_manager()
 
@@ -412,10 +415,8 @@ class TestFanOutSurvivesConnectionChurn:
     """A tab connecting or closing mid-broadcast must not kill the stream.
 
     The fan-out walks the manager's live connection map and awaits inside the
-    loop, so a socket registering during that await mutated the dict under the
-    iterator. The resulting error killed the session's drainer task for good:
-    every later line was queued with no consumer, and live output stopped for
-    every subscriber, not just the new one.
+    loop, so a socket registering during that await mutates the dict under the
+    iterator, which would end the drainer task and stop all live output.
     """
 
     async def test_a_tab_connecting_mid_send_does_not_stop_the_stream(

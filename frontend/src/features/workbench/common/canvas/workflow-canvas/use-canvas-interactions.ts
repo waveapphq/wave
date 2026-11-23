@@ -44,9 +44,7 @@ export function useCanvasInteractions({
   // subtree (deepest drilled Function), not the root tree. We must apply
   // the changes against the active subtree and write the result back via
   // the drill-aware setNodes/setEdges (which scope the write to the same
-  // subtree). Using `state.nodes` here was the source of the
-  // "infinite recursion" bug where moving any node inside a drilled
-  // Function overwrote the inner workflow with the root's content.
+  // subtree). state.nodes here would overwrite a drilled Function with the root.
   const rootNodes = useWorkflowStore((state) => state.nodes)
   const rootEdges = useWorkflowStore((state) => state.edges)
   const drillPath = useWorkflowStore((state) => state.drillPath)

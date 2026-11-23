@@ -26,7 +26,7 @@ No external seed script. The spec self-seeds via `POST /tests` using `fixture.js
 
 ## Validation
 
-- `UNDECLARED_VARIABLE` is no longer in `_VARIABLE_FIX_CODES` - the BE does NOT silently recreate the variable on save.
+- `UNDECLARED_VARIABLE` is not in `_VARIABLE_FIX_CODES` - the BE does NOT silently recreate the variable on save.
 - The variable lives in `_ON_DEMAND_VARIABLE_FIX_CODES` instead, so `fix_test` still restores it when the user clicks Fix All.
 - Save / Run dialogs show the same error code; only the title and "Fix All" button reachability differ.
 - Save's Cancel triggers the alert pulse (`animate-validation-icon-pulse`) on the offending Log node.

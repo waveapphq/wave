@@ -48,25 +48,22 @@ behind.
   there, and the page shows no read-failure surface. No restart happened.
 - **Put back underneath:** the victim's row is listed again.
 - **Unreadable record:** no read-failure surface, and both seeded rows still
-  render. This is the leg that used to fail - a permission-denied or non-UTF-8
-  file made the whole page answer an error.
+  render: a permission-denied or non-UTF-8 file never makes the whole page
+  answer an error.
 - **Deleted Profile opened from a stale row:** the page reports
   `Profile with ID '<id>' not found`, no editor opens, and the API answers 404.
-  It used to open and show the profile's old values.
 - **Name freed:** re-creating a Profile or Environment with the deleted
   record's name succeeds immediately.
 - **Execution deleted through the product:** the row leaves the list, the
   record and its variables answer 404, its directory is gone, and a fresh read
   of the list does not bring it back.
 
-## Not asserted (known and unfixed)
+## Not asserted (open bugs)
 
-- A record file MODIFIED in place is still served stale on all three entities.
-- Saves are not atomic.
-- An unreadable record is invisible rather than flagged, so the user just sees
-  one fewer row.
-- An execution whose files are deleted by hand stays in the Executions list
-  until someone opens it.
+- Not asserted: a record file modified in place being served fresh (an open bug).
+- Not asserted: atomic saves (an open bug).
+- Not asserted: an unreadable record being flagged (an open bug).
+- Not asserted: an execution whose files are deleted by hand leaving the list (an open bug).
 
 ## Safety
 

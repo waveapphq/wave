@@ -1,7 +1,7 @@
 /**
  * ParameterRow - variableRef Integration Tests
  *
- * TDD tests verifying that ParameterRow renders VariableRefCombobox
+ * Tests that ParameterRow renders VariableRefCombobox
  * when a parameter has the variableRef property, instead of the
  * default input widget.
  */

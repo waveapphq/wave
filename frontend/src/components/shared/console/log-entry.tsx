@@ -91,7 +91,7 @@ const VARIANT_CLASS_MAP: Record<string, string> = {
   success: 'log-variant-success',
   error: 'log-variant-error',
   warning: 'log-variant-warning',
-  // Paused lines render in amber - aliased to the warning palette for now
+  // Paused lines render in amber, aliased to the warning palette
   // (matches CANVAS-85's amber + the existing warning log-variant color).
   paused: 'log-variant-paused log-variant-warning',
   'regression-banner': 'log-variant-regression-banner',
@@ -172,6 +172,7 @@ export const LogEntry = memo(function LogEntry({
         paddingTop: `${verticalPadding}px`,
         paddingBottom: `${verticalPadding}px`,
       }}
+      role="article"
       aria-label={ariaLabel}
       aria-posinset={ariaPosinset}
       aria-setsize={ariaSetsize}

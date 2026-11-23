@@ -384,7 +384,7 @@ describe('Icon with Common Lucide Icons', () => {
 })
 
 describe('icon module surface', () => {
-  it.each(['ExpandIcon', 'Maximize2Icon'])('no longer exports %s (FIELD-11)', async (name) => {
+  it.each(['ExpandIcon', 'Maximize2Icon'])('does not export %s (FIELD-11)', async (name) => {
     const iconExports = await import('@/components/ui/icon')
     expect(name in iconExports).toBe(false)
   })

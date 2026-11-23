@@ -14,7 +14,7 @@
  *    32 px below the Note's measured bottom, on whole 140 px rows below the Note: the rows the Note's
  *    estimated height (lines x 22.75 + 51 px, at least 60) plus 32 px needs.
  * 3. The same after an amend that adds a Block at the end.
- * 4. The same after a save and a reload.
+ * 4. The same after a save and a reload, the last Block's Message first set to an expression.
  */
 
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
@@ -24,12 +24,11 @@ import { openTest } from '../../helpers/fn-seed'
 import { nodeFlowBox, nodeWrapper } from '../../helpers/flow-geometry'
 import { enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
-import { leaveExpressionEditor } from '../../helpers/code-editor'
-import { SWITCH_TO_EXPRESSION_TITLE, expressionBox, expressionToggle } from '../../helpers/value-field'
-import { openBlockSheet, saveBlockSheet, saveTest } from '../../helpers/workbench'
+import { saveTest, setBlockExpression } from '../../helpers/workbench'
 import {
   MCP_PORT,
   createFromRecipe,
+  expectStoredExpression,
   freeSlot,
   putWorkflow,
   storedTestDoc,
@@ -62,23 +61,6 @@ function recipeOf(name: string, flow: Doc[]): string {
 function rowsBelow(count: number, stored?: number): number {
   const height = stored ?? Math.max(NOTE_MIN_HEIGHT, Math.ceil(count * LINE_PX + NOTE_CHROME_PX))
   return Math.ceil((height + GAP_PX) / ROW_PX) * ROW_PX
-}
-
-/** Message holds a plain value, so {x} first asks to clear it (FIELD-7): Clear, type the expression, Save. */
-async function setMessageExpression(page: Page, blockId: string, expression: string): Promise<void> {
-  const sheet = await openBlockSheet(page, blockId)
-  await expressionToggle(sheet, 'message').click()
-  const ask = page.locator('[data-testid="switch-mode-dialog"]')
-  await expect(ask).toHaveAccessibleName(SWITCH_TO_EXPRESSION_TITLE)
-  await ask.getByRole('button', { name: 'Clear', exact: true }).click()
-  await expect(ask).toHaveCount(0)
-  const editor = expressionBox(sheet, 'message')
-  await expect(editor).toBeVisible()
-  await editor.click()
-  await page.keyboard.insertText(expression)
-  await expect(editor).toHaveText(expression)
-  await leaveExpressionEditor(editor)
-  await saveBlockSheet(sheet)
 }
 
 interface Canvas {
@@ -201,8 +183,10 @@ test.describe('V-MCP-RECIPE-NOTE-SIZE-FUNCTIONAL: Note sizes across create and a
     await test.step('4. after a save and a reload', async () => {
       const canvas = await canvasOf(request, testId)
       const last = canvas.nodes.find((node) => node.data?.config?.values?.message === 'appended') as Doc
-      await setMessageExpression(page, String(last.id), "'appended and saved'")
+      // Per FIELD-7: Message holds a plain value, so the helper answers the switch warning with Clear.
+      await setBlockExpression(page, String(last.id), 'message', "'appended and saved'")
       await saveTest(page)
+      await expectStoredExpression(request, testId, String(last.id), 'message', "'appended and saved'")
       await openTest(page, testId)
       await expect(nodeWrapper(page, String(last.id))).toBeVisible()
       await expectRoomBelow(page, request, testId, 'after save and reload', false)

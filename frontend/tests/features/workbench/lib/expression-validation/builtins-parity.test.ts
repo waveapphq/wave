@@ -10,16 +10,16 @@ import { describe, it, expect } from 'vitest'
 import {
   ALLOWED_BUILTINS,
   FIELD_ALLOWED_BUILTINS,
-  PYTHON_BUILTINS,
   getBuiltinByName,
 } from '@/features/workbench/lib/python-builtins'
-import { validateExpressions } from '@/features/workbench/lib/expression-validation'
+import { PYTHON_BUILTINS } from '@/features/workbench/lib/python-builtins/functions'
+import { validateExpressions } from '@/features/workbench/lib/expression-validation/validation'
 
 // The deleted helper trio - absent from the FE mirror exactly as it is absent
 // from the backend SAFE_BUILTINS (and its SECRET_RESULT_BUILTINS metadata set).
 const DELETED_HELPERS = ['basic_auth', 'bearer', 'secret'] as const
 
-describe('python-builtins mirror no longer lists the helper trio', () => {
+describe('python-builtins mirror does not list the helper trio', () => {
   it.each(DELETED_HELPERS)('does not declare %s at all', (name) => {
     expect(getBuiltinByName(name)).toBeUndefined()
   })

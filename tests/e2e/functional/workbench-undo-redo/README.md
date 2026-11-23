@@ -1,8 +1,8 @@
 # V-WORKBENCH-UNDO-REDO: Workbench Undo / Redo
 
 Functional coverage for the post-state-baseline history model in
-`workflow-store.ts`. Locks down the three reported bugs (click-twice off-by-one;
-mutations skipping the history; drag never pushing) plus the save-bound floor.
+`workflow-store.ts`: one undo per click, every mutation in the history, a drag
+pushes once, plus the save-bound floor.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ mutations skipping the history; drag never pushing) plus the save-bound floor.
 The spec runs four independent tests, each starting from a clean workbench
 session:
 
-1. **User 4-step scenario** - drop a Log block close to the start node so
+1. **Four steps, four undos** - drop a Log block close to the start node so
    proximity auto-connect fires (2 history entries: add-node + add-edge),
    open the config modal, set message to `first` and Save (1 entry), set
    message to `second` and Save (1 entry). Click Undo 4 times - assert each

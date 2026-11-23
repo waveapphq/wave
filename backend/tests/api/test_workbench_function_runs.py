@@ -1069,9 +1069,7 @@ class TestFunctionBodyShapeCoverage:
     def test_function_body_exception_stops_parent_flow(self, client: TestClient) -> None:
         """An inner plugin exception stops the Function's flow AND propagates
         as an exception to the parent scope, stopping it too (same shape as
-        a top-level plugin exception at root level). Per the user's clarified
-        model: exceptions always stop the current scope and propagate upward
-        unless caught by a wrapping Try/Catch.
+        a top-level plugin exception at root level) unless a Try/Catch wraps it.
         """
         test_id = _create_test_with_throwing_function(client)
         env_id = _seed_environment()

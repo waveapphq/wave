@@ -31,7 +31,7 @@ import {
   setPythonScript,
 } from './python-seed'
 
-/** The prefix of the approved render: line 11 reads `re`. */
+/** The completion prefix: line 11 reads `re`. */
 const PREFIX = 're'
 
 /** The builtins the expression engine blocks. A script is not sandboxed, so it offers them all. */
@@ -41,7 +41,7 @@ const BLOCKED_BUILTINS = [
   'print', 'input', 'open', 'id', 'hash', 'iter', 'next', 'vars', 'dir', 'eval', 'exec',
 ]
 
-/** Facts the approved render puts in the panel beside the highlighted `readings`. */
+/** Facts the panel shows beside the highlighted `readings`. */
 const READINGS_DOC_FACTS = [
   'Input Variable',
   '3 columns: sensor, temp_c, taken_at',
@@ -178,8 +178,7 @@ test.describe('V-PYEDIT-03: completion and documentation in the Python script ed
     created.push(await seedAndOpenPythonTest(page, 'V-PYEDIT-03 members'))
     const sheet = await openPythonScriptSheet(page)
 
-    // Deliberate deviation (blueprint-tests section 3): the wireframe renders the
-    // identifier case only, so the dot case has no wireframe of its own.
+    // The wireframe draws the identifier case only, so the dot case has no wireframe of its own.
     await completeAtEnd(page, sheet, `${PYTHON_SCRIPT}\nstatistics.`)
     const groups = await groupedOptions(page)
     expect(Object.keys(groups), 'a dot adds the Members group').toContain('Members')

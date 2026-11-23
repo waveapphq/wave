@@ -717,7 +717,7 @@ class TestUpdateScheduleEndpoint:
 
 
 class TestDeleteScheduleEndpoint:
-    """DELETE /api/backup/schedule is gone: PUT turns the schedule off (REQ-4.7.20)."""
+    """There is no DELETE /api/backup/schedule: PUT turns the schedule off (REQ-4.7.20)."""
 
     @pytest.fixture
     def client(self) -> TestClient:

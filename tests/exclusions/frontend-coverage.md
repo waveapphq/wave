@@ -171,7 +171,7 @@ Same as COV-BRANCH-026. The `renderTableHeader` arrow function in profiles.tsx i
 
 ### COV-BRANCH-029: RunDialog Checkbox Checked Branch
 
-Branch coverage for nullish coalescing `originalTest?.selected ?? false` in `run-dialog.tsx`. V8 tracks the nullish coalescing branch separately; the fallback is defensive since `originalTest` is always defined when rendering the checkbox.
+Run defensive fallbacks: `?? false`, `?? id` and the default label in `run-dialog.tsx`, the non-Error catch text in the suite and regression run hooks, and the empty-array guard in `executions.ts`. V8 tracks each fallback branch separately; none is reachable from the dialog's real inputs.
 
 ### COV-BRANCH-030: SaveTestDialog Complex Ternary Props
 
@@ -203,7 +203,7 @@ V8 tracks branches in conditionals, try/catch/finally blocks, callback dependenc
 
 ### COV-V8-004: Canvas Index Re-exports
 
-The re-export statements at `canvas/index.ts` lines 8-9. V8 coverage instrumentation tracks export statements as executable code but they cannot be "covered" in the traditional sense - they execute at module load time.
+The barrel re-exports in `src/features/workbench/common/canvas/index.ts`. V8 coverage instrumentation tracks export statements as executable code but they cannot be "covered" in the traditional sense - they execute at module load time.
 
 ### COV-V8-005: TestsListContainer Import Statement
 
@@ -1091,11 +1091,6 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 **File**: `src/features/workbench/common/element-config/parameters/parameter-table-types.ts`
 **Root cause**: `typeof raw === 'object' ? JSON.stringify(raw) : String(raw ?? '')`. Parameter values in tests are always primitives.
 
-### COV-BRANCH-111: ParameterValueInputs Object Stringify Ternary
-
-**File**: `src/features/workbench/common/element-config/parameters/parameter-value-inputs.tsx`
-**Root cause**: `typeof effectiveValue === 'object' ? JSON.stringify(...) : String(...)` in 3 input components (EnumInput, MultilineStringInput, StringInput). Effective values in tests are always primitives.
-
 ### COV-BRANCH-113: ProfileTransforms Object Stringify Ternary
 
 **File**: `src/features/profiles/container/transforms.ts`
@@ -1132,7 +1127,7 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 ### COV-BRANCH-131: VariableScopeGroup Optional Chaining and Ternary Props
 
 **File**: `src/features/workbench/common/variables/variable-manager-content/content.tsx`
-**Root cause**: `outputBoundVarNames?.has(v.name)`, `workflowReferencedVarNames?.has(v.name)`, and scope-conditional ternaries for `onEdit`/`onDelete` props. V8 tracks each optional chaining and ternary as separate branches.
+**Root cause**: `outputBoundVarNames?.has(v.name)` and `workflowReferencedVarNames?.has(v.name)` in the Variable Manager row props. V8 tracks each optional chain as a separate branch.
 
 ### COV-BRANCH-135: UseCanvasNodes Conditional Spread Props
 
@@ -1222,7 +1217,7 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 ### COV-BRANCH-176: WorkbenchContainer VarManager OnResize Callback
 
 **Files**: `src/features/workbench/common/shell.tsx`, `src/features/workbench/history/variable-manager.tsx`, `src/features/workbench/live/variable-manager.tsx`
-**Root cause**: `onResize` callback on variable manager `ResizablePanel`. V8 tracks the callback function, the `prevPanelSize === undefined` early return, and the comparison `panelSize.inPixels <= 64` as branches. Also covers `ResizableHandle` ternary `style={varManagerCollapsed ? ...}` and `className={varManagerCollapsed ? 'w-16' : undefined}`.
+**Root cause**: `onResize` callback on variable manager `ResizablePanel`. V8 tracks the callback function, the `prevPanelSize === undefined` early return, and the comparison `panelSize.inPixels <= 64` as branches. Also covers the `ResizableHandle` `style` ternary in `shell.tsx` and `className={collapsed ? 'w-16' : undefined}` on the Variable Manager panel in both `variable-manager.tsx` files.
 
 ### COV-BRANCH-177: TestsListContainer SwitchTestConfirmDialog Mode Ternary
 
@@ -1308,7 +1303,7 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 The `if (!el) return` guard in `useEffect` callbacks that attach programmatic event listeners to DOM elements via refs. In jsdom, `useEffect` runs after render when the ref is always populated. The null branch can only occur if the component never mounts, which doesn't happen in tests. This pattern appears in 7 files:
 - `console/content.tsx` - programmatic keydown/copy listeners
 - `note-node/note-node.tsx` - programmatic dblclick/contextmenu listeners
-- `variable-row-inline.tsx` - programmatic click/keydown listeners
+- `variable-row-inline.tsx` - programmatic keydown listener
 - `workflow-canvas/canvas.tsx` - programmatic keydown listener
 - `tags-input.tsx` - programmatic keydown trigger listener
 - `toast.tsx` - programmatic mouseenter/mouseleave/focus/blur listeners

@@ -78,7 +78,7 @@ import {
 const GAP = 8
 const COLUMN = 32
 const VALUE_WIDTH = 357
-// The text room the approved mock gives a value beside its null button; the line's own width follows the font.
+// The text room a value gets beside its null button; the line's own width follows the font.
 const MOCK_TEXT_ROOM = 297
 const MESSAGE_GAP = 4
 const GROWTH = 20

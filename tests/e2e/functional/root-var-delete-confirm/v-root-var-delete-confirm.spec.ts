@@ -55,7 +55,7 @@ test.describe('Root variable delete confirmation', () => {
     await openTest(page, testId)
 
     // Create a second root variable via the + Add button, then immediately delete it.
-    // "+ Add" opens the floating create modal (not the legacy scalar dialog).
+    // "+ Add" opens the floating create modal (no scalar dialog).
     await page.locator('[data-testid="add-variable-button"]').click()
     const createDialog = page.locator('[data-testid="variable-create-modal"]')
     await expect(createDialog).toBeVisible()

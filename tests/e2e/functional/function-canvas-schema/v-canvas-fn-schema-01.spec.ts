@@ -8,7 +8,7 @@
  * Phase: functional-workflow.
  *
  * Pass Criteria:
- *   1. Outside a Function the Var Mgr renders the legacy + Add button; drilled
+ *   1. Outside a Function the Var Mgr renders the + Add button; drilled
  *      into Function_1 the button morphs into "+ Add" with a chevron dropdown.
  *   2. Dropdown shows three items in order: Input parameter / Output parameter
  *      / Variable.

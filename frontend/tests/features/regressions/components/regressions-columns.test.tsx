@@ -3,7 +3,7 @@
  *
  * REQ-5.2.1.37: Regression management screen
  *
- * Tests for TanStack column definitions after DataTable migration:
+ * Tests for the TanStack column definitions:
  * - getRegressionsColumns returns correct column definitions
  * - Column IDs match the spec (name, version, suitesCount, testsCount, status, lastRun, tags, createdAt, updatedAt, actions)
  * - Sortable columns have enableSorting: true

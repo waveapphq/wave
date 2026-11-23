@@ -1,14 +1,13 @@
 /**
  * Tests for useTestSave - unified validation modal flow.
  *
- * After the unification, on 422 from updateTest:
+ * On 422 from updateTest:
  * - modal opens with mode='save'
  * - the pulse set is NOT populated eagerly; it is populated by
  *   handleValidationClose (the modal Close handler) based on the
  *   stored validationMode.
  *
- * The dead `validateOutputBindings` toast in handleSaveClick / handleSave is
- * removed; output-binding mismatches are gated INLINE in the config modal.
+ * Output-binding mismatches are gated inline in the config modal, not by a toast.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -176,7 +175,7 @@ describe('useTestSave - unified validation modal', () => {
     expect(store.setPulseValidationNodeIds).not.toHaveBeenCalled()
   })
 
-  it('does NOT show the legacy output-binding-type toast on save attempts (gated inline now)', async () => {
+  it('does NOT show an output-binding-type toast on save attempts (gated inline)', async () => {
     // Even if validateOutputBindings reports errors, the unified flow does not
     // toasts in the save handler - the inline gate in the config modal blocks
     // saving before the user can hit Save with a mismatched binding.

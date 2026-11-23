@@ -133,7 +133,7 @@ const noDataTests = [
   'canvas/v-remote-exec-01.spec.ts',
   'canvas/v-plugin-http-03.spec.ts',
   'canvas/v-plugin-http-03-validation.spec.ts',
-  // HTTP Plugin Rework: headers editor, body modes, parts editor + file-mode empty state.
+  // HTTP Block: headers editor, body modes, parts editor + file-mode empty state.
   'canvas/v-http-01.spec.ts',
   'canvas/v-http-02.spec.ts',
   'canvas/v-http-03.spec.ts',
@@ -357,7 +357,7 @@ const noDataTests = [
   'function-versioning/v-fn-publish-required-fields.spec.ts',
   // The config-modal Changelog + Details dialogs render their per-version content as real Markdown.
   'function-versioning/v-fn-config-dialogs-md.spec.ts',
-  // Function Library page + detail page + config-modal fixes.
+  // Function Library page, detail page and config modals.
   'functions-library/*.spec.ts',
   // Function View canvas: read-only chrome + Function-only breadcrumb + Test-control gating.
   'function-view/*.spec.ts',

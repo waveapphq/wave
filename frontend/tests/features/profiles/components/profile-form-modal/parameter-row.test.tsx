@@ -514,7 +514,7 @@ describe('ParameterRow', () => {
   })
 
   // ==========================================================================
-  // Shared Field Primitives Migration
+  // Shared Field Primitives
   //
   // Parameter names are profile-internal keys (not entity names), so they get
   // <TextField> (single-line overflow contract, no maxLength cap).
@@ -549,12 +549,12 @@ describe('ParameterRow', () => {
   })
 
   // ==========================================================================
-  // Value-editor migration: inline ScalarEditBody (int/float/boolean), the
+  // Value editor: inline ScalarEditBody (int/float/boolean), the
   // shared "Edit value" sheet (string + array/map/table) opened via an Edit
   // button, a uniform masked secret affordance, and per-row trash delete.
   // Mirrors the Variable Setter. The shared bodies/sheet are mocked above.
   // ==========================================================================
-  describe('value-editor migration', () => {
+  describe('value editor', () => {
     describe('inline scalar bodies (integer / float / boolean)', () => {
       it('renders the shared ScalarEditBody inline for an integer parameter', () => {
         renderRow({ parameter: makeParameter({ type: 'integer', values: { 'env-1': '7' } }) })

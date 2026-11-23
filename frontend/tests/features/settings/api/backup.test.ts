@@ -1266,7 +1266,7 @@ describe('Backup API Client', () => {
   })
 
   describe('deleteSchedule', () => {
-    it('is no longer exported: the schedule is turned off through updateSchedule', () => {
+    it('is not exported: the schedule is turned off through updateSchedule', () => {
       expect(Object.keys(backupApi)).not.toContain('deleteSchedule')
     })
   })

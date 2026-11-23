@@ -23,21 +23,21 @@ function readSrc(relativePath: string): string {
 interface TargetSpec {
   /** Path relative to `frontend/src` */
   path: string
-  /** What the file must NOT contain (post-migration). */
+  /** What the file must NOT contain. */
   forbidden?: RegExp[]
-  /** What the file MUST contain (post-migration). */
+  /** What the file MUST contain. */
   required?: RegExp[]
 }
 
 // ---------------------------------------------------------------------------
-// Per-surface specs - one per migrated surface.
+// Per-surface specs - one per target surface.
 // ---------------------------------------------------------------------------
 
 const TARGETS: TargetSpec[] = [
   {
     // Shared create modal - both Suite + Regression flow through this.
     // Name uses NameField; description uses the multi-line DescriptionField
-    // (matches env/test forms - see DescriptionField migration).
+    // (matches the env and test forms' DescriptionField).
     path: 'components/shared/dialogs/entity-create-modal.tsx',
     forbidden: [
       /from '@\/components\/ui\/input'/,
@@ -87,7 +87,7 @@ const TARGETS: TargetSpec[] = [
     ],
   },
   {
-    // Test form dialog: name bare <input className="input"> -> NameField.
+    // Test form dialog: the name uses NameField, not a bare <input>.
     // Description <textarea> stays (multi-line, out of scope).
     path: 'features/workbench/common/test-form/test-form-dialog.tsx',
     forbidden: [
@@ -111,7 +111,7 @@ const TARGETS: TargetSpec[] = [
   },
   {
     // Profile metadata: name uses NameField; description uses DescriptionField
-    // (multi-line, matches env/test - see DescriptionField migration).
+    // (matches the env and test forms' DescriptionField).
     path: 'features/profiles/components/profile-form-modal/metadata-fields.tsx',
     forbidden: [
       /from '@\/components\/ui\/input'/,
@@ -123,7 +123,7 @@ const TARGETS: TargetSpec[] = [
     ],
   },
   {
-    // Profile parameter row: parameter name cell migrated to NameField.
+    // Profile parameter row: the parameter name cell uses NameField.
     // Parameter names ARE Python variable names, so they get the same
     // NameField + validation contract as variable manager.
     path: 'features/profiles/components/profile-form-modal/parameter-row.tsx',
@@ -137,7 +137,7 @@ const TARGETS: TargetSpec[] = [
   },
 ]
 
-describe('migration: no bare/legacy inputs remain in target surfaces', () => {
+describe('no bare inputs in target surfaces', () => {
   for (const target of TARGETS) {
     describe(target.path, () => {
       const source = readSrc(target.path)

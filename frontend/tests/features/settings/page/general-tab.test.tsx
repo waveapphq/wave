@@ -336,7 +336,7 @@ describe('GeneralTab - loaded, clean', () => {
     expect(follows(subtitle, screen.getByRole('heading', { name: 'Secret Masking' }))).toBe(true)
   })
 
-  it('no longer shows the old one-line descriptions', () => {
+  it('shows no one-line descriptions', () => {
     renderTab()
 
     expect(screen.queryByText('Control backend log verbosity')).not.toBeInTheDocument()

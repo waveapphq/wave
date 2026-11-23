@@ -456,7 +456,7 @@ describe('AddCertificateDialog - parsed preview', () => {
   })
 })
 
-describe('AddCertificateDialog - errors (section 2.5 messages)', () => {
+describe('AddCertificateDialog - error messages', () => {
   it('lists each error verbatim under the table with the good rows still shown', async () => {
     renderDialog()
     await pasteAndParse(

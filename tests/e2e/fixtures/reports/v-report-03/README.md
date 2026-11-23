@@ -50,7 +50,7 @@ artifacts), and the artifact-loss callout inside the workbench close dialog.
   non-transparent amber callout background, Cancel keeps run state +
   artifacts; confirming from the canvas context menu resets: status `idle`,
   badge gone, sheet shows the empty state, backend session cleared. The
-  legacy `Reset Workflow?` dialog appears nowhere.
+  `Reset Workflow?` dialog appears nowhere.
 - **Step 6:** The close dialog (`Active Execution State`) carries the
   plural callout and the `Reset and Close` action; Cancel preserves the
   artifacts.

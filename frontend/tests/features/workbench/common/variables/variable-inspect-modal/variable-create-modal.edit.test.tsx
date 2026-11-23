@@ -1831,7 +1831,7 @@ describe('VariableCreateModal edit - required fields and errors on open (FIELD-1
 })
 
 // ===========================================================================
-// Run state (VMGR-107, blueprint 7.9)
+// Run state (VMGR-107)
 // ===========================================================================
 
 describe('VariableCreateModal edit - while a run is running', () => {

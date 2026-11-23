@@ -1,9 +1,9 @@
 /**
  * V-VMGR-CREATE-FUNCTIONAL: the Variable Manager create modal end-to-end.
  * The "+ Add" entry point opens the floating create modal
- * (NOT the legacy scalar-variable-edit-dialog); a variable of every type and
+ * (never a scalar-variable-edit-dialog); a variable of every type and
  * kind is created and its row appears with the right type / kind badge, a
- * destructive type switch confirms first, and the legacy dialog is gone.
+ * destructive type switch confirms first, and no scalar dialog exists.
  *
  * REQ-3.1.3.11 (Variable Manager UI panel), REQ-3.1.3.13 (computed/expression),
  * REQ-3.1.3.15 (template variables).
@@ -177,7 +177,7 @@ test.describe('V-VMGR-CREATE-FUNCTIONAL: create modal', () => {
     await expectWindowValue(modal, '["keep-me"]')
   })
 
-  test('regression guard: the legacy scalar-variable-edit-dialog is gone', async ({
+  test('guard: there is no scalar-variable-edit-dialog', async ({
     page,
     request,
   }) => {

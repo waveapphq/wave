@@ -1,9 +1,7 @@
 /**
- * V-PROF-VALUE-RUNTIME-FUNCTIONAL: profile value runtime binding is unchanged.
+ * V-PROF-VALUE-RUNTIME-FUNCTIONAL: profile value binding at run time.
  *
- * The profile value EDITOR lives on the shared sheet, but the stored shape and
- * the runtime binding stay unchanged: a table param resolves to the same { headers, rows }
- * dict, and integer / float params carried as exact digit-strings realize to an exact int /
+ * A table param resolves to a { headers, rows } dict, and integer / float params carried as exact digit-strings realize to an exact int /
  * Decimal at the execution edge (`get_profile_config_for_execution` ->
  * `_coerce_declared_value`). Each profile is bound to Log nodes via `profileBindings`, the
  * workflow runs, and the resolved values are read back from the console.
@@ -151,7 +149,7 @@ async function importValidateRunAndReadLogs(
 // Suite
 // ===========================================================================
 
-test.describe('V-PROF-VALUE-RUNTIME: profile value binding unchanged after the editor migration', () => {
+test.describe('V-PROF-VALUE-RUNTIME: profile value binding at run time', () => {
   test.beforeAll(async ({ request }) => {
     await ensureEnvironment(request)
   })

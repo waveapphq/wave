@@ -146,9 +146,8 @@ describe('drillToPath - local ancestors', () => {
 })
 
 describe('drillToPath - consumed identically by validation navigation', () => {
-  it('produces the same drill+select effect navigateToIssue used to inline', () => {
-    // navigateToIssue drilled each functionPath segment then selected the
-    // leaf node_id. drillToPath must reproduce that exact effect.
+  it('produces the drill+select effect navigateToIssue needs', () => {
+    // Matches navigateToIssue: drill each functionPath segment, then select the leaf.
     const leaf = plugin('Log_1', 'Log_1')
     const inner = localFn('inner-1', 'Inner_Fn', [leaf])
     const outer = localFn('outer-1', 'Outer_Fn', [inner])

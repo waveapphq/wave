@@ -1148,7 +1148,7 @@ describe('InlineVariableRow - pencil and delete tooltips per lock (VMGR-107)', (
 // ===========================================================================
 
 describe('InlineVariableRow - row body interactivity', () => {
-  it('clicking the row body does not call onEdit (no-op per redesign)', async () => {
+  it('clicking the row body does not call onEdit', async () => {
     const user = userEvent.setup()
     const onEdit = vi.fn()
     const onExpand = vi.fn()

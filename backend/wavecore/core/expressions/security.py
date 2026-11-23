@@ -41,7 +41,7 @@ When adding functions to SAFE_BUILTINS:
 4. Add the name to EXPRESSION_SAFE_NAMES in
    frontend/src/features/workbench/lib/expression-sandbox.ts, which also mirrors
    BLOCKED_SUBSTRINGS, BLOCKED_FUNCTION_NAMES, FIELD_BLOCKED_CONSTRUCTORS and
-   MUTATING_METHOD_NAMES (tests/core/test_expression_security.py fails until each pair matches)
+   MUTATING_METHOD_NAMES (tests/core/test_expression_security.py fails unless each pair matches)
 """
 
 from typing import Any
@@ -219,7 +219,7 @@ def blocked_pattern_message(pattern: str) -> str:
 # but are not supported in WAVE expression context.
 # When a NameError occurs for one of these, we provide a clearer message.
 UNSUPPORTED_BUILTINS: set[str] = {
-    # Removed as noise - not useful in expression context
+    # Not useful in expression context
     "tuple",
     "pow",
     "divmod",

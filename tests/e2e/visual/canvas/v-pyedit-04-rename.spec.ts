@@ -22,7 +22,7 @@
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { deletePythonTest, openPythonScriptSheet, seedAndOpenPythonTest } from './python-seed'
 
-/** The renamed symbol of the approved render and where it sits. */
+/** The renamed symbol and where it sits. */
 const SYMBOL = 'values'
 const SYMBOL_LINE = 5
 const SYMBOL_LINE_TEXT = 'values = [row["temp_c"] for row in readings]'

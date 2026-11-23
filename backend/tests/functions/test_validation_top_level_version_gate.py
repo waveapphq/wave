@@ -10,7 +10,7 @@ single pass every surface routes through.
 
 Wording: the missing-version message carries no raw Function UUID and reads
 ``Pinned version {version} is no longer available in the library`` so it matches
-the FE wording and the approved mockup (CANVAS-218).
+the FE wording (CANVAS-218).
 """
 
 from __future__ import annotations

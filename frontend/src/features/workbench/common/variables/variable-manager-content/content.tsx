@@ -1,10 +1,9 @@
 /**
  * Variable Manager Content
  *
- * Main content of the redesigned Variable Manager panel: header (uppercase
+ * Main content of the Variable Manager panel: header (uppercase
  * title + "+ Add" button), toolbar (filter + sort dropdown), and a flat
- * row list. The previous Watch List, scope groups, and count badge are gone;
- * the entire list is the monitoring surface and runtime values stream into
+ * row list. The entire list is the monitoring surface and runtime values stream into
  * every row.
  *
  * REQ-3.1.3.11: Variable watching UI panel
@@ -456,7 +455,7 @@ export function VariableManagerContent({
   // Loading skeleton
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full" data-testid="variable-manager-skeleton">
+      <div className="flex flex-col h-full" data-testid="variable-manager-skeleton" aria-busy="true">
         <div className="p-2 border-b">
           <div className="h-8 bg-muted animate-pulse rounded" />
         </div>
@@ -584,9 +583,9 @@ export function VariableManagerContent({
     >
       {/* Header: VARIABLE MANAGER + + Add */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-        <span className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
           VARIABLE MANAGER
-        </span>
+        </h2>
         {showAddButton && !insideFunction && (
           <Button
             variant="outline"
@@ -666,7 +665,7 @@ export function VariableManagerContent({
       )}
 
       {!showEmptyState && showNoMatch && (
-        <div className="py-8 text-center text-sm text-muted-foreground">
+        <div role="status" className="py-8 text-center text-sm text-muted-foreground">
           No variables match filter
         </div>
       )}

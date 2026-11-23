@@ -285,7 +285,7 @@ test.describe('V-PARALLEL-01: Parallel canvas node', () => {
     ]
 
     for (const [handle] of expected) {
-      // The browser's own popup is gone; the app's tooltip replaced it.
+      // No browser title popup; the app's tooltip carries the text.
       await expect(lane(page, 'par-lanes', handle)).not.toHaveAttribute('title')
     }
 

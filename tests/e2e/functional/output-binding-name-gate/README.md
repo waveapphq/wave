@@ -3,9 +3,8 @@
 A shared surface, not a plugin one. Every Block writes its outputs into
 variables through the same "Assign to" field, and the Function instance modal
 offers the same field for a Function's declared outputs. When the typed name
-cannot be a variable name, the suggestion list used to drop over the sentence
-explaining why, so the reason was unreadable and the disabled Save had no
-visible cause.
+cannot be a variable name, the suggestion list stays clear of the sentence
+explaining why, so the reason and the disabled Save's cause stay readable.
 
 The name gate has two specs, because the Block config sheet and the Function
 config modal are different components that share only the row table

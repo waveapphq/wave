@@ -377,15 +377,15 @@ describe('the families build Failure Handling from the shared pair', () => {
 })
 
 describe('the K8s module after the move', () => {
-  it('no longer exports the On error builder', () => {
+  it('does not export an On error builder', () => {
     expect(Object.keys(k8sShared)).not.toContain('k8sOnErrorInput')
   })
 
-  it('no longer exports the record gate', () => {
+  it('does not export a record gate', () => {
     expect(Object.keys(k8sShared)).not.toContain('K8S_RECORD_GATE')
   })
 
-  it('no longer exports the On error wording', () => {
+  it('does not export On error wording', () => {
     expect(Object.keys(k8sShared)).not.toContain('K8S_ON_ERROR_DESCRIPTION')
   })
 

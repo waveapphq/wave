@@ -15,7 +15,7 @@
  * 4. Library Function rows carry the mono version badge.
  * 5. Footer hints: navigate, Enter add after last block, Ctrl+Enter add at
  *    center, PgUp/PgDn page, Esc close, plus two pointer badges (click a row,
- *    drag a row). Alt+Enter is gone.
+ *    drag a row). No Alt+Enter hint.
  * 6. With exactly one block selected the Enter hint reads "add after selection".
  * 7. Substring filter narrows rows and hides empty group headings; no-match
  *    shows the empty state with the footer still present.

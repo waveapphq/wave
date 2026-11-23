@@ -353,7 +353,7 @@ const OUTPUT_ORDER = [
   ['reason', 'string'],
 ]
 
-// Success is the deliberate exception and stays ungated, by ruling.
+// Success is the deliberate exception and stays ungated.
 const RECORD_GATED_OUTPUTS = ['error', 'reason']
 
 describe('registration', () => {

@@ -55,11 +55,9 @@ affected.
   suppressed
 - **Session outcome:** `passed`, with `before-all` and `after-all` bookending the
   run
-- **Catch reads the error (KNOWN-FAILING, unfixed defect):** per REQ-3.2.2.6 the
-  handler runs with the structured error object in scope, so `catch_saw_error`
-  must carry the `ZeroDivisionError` and `catch_saw_caught` must be true. Today
-  the control binds both outputs only after the catch chain finishes, so the
-  handler reads the pre-run values (`None` / `false`) and this case fails.
+- **Catch reads the error:** the handler runs with the structured error object
+  in scope, so `catch_saw_error` carries the `ZeroDivisionError` and
+  `catch_saw_caught` is true (REQ-3.2.2.6).
 - **Step Over inside a try path:** the stepped block has run (`tso-try-1` logged)
   and the pause sits on `log-tso-try-2` before it runs; Continue finishes the try
   path and leaves through `tso-then`, with `tso-catch` never running because

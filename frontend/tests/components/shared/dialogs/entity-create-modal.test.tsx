@@ -1,12 +1,12 @@
 /**
- * EntityCreateModal shared-field migration tests.
+ * EntityCreateModal shared-field tests.
  *
  * Shared dialog used by both Suite create + Regression create flows.
  * Shape:
  *   - Name input renders via `<NameField>` capped at MAX_ENTITY_NAME_LENGTH (64).
  *   - Description input is a single-line value field rendered via `<TextField>`.
  *
- * The migration tests below verify post-migration shape only. The full
+ * The tests below check the field shape only. The full
  * EntityCreateModal behavior (open/close, submit, error handling) is covered
  * indirectly by the existing suite-create-modal.test.tsx and any
  * regression-create-modal coverage. We do not duplicate that here.
@@ -35,7 +35,7 @@ function renderModal() {
   )
 }
 
-describe('EntityCreateModal - shared field primitives migration', () => {
+describe('EntityCreateModal - shared field primitives', () => {
   describe('name field uses NameField with MAX_ENTITY_NAME_LENGTH', () => {
     it('renders the name input with the entity-name maxLength (64)', () => {
       renderModal()

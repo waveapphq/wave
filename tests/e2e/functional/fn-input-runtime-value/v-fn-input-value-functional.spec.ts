@@ -11,8 +11,7 @@
  *      shows `some_text = Hello`.
  *
  * Note: This drives the BE-side observable (post-run state) and a quick
- * UI check after the run. The full WS-stream check is deferred to
- * V-FN-SCOPE-RUN.
+ * UI check after the run. V-FN-SCOPE-RUN holds the full WS-stream check.
  */
 
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'

@@ -278,7 +278,7 @@ test.describe('V-VARPICK-SURFACES: the same picker on every condition surface', 
         await expect(nameSpan).toHaveClass(/truncate/)
         await expect(nameSpan).toHaveClass(/min-w-0/)
         await expect(nameSpan).toHaveClass(/flex-1/)
-        // SHELL-7a: the browser's own popup is gone; the shared tooltip carries
+        // SHELL-7a: no browser title popup; the shared tooltip carries
         // the full name (hover-proved in the tooltip-convergence spec).
         await expect(nameSpan).not.toHaveAttribute('title', /.*/)
 

@@ -1,7 +1,7 @@
 /**
  * VariableRefCombobox Component Tests
  *
- * TDD tests for the variable-reference combobox that filters available
+ * Tests for the variable-reference combobox that filters available
  * variables by allowed types. Used by ForEach collection parameter and
  * future variable-reference parameters.
  *

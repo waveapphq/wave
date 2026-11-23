@@ -32,7 +32,7 @@ test.describe('V-NAV-01: Navigation Structure (Expanded)', () => {
     const sidebarWrapper = page.locator('.group.peer[data-state]')
     await expect(sidebarWrapper).toHaveAttribute('data-state', 'expanded')
 
-    // 1. SHELL-8: the search field is gone. Assert the absence explicitly -
+    // 1. SHELL-8: no search field. Assert the absence explicitly -
     // a nav-item count would pass for the wrong reason.
     await expect(
       sidebar.locator('input[type="search"], [role="search"]'),

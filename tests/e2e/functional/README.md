@@ -36,8 +36,8 @@ These tests follow a common pattern: load a `fixture.json` containing a pre-buil
 
 | Suite | Directory | Nodes | Coverage |
 |-------|-----------|-------|----------|
-| [HTTP Plugin](#http-plugin) | `http-plugin/` | 47 (23 HTTP + 23 Log + 1 Start) | All 7 HTTP methods, 14 parameters, 6 output variables, SSL, redirects, retries, timeouts |
-| [HTTP Plugin Rework](#http-plugin-rework) | `http-plugin/` (`rework-fixture.json`) | 17 (8 HTTP + 6 Log + File I/O + 2 Try/Catch) | Auth helpers + masking, GET-with-body, form/multipart/file body modes, file response mode (artifact + sha256), max_size cap, combined DEBUG trace, dynamic-map Content-Type conflict |
+| [HTTP Plugin](#http-plugin) | `http-plugin/` | 55 (26 HTTP + 25 Log + 4 Try/Catch) | All 7 HTTP methods, 14 parameters, 6 output variables, SSL, redirects, retries, timeouts |
+| [HTTP Block Flow](#http-block-flow) | `http-plugin/` (`flow-fixture.json`) | 24 (13 HTTP + 7 Log + File I/O + 3 Try/Catch) | Auth helpers + masking, GET-with-body, form/multipart/file body modes, file response mode (artifact + sha256), max_size cap, combined DEBUG trace, dynamic-map Content-Type conflict |
 | [Log Plugin](#log-plugin) | `log-plugin/` | 14 (1 VarSetter + 13 Log) | All 5 severity levels, expression messages, type coercion, arithmetic |
 | [Variable Setter](#variable-setter) | `variable-setter/` | 11 (2 VarSetter + 7 Log + Start + End) | Literal scalar types, expression resolution, variable propagation |
 | [Delay Control](#delay-control) | `delay-control/` | 11 (4 Delay + 1 VarSetter + 6 Log) | Literal/expression durations, output bindings, sequential delays, 1ms boundary |
@@ -117,7 +117,7 @@ Tests that exercise API and UI lifecycle operations without workflow execution.
 **Directory**: `http-plugin/`
 **Files**: `fixture.json`, `v-plugin-http-execution.spec.ts`, `v-http-remote-proxy-choice-functional.spec.ts`
 
-47-node linear workflow (43 active + 4 disabled) covering every HTTP Client parameter and output variable. HTTPS endpoints target the published `http-echo` stack service (`127.0.0.1:9449`, rewritten to the shard gateway in container mode via `injectHttp`).
+55-node workflow covering every HTTP Client parameter and output variable. HTTPS endpoints target the published `http-echo` stack service (`127.0.0.1:9449`, rewritten to the shard gateway in container mode via `injectHttp`).
 
 **Fixture variables** (overridden at load):
 - `backend_port` - backend port for the /health nodes
@@ -139,7 +139,7 @@ Tests that exercise API and UI lifecycle operations without workflow execution.
 | `verify_ssl` | true (HTTPS With CA) | false (HTTPS Skip Verify) |
 | `ca_cert` | Most nodes (none) | PEM content (HTTPS With CA) |
 | `allow_redirects` | true (redirect chain) | false (no redirect) |
-| `max_redirects` | 10 (default) | 3 (custom), 1 (exceed - disabled) |
+| `max_redirects` | 10 (default) | 3 (custom), 1 (exceed, in Try/Catch) |
 | `retry_count` | 0 (most) | 3 (retry), 2 (custom codes), 1 (timeout) |
 | `retry_delay` | 1s (default) | 0.5s (retry) |
 | `retry_backoff_factor` | 2 (default) | 1 (no exponential) |
@@ -147,12 +147,12 @@ Tests that exercise API and UI lifecycle operations without workflow execution.
 
 **Output variables**: `status_code`, `body`, `headers`, `content_type`, `response_time`, `final_url`
 
-**Disabled fail nodes** (4, need try-catch to enable): max redirects exceeded, SSL failure, timeout no retry, connection refused.
+**Fail cases** (4, each wrapped in Try/Catch): max redirects exceeded, SSL failure, timeout no retry, connection refused.
 
-### HTTP Plugin Rework
+### HTTP Block Flow
 
 **Directory**: `http-plugin/`
-**Files**: `rework-fixture.json`, `v-plugin-http-rework-functional.spec.ts`
+**Files**: `flow-fixture.json`, `v-plugin-http-flow-functional.spec.ts`
 
 Multi-node chain (REQ-3.4.1.4) run against an in-spec
 recording HTTP server on an ephemeral 127.0.0.1 port (`base_url` variable

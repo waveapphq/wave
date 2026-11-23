@@ -165,7 +165,7 @@ export default defineConfig({
         // Profiles: usage tracking, structural lock, env cascade,
         // type alignment, alias validation, namespace conflicts.
         'profile-bugs/**/*.spec.ts',
-        // Profile value-editor migration - per-type edit+persist, secret
+        // Profile value editor - per-type edit+persist, secret
         // clear-and-edit, per-env isolation, description, number precision,
         // sheet-over-modal + Format control, empty-name-blocks-Save. CRUD via the modal.
         'profile-value-editor/**/*.spec.ts',
@@ -559,17 +559,16 @@ export default defineConfig({
         // A run passes a Note on inside every body, section, case and lane.
         'note-control/**/*.spec.ts',
         'variable-setter/**/*.spec.ts',
-        // The migrated setter assigns one value of EACH type
+        // The setter assigns one value of EACH type
         // (string/int/float/bool/array/map/table) + a per-key expression row +
         // a per-key template row; exact numbers preserved, template renders
         // eagerly, expression evaluates.
-        'variable-setter-migration/**/*.spec.ts',
+        'variable-setter-types/**/*.spec.ts',
         // A Variable Setter overriding an
         // expression variable must supersede the pending expression via a
         // direct write WITHOUT realizing it.
         'variable-setter-expression/**/*.spec.ts',
-        // The profile value runtime binding is UNCHANGED by the
-        // editor migration - a table param resolves to the same {headers,rows} dict
+        // The profile value runtime binding: a table param resolves to the same {headers,rows} dict
         // and exact-digit-string numbers realize to int / Decimal at execution.
         'profile-value-runtime/**/*.spec.ts',
         // Bound HTTP and Custom profile fields read as alias.field; a secret field prints masked.
@@ -625,7 +624,7 @@ export default defineConfig({
         // EntityPickerModal cross-page selection persistence.
         // Self-seeds a PKR2-namespaced fixture (no reset) and cleans it up.
         'entity-picker/**/*.spec.ts',
-        // Workbench undo/redo refactor (post-state baseline model)
+        // Workbench undo/redo (post-state baseline model)
         'workbench-undo-redo/**/*.spec.ts',
         // Save-spec sanitization (selected/dragging/hasNewerVersion)
         'workbench-save-sanitize/**/*.spec.ts',

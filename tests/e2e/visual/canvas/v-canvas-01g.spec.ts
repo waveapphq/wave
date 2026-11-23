@@ -176,8 +176,7 @@ test.describe('V-CANVAS-01g: Palette Expanded State', () => {
     await waitForCanvasLoad(page)
     await expandPalette(page)
 
-    // New Function drag handle. The label is the words alone: the
-    // leading "+" character is gone, and the plus is carried by the icon.
+    // New Function drag handle. The label is the words alone; the icon carries the plus.
     const newFunctionButton = page.locator('[data-testid="palette-new-block-button"]')
     await expect(newFunctionButton).toBeVisible()
     await expect(newFunctionButton).toHaveText('New Function')

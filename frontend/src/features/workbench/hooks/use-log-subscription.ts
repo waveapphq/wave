@@ -16,7 +16,7 @@ import { LOG_LEVELS, type LogLevel } from '@/lib/log-levels'
 import { toFailureDetail } from '@/lib/failure-detail'
 import { randomUUID } from '@/lib/uuid'
 import type { LogEntry } from '@/types/console'
-import type { Subscription } from '@/services/websocket-client'
+import type { Subscription } from '@/services/websocket-client/types'
 
 // ============================================================================
 // Constants
@@ -81,7 +81,7 @@ export function useLogSubscription(
   const { isConnected, subscribe, connect } = useWebSocketStore()
   const addEntry = useLogStore((state) => state.addEntry)
   const addEntries = useLogStore((state) => state.addEntries)
-  // clearLogs removed - we no longer clear on level change, filtering is client-side
+  // A level change keeps the logs; filtering is client-side
   const prependHistoricalEntries = useLogStore((state) => state.prependHistoricalEntries)
   const setPaginationLoading = useLogStore((state) => state.setPaginationLoading)
   const setPaginationHasMore = useLogStore((state) => state.setPaginationHasMore)
@@ -195,8 +195,7 @@ export function useLogSubscription(
 
     const topic = `log:${sessionId}`
 
-    // Note: We don't clear logs on level change anymore since we filter client-side
-    // The log store's getFilteredEntries() handles level filtering
+    // A level change keeps the logs; getFilteredEntries() filters by level
     previousLevelRef.current = level
     hasMountedRef.current = true
 

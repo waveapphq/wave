@@ -6,7 +6,7 @@
  * A profile credential is a shared-variable surface: the `shared_variables` reveal
  * flag unseals it on read (`_prepare_profile_response`), and the profile edit modal
  * fresh-fetches on open, so a revealed credential shows plaintext in its parameter
- * row. RED proof: with `shared_variables` off the credential stays masked write-only.
+ * row. With `shared_variables` off the credential stays masked write-only.
  * Resets the flag in beforeEach/afterEach so it never leaks to another spec.
  */
 

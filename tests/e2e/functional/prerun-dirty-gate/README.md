@@ -59,9 +59,9 @@ on the canvas is the whole dirty edit - nothing is saved afterwards.
 
 ## Notes
 
-- The last case is the regression trap. The gate used to pass everything a dirty
-  canvas carried, so a check that refused everything would satisfy every other
-  case here and fail only this one.
+- The last case catches a gate that passes everything a dirty canvas carries: a
+  check that refused everything would satisfy every other case here and fail
+  only this one.
 - The gate is one shared check, which is why the entry points are covered
   separately rather than assumed: Run, Debug, the ad-hoc run and the Function
   scope each reach it by their own route.

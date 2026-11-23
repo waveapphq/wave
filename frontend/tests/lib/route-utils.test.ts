@@ -74,8 +74,7 @@ describe('prefersReducedMotion', () => {
   })
 
   it('returns false when matchMedia is not a function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    globalThis.matchMedia = undefined as any
+    globalThis.matchMedia = undefined as unknown as typeof globalThis.matchMedia
     expect(prefersReducedMotion()).toBe(false)
   })
 })
@@ -108,7 +107,7 @@ describe('isKnownRoute', () => {
     expect(isKnownRoute(route)).toBe(true)
   })
 
-  it('no longer recognizes the removed /blocks routes', () => {
+  it('does not recognize /blocks routes', () => {
     expect(isKnownRoute('/blocks')).toBe(false)
     expect(isKnownRoute('/blocks/abc')).toBe(false)
   })

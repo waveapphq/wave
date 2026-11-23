@@ -61,13 +61,13 @@ function renderWithReactFlow(ui: React.ReactElement) {
   return render(<ReactFlowProvider>{ui}</ReactFlowProvider>)
 }
 
-describe('Removed legacy surfaces - negative DOM guards', () => {
+describe('Absent surfaces - negative DOM guards', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('no WorkflowNodeStatusChip in the DOM (legacy external chip)', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+  it('no WorkflowNodeStatusChip in the DOM', async () => {
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -77,8 +77,8 @@ describe('Removed legacy surfaces - negative DOM guards', () => {
     expect(screen.queryByTestId('workflow-node-status-chip')).not.toBeInTheDocument()
   })
 
-  it('no name-chevron in the DOM (legacy collapse toggle)', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+  it('no name-chevron collapse toggle in the DOM', async () => {
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -92,10 +92,10 @@ describe('Removed legacy surfaces - negative DOM guards', () => {
 
   it('the validation alert is not positioned at the TL corner', async () => {
     /*
-     * The corner-positioning class chain (`absolute -top-1.5 -left-1.5`) is gone.
+     * No corner-positioning class chain (absolute -top-1.5 -left-1.5).
      * The alert badge lives inside the status bar left cluster (no corner positioning).
      */
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const { container } = renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -115,7 +115,7 @@ describe('Removed legacy surfaces - negative DOM guards', () => {
   })
 
   it('no BlockActionRow render (replaced by NodeStatusBar)', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -126,7 +126,7 @@ describe('Removed legacy surfaces - negative DOM guards', () => {
   })
 
   it('NodeStatusBar is present in the DOM (the bar replaces the action row)', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"

@@ -1,7 +1,7 @@
-# Profile value-editor migration
+# Profile value editor
 
-End-to-end coverage for the profile parameter value cell after it was migrated onto
-the shared Variable-Setter value affordances.
+End-to-end coverage for the profile parameter value cell on the shared
+Variable-Setter value affordances.
 
 ## Pre-requisites
 

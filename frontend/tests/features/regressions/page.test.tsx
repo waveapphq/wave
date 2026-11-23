@@ -1,11 +1,11 @@
 /**
- * RegressionsPage Component Tests - DataTable Migration
+ * RegressionsPage Component Tests
  *
  * REQ-5.2.1.37: Regression management screen (list, create, edit, version control)
  *
  * V-LIST-09: Regressions list populated
  *
- * Tests for RegressionsPage component after DataTable migration:
+ * Tests for the RegressionsPage component:
  * - Uses TanStack native props (sorting, onSortingChange, columnVisibility, etc.)
  * - DataTable replaces hand-rolled RegressionsTable
  * - No more SortableTh - DataTableColumnHeader handles sort UI
@@ -120,7 +120,7 @@ function renderRegressionsPage(props: Partial<RegressionsPageProps> = {}) {
     allTags: mockAllTags,
     loading: false,
     error: undefined,
-    // TanStack native props (DataTable migration)
+    // TanStack native props
     sorting: [],
     onSortingChange: vi.fn(),
     columnVisibility: {},
@@ -326,7 +326,7 @@ describe('RegressionsPage', () => {
     })
   })
 
-  describe('TanStack Sorting (DataTable migration)', () => {
+  describe('TanStack Sorting', () => {
     it('passes sorting state to DataTable', () => {
       const sorting: SortingState = [{ id: 'name', desc: false }]
       renderRegressionsPage({ sorting })

@@ -98,7 +98,7 @@ describe('WorkflowNode Parallel lane order (PARALLEL-1)', () => {
   beforeEach(seedStore)
 
   it('renders one lane per branch in config order with then last', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const { container } = renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -111,7 +111,7 @@ describe('WorkflowNode Parallel lane order (PARALLEL-1)', () => {
   })
 
   it('grows the lane list with the branch list', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const { container } = renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -128,7 +128,7 @@ describe('WorkflowNode Parallel lane order (PARALLEL-1)', () => {
   })
 
   it('drops the single default output handle once branches are configured', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -137,7 +137,7 @@ describe('WorkflowNode Parallel lane order (PARALLEL-1)', () => {
   })
 
   it('re-orders the lanes with the branch list while each id keeps its branch', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const { container, rerender } = renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -170,7 +170,7 @@ describe('WorkflowNode Parallel lane order (PARALLEL-1)', () => {
   })
 
   it('binds the branch id as the React Flow handle id an edge wires to', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -189,7 +189,7 @@ describe('WorkflowNode Parallel lane roles', () => {
   it('paints every branch lane violet', async () => {
     // A fan-out is its own role: not the blue try path, the cyan sub-flow or
     // the orange case lane.
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -201,7 +201,7 @@ describe('WorkflowNode Parallel lane roles', () => {
   })
 
   it('paints the then lane the container-exit neutral', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -217,7 +217,7 @@ describe('WorkflowNode Parallel lane names', () => {
   beforeEach(seedStore)
 
   it('titles a named lane with the branch name', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -230,7 +230,7 @@ describe('WorkflowNode Parallel lane names', () => {
   })
 
   it('titles an unnamed lane with its 1-based branch number', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -240,7 +240,7 @@ describe('WorkflowNode Parallel lane names', () => {
   })
 
   it('titles the then lane with its role', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={parallelData([branch('branch_1'), branch('branch_2')])} />,
     )
@@ -249,7 +249,7 @@ describe('WorkflowNode Parallel lane names', () => {
   })
 
   it('names the lane through the shared tooltip, not the browser title', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -264,7 +264,7 @@ describe('WorkflowNode Parallel lane names', () => {
   })
 
   it('reveals the lane name on hover', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const user = userEvent.setup()
     renderWithReactFlow(
       <WorkflowNode
@@ -279,7 +279,7 @@ describe('WorkflowNode Parallel lane names', () => {
   })
 
   it('renders no text label on any lane', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -298,7 +298,7 @@ describe('WorkflowNode Parallel lane positioning (PARALLEL-2)', () => {
   beforeEach(seedStore)
 
   it('spaces the lanes 64px apart starting at 48px', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -325,7 +325,7 @@ describe('WorkflowNode Parallel node width (PARALLEL-2)', () => {
   beforeEach(seedStore)
 
   it('sizes a two-branch section to 224px', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -339,7 +339,7 @@ describe('WorkflowNode Parallel node width (PARALLEL-2)', () => {
   })
 
   it('sizes a three-branch section to 288px', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -353,7 +353,7 @@ describe('WorkflowNode Parallel node width (PARALLEL-2)', () => {
   })
 
   it('sizes a four-branch section to 352px', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="node-1"
@@ -376,7 +376,7 @@ describe('WorkflowNode Parallel without configured branches', () => {
   beforeEach(seedStore)
 
   it('falls back to the single output handle for an empty branch list', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(<WorkflowNode id="node-1" data={parallelData([])} />)
 
     expect(screen.getByTestId('handle-output')).toBeInTheDocument()
@@ -384,7 +384,7 @@ describe('WorkflowNode Parallel without configured branches', () => {
   })
 
   it('falls back to the single output handle when the branches key is absent', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="node-1" data={{ ...PARALLEL_BASE, config: { values: {} } }} />,
     )
@@ -393,9 +393,9 @@ describe('WorkflowNode Parallel without configured branches', () => {
     expect(screen.queryByTestId('handle-output-then')).not.toBeInTheDocument()
   })
 
-  it('falls back to the single output handle when branches is the old integer count', async () => {
-    // Guard: the count shape is gone; reading it as two lanes would hide the change.
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+  it('falls back to the single output handle when branches is an integer count', async () => {
+    // Guard: an integer branches value is never read as lanes.
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(<WorkflowNode id="node-1" data={parallelData(4)} />)
 
     expect(screen.getByTestId('handle-output')).toBeInTheDocument()

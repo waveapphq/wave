@@ -274,7 +274,7 @@ describe('ScalarEditBody - numeric editing', () => {
     expect(onChange).toHaveBeenLastCalledWith(value)
   })
 
-  it('accepts a 0.<28-digit> value (no longer char-capped: zeros + dot are free)', () => {
+  it('accepts a 0.<28-digit> value (not char-capped: zeros + dot are free)', () => {
     // Significant digits (not chars) are the limit, so the dot can form -0.<28 sig>.
     const { onChange } = renderBody({ value: 0, type: 'float' })
     const value = '-0.' + '9'.repeat(28) // 28 significant digits, 31 chars

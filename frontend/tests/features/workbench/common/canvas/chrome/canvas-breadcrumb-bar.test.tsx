@@ -1,7 +1,7 @@
 /**
  * CanvasBreadcrumbBar Tests (REQ-5.2.1.25)
  *
- * Tests the refactored canvas breadcrumb bar that:
+ * Tests the canvas breadcrumb bar, which:
  *   - Renders BreadcrumbSegment[] using shadcn Breadcrumb primitives.
  *   - Hides the back arrow when backHref is null, shows otherwise.
  *   - Renders each segment with a BreadcrumbSegmentIcon + TruncatedName

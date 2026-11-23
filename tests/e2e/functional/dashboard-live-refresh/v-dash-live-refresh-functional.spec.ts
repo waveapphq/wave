@@ -106,8 +106,7 @@ test.describe('Dashboard live refresh (REQ-3.2.2.17)', () => {
       })
       await expect(pill).toHaveAttribute('data-status', 'live')
 
-      // Manual Refresh button is gone - the test would have accidentally
-      // covered for its existence if we clicked something, so fail loudly.
+      // No manual Refresh button: clicking one would cover for a broken live refresh.
       await expect(
         page.getByRole('button', { name: /^refresh$/i }),
         'Manual Refresh button must be absent on the Dashboard',

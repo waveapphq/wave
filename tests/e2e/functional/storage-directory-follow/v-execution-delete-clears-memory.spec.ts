@@ -9,8 +9,7 @@
  * execution from the in-memory record as well as from disk, and it does not
  * come back on a fresh read of the list.
  *
- * NOT asserted here, because it is known and unfixed: an execution whose files
- * are deleted by hand stays in the list until someone opens it.
+ * Not asserted: an execution whose files are deleted by hand leaving the list (an open bug).
  */
 
 import fs from 'fs'

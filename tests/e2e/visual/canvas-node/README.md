@@ -1,6 +1,6 @@
 # Canvas Node Visual Tests (V-CANVAS-NODE-01..13)
 
-Visual coverage for the canvas-node redesign: persistent status bar, description row, run-state badges, note edit-mode chrome morph, handle positioning, function lifecycle badges, and the read-only config-modal contract during run.
+Visual coverage for the canvas node: persistent status bar, description row, run-state badges, note edit-mode chrome morph, handle positioning, function lifecycle badges, and the read-only config-modal contract during run.
 
 ## Prerequisites
 

@@ -65,6 +65,7 @@ export const ErrorFallback = forwardRef<HTMLDivElement, ErrorFallbackProps>(
   ) => {
     const titleId = useId()
     const showDashboardLink = level === 'root' || level === 'route'
+    const TitleTag = showDashboardLink ? 'h2' : 'h3'
 
     const handleReload = () => {
       globalThis.location.reload()
@@ -114,12 +115,12 @@ export const ErrorFallback = forwardRef<HTMLDivElement, ErrorFallbackProps>(
         </span>
 
         {/* Title */}
-        <h3
+        <TitleTag
           id={titleId}
           className="text-lg font-semibold text-error mb-2"
         >
           {title}
-        </h3>
+        </TitleTag>
 
         {/* Description */}
         <p className="text-sm font-normal text-secondary leading-normal mb-6">
@@ -132,7 +133,7 @@ export const ErrorFallback = forwardRef<HTMLDivElement, ErrorFallbackProps>(
             <summary className="text-xs text-muted cursor-pointer">
               Error Details
             </summary>
-            <pre className="text-xs text-muted mt-2 p-2 bg-muted rounded overflow-auto max-h-32">
+            <pre translate="no" className="text-xs text-muted mt-2 p-2 bg-muted rounded overflow-auto max-h-32">
               {error.message}
             </pre>
           </details>
@@ -233,7 +234,7 @@ interface PersistedErrorState {
   // Track the first error in current error recovery cycle
   firstErrorInCycle: string | null
   errorCycleProcessed: boolean
-  // State that was previously module-level, now scoped per instance
+  // Error-cycle state, scoped per instance
   firstErrorMessageInCycle: string | null
   errorCycleInProgress: boolean
   lastErrorMessageForRecurrence: string | null

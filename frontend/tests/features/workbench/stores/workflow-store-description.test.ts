@@ -1,10 +1,10 @@
 /**
- * Tests for workflow-store description-field rename.
+ * Tests for the workflow-store node description field.
  *
  * Contract:
- * - `WorkflowNodeData.displayName` is removed from the node-data shape.
- * - `WorkflowNodeData.nameCollapsed` is removed (no successor).
- * - A new `description?: string` is allowed on the node data and preserved by store mutations.
+ * - `WorkflowNodeData` has no `displayName` field.
+ * - `WorkflowNodeData` has no `nameCollapsed` field.
+ * - A `description?: string` is allowed on the node data and preserved by store mutations.
  * - An absent description is represented as `undefined`, not the empty string.
  */
 
@@ -84,7 +84,7 @@ describe('workflow-store - description field', () => {
     expect(node.data.description).toBe('Updated')
   })
 
-  it('the legacy `displayName` field is no longer in the NodeType.data type surface', async () => {
+  it('NodeType.data has no displayName field', async () => {
     const { useWorkflowStore } = await import('@/features/workbench/stores/workflow-store')
     useWorkflowStore.setState({ nodes: STARTING_NODES() })
     const node = useWorkflowStore.getState().nodes.find((n) => n.id === 'n1')!
@@ -94,7 +94,7 @@ describe('workflow-store - description field', () => {
     expect((node.data as Record<string, unknown>).displayName).toBeUndefined()
   })
 
-  it('the legacy `nameCollapsed` field is no longer in the NodeType.data type surface', async () => {
+  it('NodeType.data has no nameCollapsed field', async () => {
     const { useWorkflowStore } = await import('@/features/workbench/stores/workflow-store')
     useWorkflowStore.setState({ nodes: STARTING_NODES() })
     const node = useWorkflowStore.getState().nodes.find((n) => n.id === 'n1')!

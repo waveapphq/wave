@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/waveapphq/wave/actions/workflows/ci.yml"><img src="https://github.com/waveapphq/wave/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/version-1.0.0--alpha61-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.0.0--alpha62-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?logo=python&amp;logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/react-19-61DAFB?logo=react&amp;logoColor=black" alt="React">
 </p>

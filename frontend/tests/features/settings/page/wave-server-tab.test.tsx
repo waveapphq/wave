@@ -8,7 +8,7 @@
  * port/bind), the backend card's live session count, the browser-session
  * roster with the "You" self marker and the deep-link highlight, one-click
  * per-row Disconnect, and the confirmation-gated Disconnect Others / All.
- * Wording is pinned to the approved wireframes.
+ * Wording is pinned to the wireframes.
  *
  * The Backend Server card carries the lock-marked, copyable Data folder fact
  * (WSRV-10, REQ-4.7.13) with the Config file fact under it (WSRV-11,
@@ -526,12 +526,12 @@ describe('WaveServerTab', () => {
   })
 
   describe('Target session highlight', () => {
-    it('rings the targeted row and scrolls it into view, with no legacy chip', () => {
+    it('rings the targeted row and scrolls it into view, with no workbench chip', () => {
       renderTab({ targetSessionId: OTHER_ID })
 
       const target = screen.getByTestId(`server-session-row-${OTHER_ID}`)
       expect(target).toHaveAttribute('data-highlighted', 'true')
-      // The confusing "From your workbench" chip is gone; role pills convey state.
+      // No "From your workbench" chip; role pills convey state.
       expect(screen.queryByText('From your workbench')).not.toBeInTheDocument()
 
       const ownRow = screen.getByTestId(`server-session-row-${OWN_ID}`)

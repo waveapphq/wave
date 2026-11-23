@@ -1,6 +1,6 @@
 /**
  * Shared seed for the Python block visual specs: one Test holding a Python
- * block in Source mode with the approved script, its two typed Input Variables
+ * block in Source mode with the sample script, its two typed Input Variables
  * and its two Variable Exports, plus the two ways in (canvas, script sheet).
  *
  * Imported by V-PLUGIN-PYTHON-01 and every V-PYEDIT-* spec. Keep the exported
@@ -20,7 +20,7 @@ export const PYTHON_NODE_ID = 'python-block'
 
 const REMOTE_CONTAINER_ID = 'remote-container'
 
-/** The ten-line script of the approved Python editor mock. */
+/** The ten-line sample script. */
 export const PYTHON_SCRIPT = [
   'import statistics',
   'import logging',

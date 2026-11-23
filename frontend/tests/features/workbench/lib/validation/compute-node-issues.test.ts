@@ -872,8 +872,8 @@ describe('computeNodeIssues', () => {
   })
 })
 
-// HTTP rework rules mirrored in live node validation.
-describe('computeNodeIssues - HTTP rework rules', () => {
+// HTTP rules mirrored in live node validation.
+describe('computeNodeIssues - HTTP rules', () => {
   const issuesFor = (values: Record<string, unknown>): NodeIssue[] => {
     const result = computeNodeIssues([httpNode({ config: { values } })], [])
     return result.get('http-1') ?? []
@@ -1046,13 +1046,13 @@ describe('computeNodeIssues - HTTP rework rules', () => {
       ])
     })
 
-    it('no longer flags Transfer-Encoding (left the blocklist)', () => {
+    it('does not flag Transfer-Encoding', () => {
       expect(
         issuesFor({ ...baseValues, headers: { 'Transfer-Encoding': 'chunked' } }),
       ).toEqual([])
     })
 
-    it('no longer flags Content-Type in form or multipart mode (mode-conflict retired)', () => {
+    it('does not flag Content-Type in form or multipart mode', () => {
       expect(
         issuesFor({
           ...baseValues,

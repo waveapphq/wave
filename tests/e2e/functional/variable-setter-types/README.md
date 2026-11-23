@@ -1,6 +1,6 @@
-# V-PLUGIN-VARSET-MIGRATION-FUNCTIONAL: Setter Migration End-to-End
+# V-PLUGIN-VARSET-TYPES-FUNCTIONAL: Variable Setter types end to end
 
-Verify that the migrated Variable Setter persists and
+Verify that the Variable Setter persists and
 resolves one value of EACH type plus a per-key expression and a per-key
 template, end-to-end through a real run.
 

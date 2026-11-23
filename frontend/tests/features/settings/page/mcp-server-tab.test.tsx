@@ -9,7 +9,7 @@
  * the Save confirmation drawn from the page state, the stored password behind
  * the masked clear-and-edit field with its strength score, the rows on the
  * shared settings row, sessions with Disconnect, and the scrollable
- * activity feed. Wording is pinned to the approved wireframes.
+ * activity feed. Wording is pinned to the wireframes.
  *
  * Component under test: frontend/src/features/settings/page/mcp-server-tab.tsx
  */

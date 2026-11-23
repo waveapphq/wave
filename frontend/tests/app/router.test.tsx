@@ -616,8 +616,7 @@ describe('Route Rendering', () => {
 
   })
 
-  // Settings Route and Workbench Route tests removed - lazy loading causes test pollution.
-  // These routes are fully tested in their respective container test files.
+  // Settings and Workbench routes are tested in their container test files.
 
   describe('User Route', () => {
     it('renders user page at /user', async () => {
@@ -696,9 +695,6 @@ describe('Route Rendering', () => {
       })
     })
   })
-
-  // Profiles list route test removed - lazy loading causes test pollution.
-  // ProfilesListContainer is fully tested in its own test file.
 
   describe('Profiles Routes', () => {
 

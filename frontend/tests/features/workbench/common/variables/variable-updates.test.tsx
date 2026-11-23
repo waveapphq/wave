@@ -1,7 +1,7 @@
 /**
  * Variable Updates Tests
  *
- * TDD tests for real-time variable update functionality.
+ * Tests for real-time variable updates.
  * The hook receives events forwarded from useWorkbenchRun via registerVariableHandler.
  * No own WebSocket connection.
  *

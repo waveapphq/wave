@@ -3,7 +3,7 @@
  *
  * REQ-5.2.1.40: Execution history screen
  *
- * Tests for TanStack column definitions after DataTable migration.
+ * Tests for the TanStack column definitions.
  * Status and duration rendering are covered in the shared factory test
  * file; this file only asserts column shape and metadata.
  *

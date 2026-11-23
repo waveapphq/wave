@@ -4,7 +4,7 @@
  * Processes real-time variable change events forwarded from useWorkbenchRun.
  * No own WebSocket connection - events arrive via registerVariableHandler.
  * Every variable_changed event lands in the runtime values map: the
- * redesigned panel monitors all variables, not a curated watch subset.
+ * panel monitors all variables, not a curated watch subset.
  *
  * REQ-3.1.3.12: Auto-refresh watched variables on change
  * REQ-3.2.2.18: Live variable values display

@@ -1,7 +1,7 @@
 /**
  * HTTP Client plugin parameter schema (REQ-3.4.1.4).
  *
- * Pins the reworked schema surface: the Auth config section, the Body config
+ * Pins the schema surface: the Auth config section, the Body config
  * section with body_auto_headers + file_content_type, the retired
  * mode-conflict key rules and the reworded Content-Length block, the
  * two-choice Proxy row with its remote-host lock (HTTP-13), the TLS
@@ -255,7 +255,7 @@ describe('headers row', () => {
 })
 
 describe('headers scaffolds', () => {
-  it('declares only the + Content-Type menu (the + Auth scaffold is gone)', () => {
+  it('declares only the + Content-Type menu, no + Auth scaffold', () => {
     const menus = byName().headers.quickInserts ?? []
     expect(menus.map((m) => m.label)).toEqual(['+ Content-Type'])
   })
@@ -433,7 +433,7 @@ describe('Response group', () => {
     )
   })
 
-  it('retires the File Name descriptor - the path replaces it, with no alias', () => {
+  it('has no file_name input', () => {
     expect(inputs().map((p) => p.name)).not.toContain('file_name')
     expect(byName().file_name).toBeUndefined()
   })

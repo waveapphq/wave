@@ -624,7 +624,7 @@ test.describe('V-BACKUP-01: Create Backup Section', () => {
     // No Include-credentials toggle.
     await expect(
       createSection.locator('[data-testid="include-credentials-toggle"]'),
-      'legacy include-credentials toggle removed'
+      'no include-credentials toggle'
     ).toHaveCount(0)
 
     // Secret values picker present with Mask default.
@@ -864,10 +864,10 @@ test.describe('V-BACKUP-01: Periodic Backup Section', () => {
 
     const periodicSection = page.locator('[data-testid="periodic-backup-section"]')
 
-    // Legacy periodic include-credentials toggle is gone.
+    // No periodic include-credentials toggle.
     await expect(
       periodicSection.locator('[data-testid="periodic-include-credentials-toggle"]'),
-      'legacy periodic include-credentials toggle removed'
+      'no periodic include-credentials toggle'
     ).toHaveCount(0)
 
     // Secret values picker present with Mask default.

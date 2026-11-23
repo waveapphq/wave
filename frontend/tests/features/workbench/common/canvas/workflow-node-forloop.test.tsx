@@ -71,7 +71,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
 
   describe('Default handles (body + then) - 2 handles', () => {
     it('renders body and then handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -89,7 +89,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
     })
 
     it('does not render the default single output handle', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -106,7 +106,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
     })
 
     it('still renders input handle', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -123,7 +123,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
     })
 
     it('body handle has cyan background', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -141,7 +141,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
     })
 
     it('then handle has gray background', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -161,7 +161,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
 
   describe('No try/catch handles rendered', () => {
     it('does not render try/catch/finally handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -182,7 +182,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
 
   describe('Handle positioning and dynamic classes', () => {
     it('applies left position style for body and then handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -202,10 +202,10 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
       expect(thenHandle.style.left).toBe('112px')
     })
 
-    it('no longer applies a bottom offset (action row is inside the card, handles anchor to outer bottom)', async () => {
+    it('applies no bottom offset (action row is inside the card, handles anchor to outer bottom)', async () => {
       mockWorkflowStore.selectedNodeIds = ['node-1']
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -224,7 +224,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
     })
 
     it('applies proximity source ring when proximitySource is true', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -247,7 +247,7 @@ describe('WorkflowNode For Loop Handle Rendering (REQ-3.5.1.15)', () => {
 
   describe('Handle names', () => {
     it('each handle carries its role as an accessible name', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"

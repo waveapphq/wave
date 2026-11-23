@@ -390,7 +390,7 @@ function switchOperation(from: string, to: string) {
 }
 
 // ---------------------------------------------------------------------------
-// The sheet per Operation, as the approved wireframes show it
+// The sheet per Operation, as the wireframes show it
 // ---------------------------------------------------------------------------
 
 interface OperationState {

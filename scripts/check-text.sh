@@ -15,7 +15,7 @@ fi
 # Planning references fail; REQ-*, design IDs and COV-* stay.
 echo "Checking source comments for process markers..."
 lead='(^|[\s{])(#|//|/\*|\*|<!--|-- )'
-marker='(?i:\b(roadmap|handoff)\b|\bsession [0-9]|\bbatch [a-h]\b|\bphase[ -]?[0-9]|\bphase: *[0-9]|\.tmp/|\buser[- ](reported|ruling|ruled|clarified)\b|\b(issue|ticket) #[0-9])|§|\b(DD|PS5|GAP)-[0-9]+|\b1[0-2]\.[0-9]+(\.[0-9]+)*[ /](#|batch|group|session|[A-H]\b)'
+marker='(?i:\b(roadmap|handoff)\b|\bsession [0-9]|\bbatch [a-h]\b|\bphase[ -]?[0-9]|\bphase: *[0-9]|\.tmp/|\buser[- ](reported|ruling|ruled|clarified)\b|\b(issue|ticket) #[0-9]|\bblueprint|\bapproved (mockup|render|variant)|\bper (the )?user'\''?s? (spec|request|clarified)\b|\bby ruling\b|\bthe ruled\b|\bre(work|worked|design|designed)\b|\bfuture phase\b|\bitem [0-9]+ -|\b(fails|red) until\b|\bRED proof\b|\bTDD tests? for\b)|§|\b(DD|PS5|GAP)-[0-9]+|\b1[0-2]\.[0-9]+(\.[0-9]+)*[ /](#|batch|group|session|[A-H]\b)'
 if LC_ALL=C git grep -InP --untracked "$lead.*($marker)" -- ':!*.md' ':!*.json' ':!*.lock' ':!scripts/check-text.sh'; then
   status=1
 fi

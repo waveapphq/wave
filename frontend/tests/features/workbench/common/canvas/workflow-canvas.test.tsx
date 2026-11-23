@@ -300,7 +300,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
 
   describe('Palette Block Drop (application/wave-block)', () => {
     it('parses application/wave-block data and calls addNode', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -326,7 +326,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     })
 
     it('creates node with unique ID', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -348,7 +348,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     })
 
     it('ignores non-wave-block data types', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -369,7 +369,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     })
 
     it('ignores malformed JSON in wave-block data', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -395,7 +395,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     it('uses client coordinates directly at zoom=1, pan=(0,0)', async () => {
       mockWorkflowStore.viewport = { x: 0, y: 0, zoom: 1 }
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -414,7 +414,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     it('adjusts position for pan offset', async () => {
       mockWorkflowStore.viewport = { x: 100, y: 50, zoom: 1 }
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -434,7 +434,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     it('adjusts position for zoom level', async () => {
       mockWorkflowStore.viewport = { x: 0, y: 0, zoom: 2 }
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -454,7 +454,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     it('adjusts position for both pan and zoom', async () => {
       mockWorkflowStore.viewport = { x: 100, y: 100, zoom: 2 }
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -478,7 +478,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
       mockWorkflowStore.nodes = []
       mockWorkflowStore.edges = []
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -507,7 +507,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
         { id: 'edge-start', source: 'start-node', target: 'node-1' },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -529,7 +529,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
       mockWorkflowStore.nodes = []
       mockWorkflowStore.edges = []
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -554,7 +554,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
         { id: 'edge-start', source: 'start-node', target: 'node-1' },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -575,7 +575,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
 
   describe('Drag Over Handling', () => {
     it('allows drop by preventing default and setting dropEffect', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -595,7 +595,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
 
   describe('Node Data Structure', () => {
     it('maps "type: plugin" to "nodeType: plugin"', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -614,7 +614,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     })
 
     it('maps "type: control" to "nodeType: control"', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -633,7 +633,7 @@ describe('WorkflowCanvas - Drop Handling', () => {
     })
 
     it('does not stamp the palette category onto the dropped block', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const canvas = screen.getByTestId('workflow-canvas')
@@ -663,7 +663,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
 
   describe('onNodesChange', () => {
     it('applies node position changes to user nodes', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -679,7 +679,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('filters out changes to start node', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -698,7 +698,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     it('filters out changes to onboarding node', async () => {
       mockWorkflowStore.nodes = [] // Empty canvas shows onboarding node
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -714,7 +714,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('handles changes without id property', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -736,7 +736,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
         { id: 'edge-1', source: 'node-1', target: 'node-2' },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -754,7 +754,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     it('filters out changes to ghost edge', async () => {
       mockWorkflowStore.nodes = [] // Empty canvas has ghost edge
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -770,7 +770,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('handles changes without id property', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -793,7 +793,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     // and composes onNodeDragStop = handleNodeDragStop (proximity auto-
     // connect) followed by endDragOperation.
     it('onNodeDragStart calls startDragOperation', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -809,7 +809,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('onNodeDragStop calls endDragOperation after proximity handler runs', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -827,7 +827,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
 
   describe('onConnect', () => {
     it('creates edge for valid new connection', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -850,7 +850,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('rejects self-loop connection', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -870,7 +870,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
         { id: 'edge-1', source: 'node-1', target: 'node-2' },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -886,7 +886,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('ignores connection with missing source', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -902,7 +902,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('ignores connection with missing target', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -918,7 +918,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
     })
 
     it('handles null sourceHandle and targetHandle', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -945,7 +945,7 @@ describe('WorkflowCanvas - React Flow Callbacks', () => {
 
   describe('onViewportChange', () => {
     it('updates viewport in store', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -970,7 +970,7 @@ describe('WorkflowCanvas - Canvas States', () => {
     ]
     mockWorkflowStore.edges = []
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     // Canvas renders without throwing
@@ -985,7 +985,7 @@ describe('WorkflowCanvas - Canvas States', () => {
       { id: 'edge-1', source: 'start-node', target: 'node-1' },
     ]
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     expect(screen.getByTestId('workflow-canvas')).toBeInTheDocument()
@@ -995,7 +995,7 @@ describe('WorkflowCanvas - Canvas States', () => {
     mockWorkflowStore.nodes = []
     mockWorkflowStore.edges = []
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const nodes = (globalThis as Record<string, unknown>).__reactFlowNodes as Array<{
@@ -1007,7 +1007,7 @@ describe('WorkflowCanvas - Canvas States', () => {
   })
 
   it('names the glide of a watched change while its Blocks wait for the framing, then while they move', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     mockWorkflowStore.mirrorGlide = { moves: new Map(), startedAt: null, frame: 1 }
     const { rerender } = render(<WorkflowCanvas />)
 
@@ -1036,7 +1036,7 @@ describe('WorkflowCanvas - Theme Variants', () => {
 
     // Re-import to get fresh module with dark theme
     vi.resetModules()
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     expect(screen.getByTestId('workflow-canvas')).toBeInTheDocument()
@@ -1052,7 +1052,7 @@ describe('WorkflowCanvas - Theme Variants', () => {
 
     // Re-import to get fresh module with throwing theme hook
     vi.resetModules()
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     // Should render without crashing, using light theme fallback
@@ -1060,7 +1060,7 @@ describe('WorkflowCanvas - Theme Variants', () => {
   })
 
   it('applies className when provided', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas className="custom-class" />)
 
     expect(screen.getByTestId('workflow-canvas')).toHaveClass('custom-class')
@@ -1411,7 +1411,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
 
   describe('Pane Click Selection', () => {
     it('clears selection on left-click (button 0)', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       // Get the stored onPaneClick callback from the mock
@@ -1429,7 +1429,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
     })
 
     it('does not clear selection on right-click (button 2)', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       // Get the stored onPaneClick callback from the mock
@@ -1450,7 +1450,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
     })
 
     it('does not clear selection on Shift+left-click (no-op for chain select)', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -1471,7 +1471,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
 
   describe('Chain Select via native pointerup', () => {
     it('calls chainSelect on Shift+pointerup over a node element', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       const { container } = render(<WorkflowCanvas />)
 
       // Create a fake node element with data-id inside the wrapper
@@ -1506,7 +1506,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
     })
 
     it('does not call chainSelect on pointerup without Shift', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       const { container } = render(<WorkflowCanvas />)
 
       const wrapper = container.querySelector('[data-testid="workflow-canvas"]')!
@@ -1533,7 +1533,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
     })
 
     it('does not call chainSelect on Shift+pointerup over non-node element', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       const { container } = render(<WorkflowCanvas />)
 
       const wrapper = container.querySelector('[data-testid="workflow-canvas"]')!
@@ -1555,7 +1555,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
     })
 
     it('skips start-node on Shift+pointerup', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       const { container } = render(<WorkflowCanvas />)
 
       const wrapper = container.querySelector('[data-testid="workflow-canvas"]')!
@@ -1583,7 +1583,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
 
   describe('Pane Context Menu', () => {
     it('stores flow position on pane right-click', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -1607,7 +1607,7 @@ describe('WorkflowCanvas - Selection Behavior', () => {
 
   describe('Edge Context Menu', () => {
     it('stores edge ID on edge right-click', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -1653,7 +1653,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       // Set openConfigNodeIds to a node that doesn't exist in nodes
       mockWorkflowStore.openConfigNodeIds = ['non-existent-node']
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1680,7 +1680,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       ]
       mockWorkflowStore.openConfigNodeIds = ['minimal-node']
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1704,7 +1704,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       ]
       mockWorkflowStore.openConfigNodeIds = ['unknown-node']
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1718,7 +1718,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
 
   describe('Config Modal Rendering', () => {
     it('renders config modal when openConfigNodeIds is set', async () => {
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       // The modal should be rendered when openConfigNodeIds is set
@@ -1769,7 +1769,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       ]
       mockWorkflowStore.openConfigNodeIds = [nodeId]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1799,7 +1799,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
         },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1835,7 +1835,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
         },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1873,7 +1873,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
         },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1915,7 +1915,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
         },
       ]
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1951,7 +1951,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       ]
       mockWorkflowStore.openConfigNodeIds = ['fn-1']
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -1983,7 +1983,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
       ]
       mockWorkflowStore.openConfigNodeIds = ['fn-shared']
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       await act(async () => {
@@ -2034,7 +2034,7 @@ describe('WorkflowCanvas - Config Modal Integration', () => {
         },
       }
 
-      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+      const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
       render(<WorkflowCanvas />)
 
       // Canvas should render
@@ -2071,7 +2071,7 @@ describe('WorkflowCanvas - Edge Click Selection', () => {
   })
 
   it('calls setSelectedEdges with edge ID on edge click', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -2091,7 +2091,7 @@ describe('WorkflowCanvas - Edge Click Selection', () => {
   it('adds edge to selection on Ctrl+click', async () => {
     mockWorkflowStore.selectedEdgeIds = ['edge-existing']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -2111,7 +2111,7 @@ describe('WorkflowCanvas - Edge Click Selection', () => {
   it('adds edge to selection on Meta+click (Mac)', async () => {
     mockWorkflowStore.selectedEdgeIds = ['edge-existing']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -2131,7 +2131,7 @@ describe('WorkflowCanvas - Edge Click Selection', () => {
   it('deselects nodes when edge is clicked (mutual exclusivity)', async () => {
     mockWorkflowStore.selectedNodeIds = ['node-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -2151,7 +2151,7 @@ describe('WorkflowCanvas - Edge Click Selection', () => {
   it('replaces edge selection on single click (no modifier)', async () => {
     mockWorkflowStore.selectedEdgeIds = ['edge-existing']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -2192,7 +2192,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
   it('calls requestDeleteSelected on Delete key press when edges are selected', async () => {
     mockWorkflowStore.selectedEdgeIds = ['edge-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2204,7 +2204,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
   it('calls requestDeleteSelected on Delete key press when nodes are selected', async () => {
     mockWorkflowStore.selectedNodeIds = ['node-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2216,7 +2216,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
   it('calls disconnectSelected on Backspace key press when nodes are selected', async () => {
     mockWorkflowStore.selectedNodeIds = ['node-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2228,7 +2228,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
   it('calls disconnectSelected on Backspace key press when edges are selected', async () => {
     mockWorkflowStore.selectedEdgeIds = ['edge-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2239,7 +2239,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
 
   it('does not fire when there is no selection', async () => {
     // Both selections empty
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2269,7 +2269,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
       },
     ]
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2282,7 +2282,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
     mockWorkflowStore.selectedNodeIds = ['fn-1', 'fn-2']
     mockWorkflowStore.nodes = []
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2310,7 +2310,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
       },
     ]
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2324,7 +2324,7 @@ describe('WorkflowCanvas - Keyboard Deletion', () => {
   it('ignores non-deletion keys', async () => {
     mockWorkflowStore.selectedEdgeIds = ['edge-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2354,7 +2354,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
   })
 
   it('renders proximity ghost edge when dragging within threshold of free output', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2382,7 +2382,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
   })
 
   it('does not render proximity ghost edge when dragging beyond threshold', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2407,7 +2407,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
   })
 
   it('clears proximity ghost edge when drag position moves beyond threshold', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2457,7 +2457,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
       { id: 'edge-1', source: 'node-1', target: 'node-2' },
     ]
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2479,7 +2479,7 @@ describe('WorkflowCanvas - Drag Proximity Feedback', () => {
   })
 
   it('does not show proximity feedback for non-wave-block drag', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2509,7 +2509,7 @@ describe('WorkflowCanvas - readOnly mode', () => {
   })
 
   it('stamps data-readonly on the canvas root so history can be diagnosed', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas readOnly />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2517,7 +2517,7 @@ describe('WorkflowCanvas - readOnly mode', () => {
   })
 
   it('does not stamp data-readonly on the default (live) canvas', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     const canvas = screen.getByTestId('workflow-canvas')
@@ -2528,19 +2528,19 @@ describe('WorkflowCanvas - readOnly mode', () => {
     // Must NOT be `undefined`. React Flow ignores undefined threshold
     // updates, so drilling read-only then entering edit mode would leave a stale
     // MAX_SAFE_INTEGER and silently disable node dragging.
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     expect((globalThis as Record<string, unknown>).__reactFlowNodeDragThreshold).toBe(1)
   })
 
   it('disables the drag threshold (MAX_SAFE_INTEGER) in read-only mode', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas readOnly />)
     expect((globalThis as Record<string, unknown>).__reactFlowNodeDragThreshold).toBe(Number.MAX_SAFE_INTEGER)
   })
 
   it('does not pass connect, drop, context-menu, or double-click handlers to ReactFlow', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas readOnly />)
 
     const callbacks = (globalThis as Record<string, unknown>).__reactFlowCallbacks as {
@@ -2572,7 +2572,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
   })
 
   it('opens the window on Ctrl+Space and inserts on Enter', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     expect(screen.queryByTestId('quick-add-popover')).not.toBeInTheDocument()
@@ -2624,7 +2624,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
         },
       },
     })
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
@@ -2647,7 +2647,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
         handleBounds: { source: [{ x: 0, y: 56, width: 16, height: 8 }] },
       },
     })
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
     fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
@@ -2657,7 +2657,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
   })
 
   it('does not open the window in read-only mode', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas readOnly />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
     expect(screen.queryByTestId('quick-add-popover')).not.toBeInTheDocument()
@@ -2666,7 +2666,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
   // The footer names the anchor currently in force, so the canvas has to
   // tell the window whether exactly one block is selected.
   it('tells the window there is no selection to anchor on', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
 
@@ -2679,7 +2679,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
       { id: 'node-1', position: { x: 0, y: 0 }, data: { label: 'HTTP', elementType: 'http-client' } },
     ]
     mockWorkflowStore.selectedNodeIds = ['node-1']
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
 
@@ -2693,7 +2693,7 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
       { id: 'node-2', position: { x: 0, y: 0 }, data: { label: 'Log', elementType: 'log' } },
     ]
     mockWorkflowStore.selectedNodeIds = ['node-1', 'node-2']
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
 
@@ -2701,13 +2701,13 @@ describe('WorkflowCanvas - Quick Add (REQ-4.2.5)', () => {
     expect(within(win).getByText(/add after last block/i)).toBeInTheDocument()
   })
 
-  it('no longer offers the removed Alt+Enter insert mode', async () => {
+  it('offers no Alt+Enter insert mode', async () => {
     // One block selected must not enable Alt+Enter.
     mockWorkflowStore.nodes = [
       { id: 'node-1', position: { x: 0, y: 0 }, data: { label: 'HTTP', elementType: 'http-client' } },
     ]
     mockWorkflowStore.selectedNodeIds = ['node-1']
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     fireEvent.keyDown(document, { key: ' ', ctrlKey: true })
 
@@ -2742,7 +2742,7 @@ describe('WorkflowCanvas - config sheet cap and duplicate open', () => {
   }
 
   it('opens the config sheet on double-click below the cap', async () => {
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     act(() => {
       getDoubleClick()({}, { id: 'node-1', type: 'workflowNode' })
@@ -2752,7 +2752,7 @@ describe('WorkflowCanvas - config sheet cap and duplicate open', () => {
 
   it('focuses the existing sheet instead of duplicating when the node is already open', async () => {
     mockWorkflowStore.openConfigNodeIds = ['node-1']
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     act(() => {
       getDoubleClick()({}, { id: 'node-1', type: 'workflowNode' })
@@ -2774,7 +2774,7 @@ describe('WorkflowCanvas - config sheet cap and duplicate open', () => {
       dismissAll: vi.fn(),
     }
     const { ToastContext } = await import('@/components/ui/toast')
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(
       <ToastContext.Provider value={toastValue as never}>
         <WorkflowCanvas />
@@ -2800,7 +2800,7 @@ describe('WorkflowCanvas - dirty-sheet delete confirmation', () => {
 
   it('renders the confirmation and Close continues the intercepted delete', async () => {
     mockWorkflowStore.pendingDeleteNodeIds = ['node-1']
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     expect(screen.getByText('Delete with unsaved changes?')).toBeInTheDocument()
@@ -2811,7 +2811,7 @@ describe('WorkflowCanvas - dirty-sheet delete confirmation', () => {
 
   it('Keep Editing cancels the intercepted delete', async () => {
     mockWorkflowStore.pendingDeleteNodeIds = ['node-1']
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     fireEvent.click(screen.getByRole('button', { name: /^keep editing$/i }))
@@ -2835,7 +2835,7 @@ describe('WorkflowCanvas - dirty-sheet drill confirmation', () => {
 
   it('renders the confirmation and confirms the intercepted drill', async () => {
     mockWorkflowStore.pendingDrillAction = { run: vi.fn() }
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     expect(screen.getByText('Navigate with unsaved changes?')).toBeInTheDocument()
@@ -2845,7 +2845,7 @@ describe('WorkflowCanvas - dirty-sheet drill confirmation', () => {
 
   it('cancels the intercepted drill', async () => {
     mockWorkflowStore.pendingDrillAction = { run: vi.fn() }
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
 
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
@@ -2894,7 +2894,7 @@ describe('WorkflowCanvas - scope read-only sheets (persist across drill)', () =>
     mockWorkflowStore.drillPath = [{ nodeId: 'fn-1', label: 'Function_1' }]
     mockWorkflowStore.openConfigNodeIds = ['root-http']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0))
@@ -2921,7 +2921,7 @@ describe('WorkflowCanvas - scope read-only sheets (persist across drill)', () =>
     ]
     mockWorkflowStore.openConfigNodeIds = ['node-1']
 
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas readOnly />)
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0))
@@ -2953,7 +2953,7 @@ describe('WorkflowCanvas - Save warning before a plain variable turns secret (SE
 
   async function renderCanvasWithHeldSave(names: string[] | null) {
     mockWorkflowStore.pendingSecretPromotion = names === null ? null : { names, save: vi.fn() }
-    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas')
+    const { WorkflowCanvas } = await import('@/features/workbench/common/canvas/workflow-canvas/canvas')
     render(<WorkflowCanvas />)
   }
 

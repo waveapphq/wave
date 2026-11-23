@@ -4,12 +4,12 @@
  * Locks the post-state-baseline history model in the workflow store from
  * the user's perspective. Four scenarios:
  *
- * 1. The user's 4-step spec: drop a Log block (auto-connects to the start
+ * 1. Four steps, four undos: drop a Log block (auto-connects to the start
  *    node, 2 history entries), edit config message twice (2 more history
  *    entries). Click Undo 4 times - assert each click changes the canvas
  *    meaningfully (text reverts, text reverts, edge disappears, node
  *    disappears). Click Redo 4 times - canvas walks back to the fully
- *    configured state. Proves the click-twice off-by-one is gone.
+ *    configured state, one step per click.
  * 2. Drag a node and release. Undo snaps it back to the original position.
  *    Redo returns it to the dropped position.
  * 3. Edit a Note's text and commit. Undo reverts the text. Redo restores it.
@@ -175,7 +175,7 @@ test.describe('Workbench undo/redo (post-state baseline model)', () => {
     await page.request.delete(`${BASE}/workbench/session`).catch(() => {})
   })
 
-  test('user 4-step scenario: drop + 2 config saves yield 4 undos / 4 redos with no click-twice', async ({
+  test('drop + 2 config saves yield 4 undos / 4 redos with no click-twice', async ({
     page,
   }) => {
     await gotoDraftWorkbench(page)

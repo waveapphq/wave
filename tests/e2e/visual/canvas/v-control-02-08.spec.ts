@@ -406,7 +406,7 @@ test.describe('V-CONTROL-02-08: Control Configuration Modal', () => {
   test.describe('V-CONTROL-08: Initial Version on Canvas', () => {
     // No inline version label on the canvas. The configuration
     // modal header is the only version-display surface. S1-S4 below assert the
-    // legacy inline label is gone; S5 still verifies the modal version.
+    // no inline label; S5 verifies the modal version.
     test('V-CONTROL-08-S1: Delay drop renders without inline version on the canvas', async ({ page }) => {
       await page.goto('/workbench')
       await waitForCanvasLoad(page)
