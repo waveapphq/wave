@@ -1,5 +1,5 @@
 /**
- * V-PLUGIN-HTTP-REWORK-FUNCTIONAL: the HTTP block end to end against a recording server
+ * V-PLUGIN-HTTP-FLOW-FUNCTIONAL: the HTTP block end to end against a recording server
  * REQ: REQ-3.4.1.4, REQ-3.1.3.21
  *
  * The recording HTTP server lives in the spec: its byte-exact ordering and absence proofs are
@@ -9,14 +9,14 @@
  *     dynamic-map Content-Type; a dynamic-map Content-Length fails before send with its
  *     sentence; the map / part literal-vs-expression and coercion wire matrix; a text-only
  *     multipart body sent as real multipart; file download, cap and trace; a query entry
- *     given None sent as empty text (M5).
+ *     given None sent as empty text.
  *   Test 2: Basic and API-key auth modes reach the server composed and masked; the
  *     section-enabler rows carry no expression toggle.
  *   Test 3: the runtime auth required-field checks (admin-seeded).
  *   Test 4: trace name-masking of short and response catalog headers, the reveal path, the
  *     marked-trace parity, a 1-redirect hop trace, and the file-mode size cap.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-rework-functional.spec.ts
+ * Run: ./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-flow-functional.spec.ts
  */
 
 import http from 'node:http'
@@ -105,7 +105,7 @@ function startRecordingServer(seen: SeenRequest[]): Promise<{ server: http.Serve
 }
 
 function loadFixture(baseUrl: string): Record<string, any> {
-  const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'rework-fixture.json'), 'utf-8'))
+  const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'flow-fixture.json'), 'utf-8'))
   fixture.variables.base_url.value = baseUrl
   fixture.variables.api_token.value = TOKEN
   return fixture
@@ -132,7 +132,7 @@ async function setDebugSelectRun(page: Page) {
 const find = (seen: SeenRequest[], prefix: string) => seen.find((r) => r.url.startsWith(prefix))
 
 // ---------------------------------------------------------------------------
-// Test 1 - the reworked fixture end-to-end
+// Test 1 - the fixture end to end
 // ---------------------------------------------------------------------------
 
 const SUCCESS_NODES = [
@@ -159,7 +159,7 @@ const SUCCESS_NODES = [
   'http-nullq',
 ]
 
-test.describe('HTTP Plugin Rework E2E Execution', () => {
+test.describe('HTTP Block end to end', () => {
   test('Auth section, body modes, generated-wins, content-length fail, coercion, cap, trace', async ({
     page,
   }) => {
@@ -180,7 +180,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(auth, 'expected /echo request').toBeTruthy()
         expect(auth!.headers.authorization).toBe(`Bearer ${TOKEN}`)
 
-        // Guard 1: a catalog header with a short value (below the value-scan floor)
+        // A catalog header with a short value (below the value-scan floor)
         // still reaches the server RAW - name-masking happens only in the console
         const apikey = find(seen, '/apikey')
         expect(apikey!.headers['x-api-key']).toBe('open')
@@ -198,7 +198,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(formPairs.get('username')).toBe('alice')
         expect(formPairs.get('scope')).toBe('orders read')
 
-        // Guard 7: the generated Content-Type OVERWRITES an expression-map
+        // The generated Content-Type OVERWRITES an expression-map
         // Content-Type - the server receives the generated urlencoded type, not
         // the map's application/json
         const genwins = find(seen, '/genwins')
@@ -212,7 +212,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(multipartBody).toContain('filename="src.bin"')
         expect(multipartBody).toContain(MULTIPART_FILE_CONTENT)
 
-        // Guard 8: a TEXT-ONLY multipart body arrives as real multipart/form-data
+        // A TEXT-ONLY multipart body arrives as real multipart/form-data
         // WITH a boundary
         const uploadText = find(seen, '/uploadtext')
         expect(uploadText!.headers['content-type']).toMatch(/^multipart\/form-data; boundary=/)
@@ -222,7 +222,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(textBody).toContain('name="beta"')
         expect(textBody).toContain('two')
 
-        // Guard 9: literal vs expression at runtime. A literal header holding
+        // Literal vs expression at runtime. A literal header holding
         // {{ }} chars is sent VERBATIM; expression query params evaluate and
         // coerce to strings (int -> "10", an empty entry -> "", concat computed)
         const coerce = find(seen, '/coerce')
@@ -238,7 +238,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(seen.some((r) => r.url.startsWith('/big'))).toBeTruthy()
         expect(seen.some((r) => r.url.startsWith('/content-length'))).toBeFalsy()
         expect(seen.some((r) => r.url.startsWith('/missing-upload'))).toBeFalsy()
-        // M5: a query entry given None reaches the server as empty text (REQ-3.1.3.21).
+        // A query entry given None reaches the server as empty text (REQ-3.1.3.21).
         const nullq = find(seen, '/nullq')
         expect(nullq, 'the request with a null query entry is sent').toBeTruthy()
         const nullQuery = new URLSearchParams(nullq!.url.split('?')[1] ?? '')
@@ -270,14 +270,14 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(logTexts.some((t) => t === 'dl=artifact://report.bin')).toBeTruthy()
         expect(logTexts.some((t) => t === `sha=${DL_SHA256} size=${DL_CONTENT.length}`)).toBeTruthy()
 
-        // Body cap WARN (reworded) + capped size output
+        // Body cap WARN + capped size output
         expect(logTexts.some((t) => t === 'Response size exceeded 1.0 KB - truncated')).toBeTruthy()
         expect(logTexts.some((t) => t === 'cap_len=1024')).toBeTruthy()
 
-        // Guard 5: the reworded dynamic-map Content-Length failure, source-attributed
+        // The dynamic-map Content-Length failure, source-attributed
         expect(
           logTexts.some((t) => t.includes(CONTENT_LENGTH_MESSAGE)),
-          `Expected the reworded Content-Length message. Got:\n${allLogText}`,
+          `Expected the Content-Length message. Got:\n${allLogText}`,
         ).toBeTruthy()
         expect(logTexts.some((t) => t === 'content-length-caught')).toBeTruthy()
 
@@ -287,7 +287,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         ).toBeTruthy()
         expect(logTexts.some((t) => t === 'file-missing-caught')).toBeTruthy()
 
-        // M5: nothing failed on the null query entry, so its catch branch never ran
+        // Nothing failed on the null query entry, so its catch branch never ran
         expect(logTexts.some((t) => t === 'nullq-caught')).toBe(false)
 
         // INFO summary format unchanged
@@ -312,7 +312,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         // 3-entry contract for a plain GET: connect + exchange + timing
         expect(copyTexts.some((t) => /Connected to 127\.0\.0\.1:\d+/.test(t))).toBeTruthy()
 
-        // Guard 1: the short api-key value name-masks in the /apikey exchange
+        // The short api-key value name-masks in the /apikey exchange
         const apikeyEntry = copyTexts.find(
           (t) => t.includes('/apikey') && /^> X-Api-Key: \*+$/im.test(t),
         )
@@ -320,7 +320,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(apikeyEntry!).toMatch(/^> X-Api-Key: \*+$/im)
         expect(apikeyEntry!).not.toContain('open ')
 
-        // Guard 3: the Timing entry total is the wire window - > 0 and >= each part
+        // The Timing entry total is the wire window - > 0 and >= each part
         const timingEntry = copyTexts.find((t) => /Timing: dns/.test(t))
         expect(timingEntry, 'expected a Timing entry').toBeTruthy()
         const m = timingEntry!.match(
@@ -384,7 +384,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
   // Test 2 - Basic + API-key auth modes reach the server; enablers carry no {x}
   // -------------------------------------------------------------------------
 
-  test('Auth modes reach the server composed + masked; enablers carry no expression toggle (guards 6a/19)', async ({
+  test('Auth modes reach the server composed + masked; enablers carry no expression toggle', async ({
     page,
   }) => {
     const seen: SeenRequest[] = []
@@ -469,7 +469,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(keyEntry!).toMatch(/^> X-Api-Key: \*+$/im)
       })
 
-      await test.step('Guard 19: Enable Auth + Auto Headers rows render without the {x} toggle', async () => {
+      await test.step('Enable Auth + Auto Headers rows render without the {x} toggle', async () => {
         await page.locator('[data-testid="workflow-node-http-basic"]').dblclick()
         const sheet = configSheet(page)
         await expect(sheet).toBeVisible()
@@ -488,7 +488,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
   })
 
   // -------------------------------------------------------------------------
-  // Test 3 - runtime auth required-field guards (guard 6c)
+  // Test 3 - runtime auth required-field guards
   //
   // A required auth field whose value is an expression resolving to "" is
   // PRESENT at save (the field carries the expression text) but empty at send,
@@ -496,7 +496,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
   // no "run an invalid test" dependency.
   // -------------------------------------------------------------------------
 
-  test('Runtime auth required-field guards fire before sending (guard 6c)', async ({ page }) => {
+  test('Runtime auth required-field guards fire before sending', async ({ page }) => {
     const seen: SeenRequest[] = []
     const { server, port } = await startRecordingServer(seen)
     const base = `http://127.0.0.1:${port}`
@@ -635,10 +635,10 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
 
   // -------------------------------------------------------------------------
   // Test 4 - trace name-masking (short + response), reveal, marked-trace,
-  //          redirect hops, file-mode cap (guards 1/2)
+  //          redirect hops, file-mode cap
   // -------------------------------------------------------------------------
 
-  test('Trace masking + reveal + marked-trace + redirect hops + file cap (guards 1/2)', async ({
+  test('Trace masking + reveal + marked-trace + redirect hops + file cap', async ({
     page,
   }) => {
     const seen: SeenRequest[] = []
@@ -709,7 +709,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
             {},
             { headers: 'cookie_headers' },
           ),
-          // Guard 1 reveal path: the block's unmask list keeps X-Api-Key raw
+          // Reveal path: the block's unmask list keeps X-Api-Key raw
           httpNode(
             'http-reveal',
             220,
@@ -717,7 +717,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
             { headers: { 'X-Api-Key': REVEAL_KEY } },
             { unmasked_secret_fields: ['x-api-key'] },
           ),
-          // Guard 2: marking the trace output secret masks EVERY hop header value,
+          // Marking the trace output secret masks EVERY hop header value,
           // even a non-catalog one; the control node leaves it raw
           httpNode(
             'http-marktrace',
@@ -789,7 +789,7 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         const copyTexts = await getLogCopyTexts(page)
         const logTexts = await getLogTexts(page)
 
-        // Guard 1 name-mask: request Cookie + response Set-Cookie mask in the hop
+        // Name-mask: request Cookie + response Set-Cookie mask in the hop
         const cookieEntry = copyTexts.find(
           (t) => t.includes('/cookie') && /^> Cookie: \*+$/im.test(t),
         )
@@ -797,14 +797,14 @@ test.describe('HTTP Plugin Rework E2E Execution', () => {
         expect(cookieEntry!).toMatch(/^> Cookie: \*+$/im)
         expect(cookieEntry!).toMatch(/^< Set-Cookie: \*+$/im)
 
-        // Guard 1 reveal: the block's unmask list keeps X-Api-Key raw here
+        // Reveal: the block's unmask list keeps X-Api-Key raw here
         const revealEntry = copyTexts.find(
           (t) => t.includes('/reveal') && new RegExp(`^> X-Api-Key: ${REVEAL_KEY}$`, 'im').test(t),
         )
         expect(revealEntry, 'expected a revealed /reveal exchange entry').toBeTruthy()
         expect(revealEntry!).toMatch(new RegExp(`^> X-Api-Key: ${REVEAL_KEY}$`, 'im'))
 
-        // Guard 2: marking the trace output secret masks the non-catalog marker in that
+        // Marking the trace output secret masks the non-catalog marker in that
         // node's combined DEBUG entry (parity with a marked headers output).
         // The block's own Inputs line comes first and names the header as typed; this is the exchange.
         const markEntry = copyTexts.find((t) => t.includes('/marktrace') && /^> X-Trace-Marker: /im.test(t))

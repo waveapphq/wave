@@ -261,7 +261,7 @@ describe('VariableManagerContent - the pencil opens the variable window (VMGR-10
     expect(windows[0].dataset.windowId).not.toBe(windows[1].dataset.windowId)
   })
 
-  it('does not render the legacy VariableEditorModals plumbing', () => {
+  it('does not render VariableEditorModals', () => {
     render(<VariableManagerContent {...baseProps} />)
     expect(screen.queryByTestId('legacy-editor-modals')).not.toBeInTheDocument()
   })

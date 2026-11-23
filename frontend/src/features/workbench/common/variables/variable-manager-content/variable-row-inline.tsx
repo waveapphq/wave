@@ -1,7 +1,7 @@
 /**
  * Inline Variable Row
  *
- * Per-variable row in the redesigned Variable Manager panel. Two-line grid:
+ * Per-variable row in the Variable Manager panel. Two-line grid:
  * line 1 holds the variable name (left) and the four-icon action cluster
  * (right) - eye, expand, edit, delete in that order. Line 2 holds the
  * type-colored value text (left) and the flag + type badges (right), with
@@ -401,6 +401,7 @@ export function InlineVariableRow({
       data-testid={`variable-row-${id}`}
       className={`group flex flex-col gap-1 px-3 py-2 hover:bg-muted/50 border-b border-border/50 transition-colors overflow-hidden ${rowCueClass}`}
       style={ROW_STYLE}
+      role="group"
       aria-label={`Variable ${name}`}
     >
       {/* Row 1: Name + 4-icon action cluster */}
@@ -408,6 +409,7 @@ export function InlineVariableRow({
         <ConditionalTooltip content={name} wide>
           <span
             data-testid={`variable-name-${id}`}
+            translate="no"
             className="flex-1 font-mono text-sm truncate min-w-0 text-foreground"
           >
             {name}
@@ -465,6 +467,7 @@ export function InlineVariableRow({
       <div className="flex items-center gap-1.5 min-w-0">
         <span
           data-testid={`variable-value-${id}`}
+          translate="no"
           className={`flex-1 text-sm font-mono truncate min-w-0 ${valueClasses}`}
         >
           {rowValue.isNull ? <NullText /> : truncate(rowValue.text)}
@@ -508,6 +511,7 @@ export function InlineVariableRow({
         {isExpression && (
           <span
             data-testid={`expr-badge-${id}`}
+            translate="no"
             className="text-[10px] font-medium text-cyan-400 bg-cyan-500/20 px-1.5 py-0.5 rounded flex-shrink-0"
           >
             {'{x}'}
@@ -517,6 +521,7 @@ export function InlineVariableRow({
         {isTemplate && (
           <span
             data-testid={`template-badge-${id}`}
+            translate="no"
             className="text-[10px] font-medium text-cyan-400 bg-cyan-500/20 px-1.5 py-0.5 rounded flex-shrink-0"
           >
             {'{{ }}'}
@@ -534,6 +539,7 @@ export function InlineVariableRow({
 
         <span
           data-testid={`type-badge-${id}`}
+          translate="no"
           className={`${TYPE_PILL_CLASS} ${getTypeBadgeClass(type)}`}
         >
           {type}

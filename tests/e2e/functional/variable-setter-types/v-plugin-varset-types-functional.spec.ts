@@ -1,10 +1,9 @@
 /**
- * V-PLUGIN-VARSET-MIGRATION-FUNCTIONAL: Variable Setter migration end-to-end.
+ * V-PLUGIN-VARSET-TYPES-FUNCTIONAL: Variable Setter types end to end.
  *
- * REQ-3.4.1.14, REQ-3.1.3.15. One Variable Setter assigns
- * one value of EACH type through the migrated affordances, plus a per-key
- * expression row and a per-key template row, then downstream Log nodes read
- * every target back so the run output proves the resolved value:
+ * REQ-3.4.1.14, REQ-3.1.3.15. One Variable Setter assigns one value of EACH type,
+ * plus a per-key expression row and a per-key template row, then downstream Log
+ * nodes read every target back so the run output proves the resolved value:
  *
  *   - string literal  -> str_v   = "hello world"
  *   - integer (exact)  -> int_v   = "42"               (exact-text)
@@ -23,7 +22,7 @@
  *    numbers preserved, template rendered, expression evaluated).
  * 4. Every node shows execution status `success`.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/variable-setter-migration/v-plugin-varset-migration-functional.spec.ts
+ * Run: ./scripts/e2e-targeted-local.sh functional/variable-setter-types/v-plugin-varset-types-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
@@ -71,8 +70,8 @@ async function selectEnvironment(page: Page, envName: string) {
   await expect(envPopover).not.toBeVisible()
 }
 
-test.describe('Variable Setter Migration E2E', () => {
-  test('All migrated value types + expression + template resolve through the setter', async ({
+test.describe('Variable Setter types end to end', () => {
+  test('All value types + expression + template resolve through the setter', async ({
     page,
   }) => {
     const fixture = loadFixture()
@@ -166,7 +165,7 @@ test.describe('Variable Setter Migration E2E', () => {
       expectValue('int=42')
       expectValue('float=2.718281828459045')
       expectValue('bool=True')
-      // Complex types persisted + resolved through the migrated value sheet.
+      // Complex types persisted and resolved at run time.
       expectValue('arr=a,b,c')
       expectValue('map=v1,v2')
       expectValue('tbl=1,alpha,beta')

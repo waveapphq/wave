@@ -254,7 +254,7 @@ test('G4 a template marker that changes data is refused when the test is saved',
 
   // The whole sentence, then the Block and the field it came from.
   expect(message).toBe(`${READ_ONLY_SENTENCE} Block: Template Mutator. Field: message.`)
-  // The pattern-shaped wording is gone and must never come back.
+  // The message never uses the pattern-shaped wording.
   expect(message).not.toContain('Blocked pattern')
   expect(message).not.toContain('not allowed for security reasons')
 })

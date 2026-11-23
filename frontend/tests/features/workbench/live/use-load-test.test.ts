@@ -379,7 +379,7 @@ describe('useLoadTest', () => {
     })
 
     it('shows validation dialog for non-fatal errors AND still loads the workflow', async () => {
-      // Per user spec: Cancel on a Load validation dialog keeps the blocks
+      // Cancel on a Load validation dialog keeps the blocks
       // visible with regular alerts. The test must therefore be loaded into
       // the canvas - the dialog overlays the loaded workflow, and Cancel
       // simply dismisses it without rolling the load back.

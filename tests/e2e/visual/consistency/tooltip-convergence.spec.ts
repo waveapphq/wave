@@ -2,7 +2,7 @@
  * V-TOOLTIP-CONV-01: every hover hint in WAVE comes from the one tooltip
  *
  * Design Decisions: SHELL-7, SHELL-7a..d
- * REQ: REQ-5.2.1.17
+ * REQ: none (no requirement covers tooltips)
  *
  * Phase: no-data (seeds one long-named Test via POST /tests; no DB reset).
  *
@@ -36,7 +36,7 @@ async function expectSharedTooltip(page: Page, trigger: Locator, text: string | 
   await expect(tooltip).toHaveCount(0)
 }
 
-test.describe('V-TOOLTIP-CONV-01: one tooltip across every migrated surface', () => {
+test.describe('V-TOOLTIP-CONV-01: one tooltip across the sidebar, palette, list names and Variable Manager', () => {
   test('S1: a collapsed sidebar item and a collapsed palette icon both use the shared tooltip', async ({
     page,
   }) => {

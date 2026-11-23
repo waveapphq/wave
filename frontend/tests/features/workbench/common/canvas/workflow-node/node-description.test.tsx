@@ -68,7 +68,7 @@ describe('Node description row', () => {
   })
 
   it('does not render a description row when description is undefined', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode id="n1" data={{ label: 'HTTP_Client', elementType: 'http-client' }} />,
     )
@@ -76,7 +76,7 @@ describe('Node description row', () => {
   })
 
   it('does not render a description row when description is the empty string', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -87,7 +87,7 @@ describe('Node description row', () => {
   })
 
   it('renders the description row when description is non-empty', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -104,7 +104,7 @@ describe('Node description row', () => {
   })
 
   it('applies the line-clamp-2 class on the description row', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -120,7 +120,7 @@ describe('Node description row', () => {
   })
 
   it('title row continues to render the entity type label, not the description', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -136,7 +136,7 @@ describe('Node description row', () => {
   })
 
   it('renders multiline description text verbatim', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -151,8 +151,8 @@ describe('Node description row', () => {
     expect(desc.textContent).toBe('Line one\nLine two')
   })
 
-  it('does NOT read the legacy displayName field', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+  it('does NOT read a displayName field', async () => {
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     renderWithReactFlow(
       <WorkflowNode
         id="n1"
@@ -170,7 +170,7 @@ describe('Node description row', () => {
   })
 
   it('chevron carries the "Expand description" aria-label when collapsed (overflowing, not expanded)', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     // Force a measured overflow so the chevron shows even though descriptionExpanded=false.
     const origDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
     Object.defineProperty(HTMLElement.prototype, 'scrollHeight', { configurable: true, get() { return 999 } })
@@ -197,7 +197,7 @@ describe('Node description row', () => {
   })
 
   it('reports a measured overflow to the block without updating it during render', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const scrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
     const clientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
     Object.defineProperty(HTMLElement.prototype, 'scrollHeight', { configurable: true, get() { return 999 } })
@@ -232,7 +232,7 @@ describe('Node description row', () => {
   })
 
   it('keyboard Enter / Space on the description chevron toggles descriptionExpanded; other keys are ignored', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const { fireEvent } = await import('@testing-library/react')
     mockWorkflowStore.nodes = [
       { id: 'n1', data: { elementType: 'http-client', description: 'desc', descriptionExpanded: true } as unknown as { elementType: string; description: string } },
@@ -265,7 +265,7 @@ describe('Node description row', () => {
   })
 
   it('clicking the description chevron toggles descriptionExpanded only on the target node', async () => {
-    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+    const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
     const { default: userEvent } = await import('@testing-library/user-event')
     const user = userEvent.setup()
 

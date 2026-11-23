@@ -3,7 +3,7 @@
  *
  * The shapes match the checked-in fixtures byte for byte
  * (`functional/k8s-connect/fixture-matrix.json`,
- * `functional/http-plugin/rework-fixture.json`), so a built workflow and a
+ * `functional/http-plugin/flow-fixture.json`), so a built workflow and a
  * hand-authored one import identically.
  */
 

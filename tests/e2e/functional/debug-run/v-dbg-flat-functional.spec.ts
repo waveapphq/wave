@@ -143,7 +143,7 @@ async function clickSkipBlock(page: Page): Promise<void> {
 }
 
 async function clickStopImmediate(page: Page): Promise<void> {
-  // Stop is gated by the StopConfirmationDialog (section 15.6.0.1). The
+  // Stop is gated by the StopConfirmationDialog. The
   // primary click opens the dialog in 'immediate' mode; we then confirm it.
   await page.locator('[data-testid="action-stop-button"]').click()
   const dialog = page.locator('[data-testid="stop-confirmation-dialog"]')

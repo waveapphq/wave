@@ -254,7 +254,7 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
   // S3: Complex variable types - array, map, table
   // ========================================================================
 
-  test('V-PLUGIN-VARSET-02-S3: array, map, and table edit through the shared sheet (no legacy modals)', async ({
+  test('V-PLUGIN-VARSET-02-S3: array, map, and table edit through the shared sheet (no editor modals)', async ({
     page,
   }) => {
     await loadTestWorkflow(page)
@@ -272,7 +272,7 @@ test.describe('V-PLUGIN-VARSET-02: Variable Setter Functional Tests', () => {
     const arrayEditBtn = expandButton(modal, 0)
     await expect(arrayEditBtn).toBeVisible()
 
-    // It opens the "Edit value" sheet, NOT the legacy array-editor-modal.
+    // It opens the "Edit value" sheet, NOT an array-editor-modal.
     await arrayEditBtn.click()
     await expect(sheet).toBeVisible()
     await expect(sheet.locator('[data-testid="value-editor-type-badge"]')).toContainText('array')

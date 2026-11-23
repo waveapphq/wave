@@ -83,7 +83,7 @@ describe('VariableComboboxBase overflow + popover width', () => {
     await user.click(screen.getByRole('combobox'))
 
     const nameEl = await screen.findByText(longName)
-    // The browser's own popup is gone; the hint comes from the one tooltip.
+    // No browser title popup; the hint comes from the one tooltip.
     expect(nameEl).not.toHaveAttribute('title')
     fireEvent.focus(nameEl)
     const popup = document.querySelector('[data-slot="tooltip-content"]')

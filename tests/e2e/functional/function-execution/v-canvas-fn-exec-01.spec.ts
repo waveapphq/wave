@@ -15,7 +15,7 @@
  *      (`data-execution-status="passed"` on the Function workflow node).
  *
  * Output-binding propagation to caller-scope variable is exercised by the
- * BE TDD unit tests (`backend/tests/core/functions/test_executor.py`) and
+ * BE unit tests (`backend/tests/core/functions/test_executor.py`) and
  * by the BE workbench-integration tests
  * (`backend/tests/api/test_workbench_function_runs.py`); we do not duplicate
  * those assertions here because the workbench `/status` route does not

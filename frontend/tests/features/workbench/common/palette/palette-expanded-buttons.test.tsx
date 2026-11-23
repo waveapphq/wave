@@ -48,7 +48,7 @@ describe('PaletteExpanded bottom buttons', () => {
     expect(screen.getByText('Function Lib')).toBeInTheDocument()
   })
 
-  it('does NOT render the legacy "New Block" or "Block Library" labels', () => {
+  it('does NOT render the "New Block" or "Block Library" labels', () => {
     renderExpanded()
     expect(screen.queryByText('New Block')).not.toBeInTheDocument()
     expect(screen.queryByText('Block Library')).not.toBeInTheDocument()

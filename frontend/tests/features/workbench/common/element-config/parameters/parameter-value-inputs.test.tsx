@@ -5,8 +5,8 @@
  * not edit in a bare inline text box.
  *
  * A list or map row shows its value as one line in the one value field, and the
- * field's expand opens the sheet (FIELD-1, FIELD-10). Behavior preserved on
- * migration: param maps stay string->string (stringValuesOnly), the
+ * field's expand opens the sheet (FIELD-1, FIELD-10). The sheet keeps: param
+ * maps stay string->string (stringValuesOnly), the
  * param's allowedFormats restricts the sheet's Format dropdown, and the
  * templateFields opt-in maps to the sheet's Kind=Template (onSave(value,
  * isTemplate), allowTemplate=true).

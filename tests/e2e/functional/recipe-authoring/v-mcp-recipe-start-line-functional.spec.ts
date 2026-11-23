@@ -11,7 +11,7 @@
  * 1. In a Test from `create_test_from_recipe`, Start's bottom handle and the first Block's top handle are
  *    within 1 px in x, in the edit canvas.
  * 2. The same for a Test saved from `build_test_from_recipe`.
- * 3. The same after a save and a reload.
+ * 3. The same after a save and a reload, the last Block's Message first set to an expression.
  * 4. The same in each read-only canvas view of the Test: a second tab watching the tab that holds the Test;
  *    a run the assistant starts with `start_execution`, as the holding tab and the watching tab mirror it
  *    while it plays; the finished run's history canvas; and the holding tab's own Run while it plays.
@@ -26,10 +26,16 @@ import { openTest } from '../../helpers/fn-seed'
 import { expectSameX, handleCenterX, startHandle, topHandle } from '../../helpers/flow-geometry'
 import { callToolAsync, enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
 import { SEL, openWorkbench, resetOwnership, waitUntilHeld } from '../../helpers/ownership'
-import { leaveExpressionEditor } from '../../helpers/code-editor'
-import { SWITCH_TO_EXPRESSION_TITLE, expressionBox, expressionToggle } from '../../helpers/value-field'
-import { openBlockSheet, saveBlockSheet, saveTest, selectEnvironment } from '../../helpers/workbench'
-import { MCP_PORT, createFromRecipe, storedTestDoc, tool, uniqueName, type Doc } from './recipe-tool-helpers'
+import { saveTest, selectEnvironment, setBlockExpression } from '../../helpers/workbench'
+import {
+  MCP_PORT,
+  createFromRecipe,
+  expectStoredExpression,
+  storedTestDoc,
+  tool,
+  uniqueName,
+  type Doc,
+} from './recipe-tool-helpers'
 
 const RUN_DELAY_MS = 15_000
 const RUN_STATUS = '[data-testid="workflow-status"]'
@@ -56,23 +62,6 @@ flow:
     label: Close the check
     settings: {message: end}
 `
-}
-
-/** Message holds a plain value, so {x} first asks to clear it (FIELD-7): Clear, type the expression, Save. */
-async function setMessageExpression(page: Page, blockId: string, expression: string): Promise<void> {
-  const sheet = await openBlockSheet(page, blockId)
-  await expressionToggle(sheet, 'message').click()
-  const ask = page.locator('[data-testid="switch-mode-dialog"]')
-  await expect(ask).toHaveAccessibleName(SWITCH_TO_EXPRESSION_TITLE)
-  await ask.getByRole('button', { name: 'Clear', exact: true }).click()
-  await expect(ask).toHaveCount(0)
-  const editor = expressionBox(sheet, 'message')
-  await expect(editor).toBeVisible()
-  await editor.click()
-  await page.keyboard.insertText(expression)
-  await expect(editor).toHaveText(expression)
-  await leaveExpressionEditor(editor)
-  await saveBlockSheet(sheet)
 }
 
 /** The id of the Block Start wires to, as stored. */
@@ -133,8 +122,10 @@ test.describe('V-MCP-RECIPE-START-LINE-FUNCTIONAL: Start lines up with the first
       await openTest(page, testId)
       const edges = ((await storedTestDoc(request, testId)).workflow.edges ?? []) as Doc[]
       const last = edges.map((edge) => String(edge.target)).find((id) => !edges.some((edge) => edge.source === id))
-      await setMessageExpression(page, String(last), "'end saved'")
+      // Per FIELD-7: Message holds a plain value, so the helper answers the switch warning with Clear.
+      await setBlockExpression(page, String(last), 'message', "'end saved'")
       await saveTest(page)
+      await expectStoredExpression(request, testId, String(last), 'message', "'end saved'")
       await openTest(page, testId)
       await expectStraight(page, first, 'after save and reload')
     })

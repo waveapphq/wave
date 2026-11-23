@@ -1,6 +1,6 @@
 # Retired: in-process protocol simulators
 
-The in-process simulators are gone. All external-protocol E2E coverage runs
+All external-protocol E2E coverage runs
 against the real compose service stack - see `../services/README.md` (managed
 by `scripts/e2e-stack.sh`).
 

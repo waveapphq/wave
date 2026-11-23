@@ -148,7 +148,7 @@ describe('Plugin Definitions - REQ-3.4.4.1', () => {
       expect(new Set(icons).size).toBe(icons.length)
     })
 
-    it('no longer defines the retired k8s-api stub', async () => {
+    it('defines no k8s-api stub', async () => {
       const { getPluginById } = await import('@/features/workbench/lib/plugin-definitions')
       expect(getPluginById('k8s-api')).toBeUndefined()
     })
@@ -780,7 +780,7 @@ describe('Plugin Definitions - REQ-3.4.4.1', () => {
       expect(data?.name).toBe('Data')
     })
 
-    it('no longer declares an empty custom category', async () => {
+    it('declares no empty custom category', async () => {
       // The backend keeps `custom` as a valid plugin-authoring value; the
       // frontend category list only carries categories that have plugins.
       const { PLUGIN_CATEGORIES } = await import('@/features/workbench/lib/plugin-definitions')

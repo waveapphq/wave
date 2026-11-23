@@ -217,11 +217,11 @@ describe('Workflow store - validation state', () => {
     })
   })
 
-  describe('legacy field removal', () => {
+  describe('absent validation fields', () => {
     it.each([
-      ['the old validationErrorNodeIds array is gone', 'validationErrorNodeIds'],
-      ['the old setValidationErrorNodeIds action is gone', 'setValidationErrorNodeIds'],
-      ['the old clearValidationErrorNode action is gone', 'clearValidationErrorNode'],
+      ['there is no validationErrorNodeIds array', 'validationErrorNodeIds'],
+      ['there is no setValidationErrorNodeIds action', 'setValidationErrorNodeIds'],
+      ['there is no clearValidationErrorNode action', 'clearValidationErrorNode'],
     ])('%s', async (_title, field) => {
       const { useWorkflowStore } = await import(
         '../../../../src/features/workbench/stores/workflow-store'

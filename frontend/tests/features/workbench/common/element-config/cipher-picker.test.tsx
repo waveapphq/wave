@@ -215,7 +215,7 @@ describe('CipherPickerSheet - two-table family split', () => {
     }
   })
 
-  it('renders TLS 1.3 rows selectable and draggable (the read-only block is gone)', async () => {
+  it('renders TLS 1.3 rows selectable and draggable, none read-only', async () => {
     renderSheet()
     await ready()
     const table13 = screen.getByTestId('cipher-table-tls13')

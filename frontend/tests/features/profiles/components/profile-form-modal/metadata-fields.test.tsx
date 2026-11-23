@@ -1,12 +1,12 @@
 /**
- * MetadataFields shared-field migration tests.
+ * MetadataFields shared-field tests.
  *
  * Shape:
  *   - Profile name `<Input>` -> `<NameField maxLength={MAX_ENTITY_NAME_LENGTH}>` (64).
  *   - Profile description -> `<DescriptionField>` (multi-line, matches the
  *     environment / test description fields).
  *
- * The migration tests below verify post-migration shape only. Higher-level
+ * The tests below check the field shape only. Higher-level
  * profile form behavior (validation, submit, errors) is covered by
  * `tests/features/profiles/components/profile-form-modal.test.tsx`.
  *
@@ -52,7 +52,7 @@ function MetadataFieldsHarness({
   )
 }
 
-describe('MetadataFields - shared field primitives migration', () => {
+describe('MetadataFields - shared field primitives', () => {
   describe('profile name uses NameField with MAX_ENTITY_NAME_LENGTH', () => {
     it('renders the name input capped at 64', () => {
       render(<MetadataFieldsHarness />)

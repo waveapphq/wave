@@ -3,8 +3,6 @@ Tests for JSON Parser Plugin
 
 Implements comprehensive test coverage for requirement:
 - REQ-3.4.1.16: JSON processing with JSONPath support
-
-Following TDD approach with exact error messages and 100% coverage requirement.
 """
 
 from decimal import Decimal

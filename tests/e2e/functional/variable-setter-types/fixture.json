@@ -1,7 +1,7 @@
 {
-  "name": "Variable Setter Migration E2E (all types + expression + template)",
+  "name": "Variable Setter types (all types + expression + template)",
   "version": "1.0.0",
-  "description": "A single Variable Setter assigns one value of EACH type through the migrated value affordances - string literal, exact-text integer, exact-text float, boolean, array, map, table - plus one per-key expression row and one per-key template row. Proves the migrated setter persists + resolves every type, that exact-text numbers survive, the per-key expression evaluates eagerly, and the per-key template path renders eagerly to the target. Downstream Log nodes read each target back so the run output asserts the resolved value.",
+  "description": "A single Variable Setter assigns one value of EACH type: string literal, exact-text integer, exact-text float, boolean, array, map, table - plus one per-key expression row and one per-key template row. Proves the setter persists + resolves every type, that exact-text numbers survive, the per-key expression evaluates eagerly, and the per-key template path renders eagerly to the target. Downstream Log nodes read each target back so the run output asserts the resolved value.",
   "workflow": {
     "nodes": [
       {

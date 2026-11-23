@@ -71,9 +71,6 @@ workbench. No external service.
 
 ## Notes
 
-- The five mutators listed first are the ones the guard used to miss: it named
-  operations the table type does not have, so whole-column add / insert / remove
-  and row replace / insert went through unguarded.
 - G3 asserts both directions on purpose - widening the scan to free names must
   not blind it to a name that really is undeclared.
 - G5 is the other direction of G4. The read-only rule matches whole method and

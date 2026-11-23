@@ -39,7 +39,7 @@ _add_environment "$ENV1" "Local"
 # Execution cover sheet with the Historical Canvas plumbing:
 #   - run_id == id so _locate_run() finds the row for a test-type run.
 #   - workflow_snapshot provides the nodes/edges the canvas paints when
-#     no snapshot file exists on disk (pre-refactor behavior).
+#     no snapshot file exists on disk.
 _bulk executions "[{\"op\":\"add\",\"entity\":{
   \"id\":\"${EXEC1}\",
   \"run_id\":\"${EXEC1}\",

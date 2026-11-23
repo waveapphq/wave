@@ -614,7 +614,7 @@ describe('EnvironmentForm', () => {
   })
 
   // ==========================================================================
-  // Shared Field Primitives Migration
+  // Shared Field Primitives
   //
   // Environment name moves from a 255-char local cap to MAX_ENTITY_NAME_LENGTH
   // (64) imported from the shared field-constraints module. Description

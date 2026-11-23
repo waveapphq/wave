@@ -1,5 +1,5 @@
 /**
- * V-PROF-K8S-01: Kubernetes profile form per the approved wireframe
+ * V-PROF-K8S-01: Kubernetes profile form per the wireframe
  *
  * Phase: no-data (parallel) - opens the profile create dialog directly and
  * picks the kubernetes type; no fixture data.

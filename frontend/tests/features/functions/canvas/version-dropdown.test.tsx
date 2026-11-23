@@ -349,7 +349,7 @@ describe('VersionDropdown - mode="bump" blocked bumps', () => {
     await user.click(screen.getByTestId('version-dropdown-trigger'))
     const patchOpt = screen.getByRole('menuitemradio', { name: /patch/i })
     expect(within(patchOpt).getByTestId('blocked-info-icon')).toBeInTheDocument()
-    // The hand-rolled `title` is gone (it suppressed the help cursor + was slow).
+    // No native title: it suppresses the help cursor and is slow.
     expect(patchOpt).not.toHaveAttribute('title')
   })
 

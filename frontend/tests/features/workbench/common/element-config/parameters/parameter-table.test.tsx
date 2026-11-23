@@ -14,8 +14,7 @@ import { ParameterTable as Table } from '@/features/workbench/common/element-con
 import { HELD_DEFAULT_LOOK_CLASS } from '@/lib/variable-format'
 import { getInputParams } from '@/features/workbench/lib/node-parameters'
 
-// The Map / Array / String inputs now open the shared "Edit value" sheet
-// (the array / map / text editor modals are gone). Stand-in exposing its threaded
+// The Map / Array / String inputs open the shared "Edit value" sheet. Stand-in exposing its threaded
 // props + a literal-save / template-save / close so the ParameterTable -> input
 // wiring can be asserted; the sheet's own behavior lives in its own test files.
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {

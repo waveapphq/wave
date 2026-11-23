@@ -1,9 +1,8 @@
 # V-ELEMENT-CONFIG-VALUE-EDITOR-FUNCTIONAL
 
-Element-config parameter value editing migrates onto the shared "Edit value"
-sheet. The HTTP node's Headers / Query Params (maps) and Body
-(multiline string) open the shared `ValueEditorSheet`; the deleted array / map /
-text editor modals are gone. Param maps stay string -> string, the body keeps its
+Element-config parameter values are edited in the shared "Edit value" sheet.
+The HTTP node's Headers / Query Params (maps) and Body (multiline string) open
+the shared `ValueEditorSheet`. Param maps stay string -> string, the body keeps its
 Format control + templateFields opt-in, and the edits persist and reach the request.
 
 ## Prerequisites

@@ -104,7 +104,7 @@ async function openParamModal(page: Page): Promise<Locator> {
   return dialog
 }
 
-test.describe('V-PROF-PARAM-CELL: profile value cell renders the migrated setter affordances', () => {
+test.describe('V-PROF-PARAM-CELL: profile value cell renders the setter affordances', () => {
   test.beforeEach(async ({ page, request }) => {
     await page.goto('/')
     await ensureEnvironment(request)

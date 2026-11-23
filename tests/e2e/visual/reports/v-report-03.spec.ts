@@ -195,7 +195,7 @@ test.describe('V-REPORT-03: workbench session artifacts', () => {
       const dialog = resetDialog(page)
       await expect(dialog).toBeVisible()
       await expect(page.getByRole('alertdialog')).toHaveCount(1)
-      // The legacy Reset Workflow? dialog is gone for good.
+      // No Reset Workflow? dialog.
       await expect(page.getByText('Reset Workflow?')).toHaveCount(0)
 
       await expect(dialog).toContainText(

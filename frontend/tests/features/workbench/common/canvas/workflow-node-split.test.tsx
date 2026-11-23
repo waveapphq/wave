@@ -70,7 +70,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     // Assert defaults to SPLIT when mode is
     // undefined so a fresh drop wires both pass and fail egress immediately.
     it('renders split (pass + fail) handles when mode is undefined', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -86,7 +86,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
 
   describe('Single mode (explicit)', () => {
     it('renders single output handle for assert node in single mode', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -106,7 +106,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
 
   describe('Split mode', () => {
     it('renders two output handles (pass and fail) for assert node in split mode', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -124,7 +124,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('pass handle has green background class', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -141,7 +141,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('fail handle has red background class', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -158,7 +158,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('pass handle renders Check icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -177,7 +177,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('fail handle renders X icon', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -197,7 +197,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
 
     it('split mode handles render at the natural bottom of the card (no shift offset)', async () => {
       mockWorkflowStore.selectedNodeIds = ['node-1']
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -219,7 +219,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('split mode handles glow when proximitySource is true', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -244,7 +244,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
 
   describe('Non-assert nodes', () => {
     it('always renders single output handle regardless of config', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -264,7 +264,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
 
   describe('Cycle detection - single handle', () => {
     it('renders cycle indicator instead of normal input handle when proximityCycleDetected is true', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -283,7 +283,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('cycle indicator has red background styling', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -300,7 +300,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('cycle indicator renders RefreshCcw icon (SVG)', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -326,7 +326,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e2', source: 'b', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -350,7 +350,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e2', source: 'b', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -374,7 +374,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e2', source: 'b', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -395,7 +395,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e1', source: 'a', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -416,7 +416,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e1', source: 'a', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -437,7 +437,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e1', source: 'a', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -459,7 +459,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e1', source: 'a', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -483,7 +483,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
         { id: 'e2', source: 'b', target: 'node-1' },
       ]
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -503,7 +503,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
 
   describe('If/Else branching handles', () => {
     it('renders output handles for each branch', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -531,7 +531,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('uses the branch label as the handle name when provided', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -555,7 +555,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('falls back to the type-based name when no label provided', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -580,10 +580,10 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
       expect(screen.getByTestId('handle-output-branch_2')).toHaveAttribute('aria-label', 'else')
     })
 
-    it('if-else handles no longer apply a bottom offset (action row is inside the card)', async () => {
+    it('if-else handles apply no bottom offset (action row is inside the card)', async () => {
       mockWorkflowStore.selectedNodeIds = ['node-1']
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -608,7 +608,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('if-else handles glow when proximitySource is true', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -634,7 +634,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('renders single output handle when if-else has empty branches', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -655,7 +655,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('renders single output handle when if-else has only one branch', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -684,7 +684,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     // mode so the pass and fail egress handles are always available on a
     // fresh drop.
     it('renders split handles when assert node has empty config', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -702,7 +702,7 @@ describe('WorkflowNode Split Mode - Assert dual output handles', () => {
     })
 
     it('renders split handles when assert node has config without values', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"

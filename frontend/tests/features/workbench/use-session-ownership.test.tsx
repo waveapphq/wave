@@ -646,7 +646,7 @@ describe('useSessionOwnership - publishing the session role', () => {
     useWorkbenchSessionStore.setState({ isHolder: false, isWatching: false })
   })
 
-  it('no longer announces departure itself', async () => {
+  it('does not announce departure itself', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({ ok: true })
     vi.stubGlobal('fetch', fetchSpy)
     ownershipApi.getOwnership.mockResolvedValue(FREE)

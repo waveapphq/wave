@@ -217,14 +217,14 @@ describe('VariableManagerContent - header', () => {
     }
   })
 
-  it('does NOT render the legacy Watch List section', () => {
+  it('does NOT render a Watch List section', () => {
     render(<VariableManagerContent {...baseProps} />)
     expect(
       screen.queryByRole('region', { name: /watch list/i }),
     ).not.toBeInTheDocument()
   })
 
-  it('does NOT render the legacy "All Variables" scope group header', () => {
+  it('does NOT render an "All Variables" scope group header', () => {
     const variables = [createVariable({ id: 'v1', name: 'a' })]
     render(<VariableManagerContent {...baseProps} variables={variables} />)
     expect(

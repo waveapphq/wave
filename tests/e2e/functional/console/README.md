@@ -65,8 +65,7 @@ historical regressions cannot recur:
 
 # V-CONSOLE-SETTINGS-PERSIST-FUNCTIONAL: Shared Persisted Display Settings
 
-Regression guard: console display settings previously reset on every reload
-(four per-surface copies of the defaults). They are now one remembered
+Guard: console display settings survive a reload. They are one remembered
 per-browser preference shared by the live console, the Execution History
 console, and the report log panel.
 

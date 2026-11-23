@@ -2221,7 +2221,7 @@ class TestGetEntityServiceWiring:
 
 
 # ============================================================================
-# Item 8 - Workbench Tracked Execution Viewer
+# Workbench Tracked Execution Viewer
 # start_execution delegates to workbench engine (session_id = execution_id)
 # terminal bridge updates execution record on workbench terminal event
 # stop_execution routes through workbench stop
@@ -2898,7 +2898,7 @@ class TestStartExecutionSubsetContract:
                 entity_type="suite",
                 entity_id=suite_id,
                 environment_id=TEST_ENV_ID,
-                selected_tests=[{"unexpected": "shape"}],  # type: ignore[list-item]
+                selected_tests=[{"unexpected": "shape"}],
             )
 
     def test_start_execution_skips_missing_suite_when_seeding_regression_timeline(self) -> None:

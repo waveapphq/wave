@@ -1,5 +1,5 @@
 /**
- * Workflow Store History Refactor Tests
+ * Workflow Store History Tests
  *
  * Unit tests that define the contract of the post-state baseline undo/redo
  * model.
@@ -13,7 +13,7 @@
  * - Every user-visible mutation produces exactly one history entry, except
  *   no-displacement drag (zero entries) and transactions (one entry for the
  *   whole batch).
- * - `commitHistory` (was `pushHistory`) is called AFTER the mutation.
+ * - `commitHistory` is called AFTER the mutation.
  * - `canUndo()` is `historyIndex > 0`; `canRedo()` is `historyIndex < history.length - 1`.
  * - `HistoryEntry` carries `variables` so variable edits are undoable.
  */
@@ -87,7 +87,7 @@ function makeVariable(
   return { id, name, value, type }
 }
 
-describe('Workflow Store - History Refactor (post-state baseline model)', () => {
+describe('Workflow Store - History (post-state baseline model)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.resetModules()
@@ -98,7 +98,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
     vi.clearAllMocks()
   })
 
-  describe('User scenario: 4-step undo/redo round trip', () => {
+  describe('4-step undo/redo round trip', () => {
     /**
      * Drop a log block (auto-connects an edge),
      * edit config msg=123 + save, edit config msg=abc + save. That sequence
@@ -304,7 +304,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
     })
   })
 
-  describe('Click-twice regression', () => {
+  describe('Repeated undo at the baseline', () => {
     /**
      * Every undo click moves the pointer AND restores state, so the first click
      * does the work and any further clicks at the baseline are silent no-ops.
@@ -629,8 +629,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
     /**
      * After markSaved, history is exactly [baseline] with
      * isInitialState: true and historyIndex 0. canUndo() === false. The
-     * REQ-5.2.1.24 user-facing contract is preserved while the internal
-     * mechanism switches from "clear to empty" to "seed with baseline".
+     * REQ-5.2.1.24 contract holds: the stack is seeded with the baseline.
      */
     it('three ops, then save, then one op; cannot undo past save', async () => {
       const { useWorkflowStore } = await import(
@@ -797,9 +796,7 @@ describe('Workflow Store - History Refactor (post-state baseline model)', () => 
         useWorkflowStore.getState().undo()
       }, 'Try to undo')
 
-      // The transaction wrapper itself committed a no-mutation entry
-      // OR (per implementation choice) committed nothing. Either way the
-      // canvas state must NOT have rewound: both nodes still present.
+      // Whether or not the transaction commits an entry, the canvas has not rewound.
       expect(useWorkflowStore.getState().nodes).toHaveLength(2)
     })
 

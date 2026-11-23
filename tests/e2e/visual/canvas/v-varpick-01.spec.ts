@@ -121,7 +121,7 @@ async function assertPickerFits(page: Page, sheet: Locator, anchor: Locator): Pr
   await expect(nameSpan).toHaveClass(/truncate/)
   await expect(nameSpan).toHaveClass(/min-w-0/)
   await expect(nameSpan).toHaveClass(/flex-1/)
-  // SHELL-7a: the browser's own popup is gone; the shared tooltip carries the
+  // SHELL-7a: no browser title popup; the shared tooltip carries the
   // full name (hover-proved in `consistency/tooltip-convergence.spec.ts` -
   // hovering an option here would change which row the picker commits).
   await expect(nameSpan).not.toHaveAttribute('title', /.*/)

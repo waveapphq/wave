@@ -8,9 +8,6 @@ Test Coverage:
 - Aggregate fields: suites_count, tests_count, status, last_run, tags
 - Status filtering (passed, failed, never_run)
 - Tags filtering
-
-These tests are written TDD-style - they define the contract that the
-implementation must fulfill.
 """
 
 import re

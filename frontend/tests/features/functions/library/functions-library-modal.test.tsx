@@ -426,7 +426,7 @@ describe('FunctionsLibraryModal - viewport-clamp edge cases', () => {
 })
 
 describe('FunctionsLibraryModal - width resize handle (FN-LC-6)', () => {
-  it('renders the shared resize handle after the DraggableSheet migration', () => {
+  it('renders the shared DraggableSheet resize handle', () => {
     render(<FunctionsLibraryModal isOpen={true} onClose={() => {}} />)
     expect(screen.getByTestId('dialog-resize-handle')).toBeInTheDocument()
   })

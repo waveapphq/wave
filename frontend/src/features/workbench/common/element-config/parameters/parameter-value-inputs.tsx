@@ -97,7 +97,7 @@ const NO_SCRIPT_EDITOR: ScriptEditorProps = {}
 // PYRUN-13, SQL-10, OS-12: the formats that turn the Edit value sheet into a script editor a row runs.
 const SCRIPT_FORMATS: ReadonlySet<string> = new Set(['python', 'sql', 'dql', 'query-dsl'])
 
-// Exact approved tooltip copy for the credential-field status icon (SECFLD-1..4).
+// Tooltip copy for the credential-field status icon (SECFLD-1..4).
 export const CREDENTIAL_LITERAL_TOOLTIP =
   'This value is stored protected - after saving, it can be replaced, and viewed only ' +
   'while secret unmasking is enabled in Settings.'
@@ -158,6 +158,7 @@ export function CredentialStatusIcon({ kind, label }: Readonly<CredentialStatus>
       wide
     >
       <span
+        role="img"
         aria-label={label}
         className="absolute right-2 top-1/2 -translate-y-1/2 z-10 inline-flex items-center"
       >
@@ -358,7 +359,6 @@ export function EnumInput({
   testId?: string
 }>) {
   const errorId = use(FieldErrorContext)
-  /* v8 ignore next - COV-BRANCH-111 */
   const selected = safeStringify(effectiveValue)
   const allowed = parameter.enumValues ?? []
   // Radix keeps the empty text for "nothing picked", so it is never an item; a repeated value is one item.

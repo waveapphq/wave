@@ -33,7 +33,7 @@
  *   AP-f  every enum's option list, in order, with its first option: Kind
  *         offers ConfigMap, Secret and Job only, and no Namespace kind
  *   AP-g  every state's ordered row census, labels, required markers, the
- *         expression-toggle census by the ruled mode-selector distinction, an
+ *         expression-toggle census by the mode-selector distinction, an
  *         info badge on every row, and an Advanced group of exactly Namespace,
  *         Impersonate user and Impersonate groups with no reveal tick and no
  *         API version pair

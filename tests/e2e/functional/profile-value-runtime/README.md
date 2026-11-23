@@ -1,8 +1,7 @@
 # Profile value runtime binding
 
-Proves the profile value runtime binding is UNCHANGED by the editor migration. The
-editor moved onto the shared sheet, but the stored shape and execution-time resolution
-are identical to before.
+Proves profile value binding at run time: a `table` param resolves to a
+`{headers, rows}` dict, and big `integer` and `float` values stay exact.
 
 ## Pre-requisites
 
@@ -20,7 +19,7 @@ are identical to before.
 
 | Test | Behavior |
 |------|-----------|
-| table binding | a `table` param bound to a Log node resolves to the same `{headers, rows}` dict at runtime (`sorted(prof.conn.keys()) == ['headers', 'rows']`, header list + a cell read back) |
+| table binding | a `table` param bound to a Log node resolves to a `{headers, rows}` dict at run time (`sorted(prof.conn.keys()) == ['headers', 'rows']`, header list + a cell read back) |
 | number binding | a >2^53 `integer` and a >17-significant-digit `float` resolve to an exact int + Decimal, and integer arithmetic stays exact (`prof.bignum + 1`) |
 
 The editor-side UI round-trip (edit via the sheet, exact display on reopen, table stored

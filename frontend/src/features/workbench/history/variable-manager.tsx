@@ -11,7 +11,7 @@
  *   variable id (== name in history mode). The eye-ON ("runtime") toggle
  *   reads this.
  *
- * The redesigned panel renders read-only: Add hidden, Edit pencil + Delete
+ * The panel renders read-only: Add hidden, Edit pencil + Delete
  * trash disabled, eye stays usable so a reviewer flips between the test's
  * declared value and the actual evaluated outcome. The Unused and OUT badges
  * read the run's canvas the way the live panel reads the open one.

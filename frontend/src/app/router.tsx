@@ -31,7 +31,7 @@ const DashboardContainer = lazy(() =>
   import('@/features/dashboard/container/container').then((m) => ({ default: m.DashboardContainer }))
 )
 const TestsListContainer = lazy(() =>
-  import('@/features/tests/container').then((m) => ({ default: m.TestsListContainer }))
+  import('@/features/tests/container/container').then((m) => ({ default: m.TestsListContainer }))
 )
 const SuitesListContainer = lazy(() =>
   import('@/features/suites/container/container').then((m) => ({ default: m.SuitesListContainer }))
@@ -46,19 +46,18 @@ const ExecutionsListContainer = lazy(() =>
     default: m.ExecutionsListContainer,
   }))
 )
-/* v8 ignore next 4 - COV-V8-004 */
 const ProfilesListContainer = lazy(() =>
-  import('@/features/profiles/container').then((m) => ({
+  import('@/features/profiles/container/container').then((m) => ({
     default: m.ProfilesListContainer,
   }))
 )
 const SettingsContainer = lazy(() =>
-  import('@/features/settings/container').then((m) => ({ default: m.SettingsContainer }))
+  import('@/features/settings/container/container').then((m) => ({ default: m.SettingsContainer }))
 )
 
 // WorkbenchPage is in its own file for better code-splitting (it's a large component)
 const WorkbenchPage = lazy(() =>
-  import('@/features/workbench/live').then((m) => ({ default: m.WorkbenchContainer }))
+  import('@/features/workbench/live/container').then((m) => ({ default: m.WorkbenchContainer }))
 )
 
 // Helper to create lazy placeholder components
@@ -91,7 +90,7 @@ const ExecutionTestCanvasPage = lazy(() =>
 )
 const UserPage = lazyPlaceholder('UserPage')
 const FunctionsListContainer = lazy(() =>
-  import('@/features/functions/container').then((m) => ({ default: m.FunctionsListContainer }))
+  import('@/features/functions/container/container').then((m) => ({ default: m.FunctionsListContainer }))
 )
 const FunctionDetailPage = lazy(() =>
   import('@/features/functions/container/function-detail-page').then((m) => ({
@@ -129,7 +128,7 @@ const ArtifactDrillPage = lazy(() =>
 function PageLoadingFallback() {
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="text-muted-foreground">Loading…</div>
+      <div role="status" className="text-muted-foreground">Loading…</div>
     </div>
   )
 }

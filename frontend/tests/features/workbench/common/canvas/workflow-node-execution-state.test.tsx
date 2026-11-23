@@ -1,7 +1,7 @@
 /**
  * WorkflowNode Execution State Tests
  *
- * TDD tests for REQ-3.2.2.15 (Live flow visualization) and REQ-3.2.2.16 (Highlight currently executing blocks)
+ * Tests for REQ-3.2.2.15 (Live flow visualization) and REQ-3.2.2.16 (Highlight currently executing blocks)
  * V-CANVAS-04: Running state with status in breadcrumb, current block highlighted with pulse animation,
  * completed blocks show pass/fail icons.
  *
@@ -90,7 +90,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
   describe('executionStatus Prop Contract', () => {
     it('exposes executionStatus via data attribute for Playwright selectors', async () => {
       mockBlockExecutionStatus = 'running'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -103,7 +103,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
     })
 
     it('omits data-execution-status when not provided (idle state)', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -125,7 +125,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
       'stopped',
     ] as const)('accepts executionStatus="%s"', async (status) => {
       mockBlockExecutionStatus = status
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -141,7 +141,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
   describe('Status Icon Rendering (V-CANVAS-04: pass/fail icons)', () => {
     it('renders the run-state badge as pass for successful execution', async () => {
       mockBlockExecutionStatus = 'success'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -155,7 +155,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('renders the run-state badge as fail for failed execution', async () => {
       mockBlockExecutionStatus = 'failed'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -168,7 +168,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('renders the WARN badge for the warning execution status', async () => {
       mockBlockExecutionStatus = 'warning'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -184,7 +184,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('carries the amber chip classes on the WARN badge', async () => {
       mockBlockExecutionStatus = 'warning'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -197,7 +197,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('renders only the DISABLED badge when a warning block is also disabled', async () => {
       mockBlockExecutionStatus = 'warning'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -212,7 +212,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('warning state is also reflected on the outer card data-execution-status', async () => {
       mockBlockExecutionStatus = 'warning'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -226,7 +226,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('applies amber border for warning state', async () => {
       mockBlockExecutionStatus = 'warning'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -240,7 +240,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('applies border-2 and execution border color class when execution state is active', async () => {
       mockBlockExecutionStatus = 'success'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -255,7 +255,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
     })
 
     it('applies border-0 when no execution state (no spurious border)', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -270,7 +270,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('renders the run-state badge as run for running state, paired with the border pulse', async () => {
       mockBlockExecutionStatus = 'running'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -284,7 +284,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('does not render the chip for pending state', async () => {
       mockBlockExecutionStatus = 'pending'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -296,7 +296,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
     })
 
     it('does not render the chip when no executionStatus', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -311,7 +311,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
   describe('Execution State with Selection', () => {
     it('preserves execution status when node is selected', async () => {
       mockBlockExecutionStatus = 'running'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -329,7 +329,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
   describe('State Transitions', () => {
     it('updates the chip when execution completes (running -> success)', async () => {
       mockBlockExecutionStatus = 'running'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
 
       const { rerender } = renderWithReactFlow(
         <WorkflowNode
@@ -358,7 +358,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('updates the chip when execution fails (running -> failed)', async () => {
       mockBlockExecutionStatus = 'running'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
 
       const { rerender } = renderWithReactFlow(
         <WorkflowNode
@@ -385,7 +385,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
 
     it('clears status icon on reset (success -> undefined)', async () => {
       mockBlockExecutionStatus = 'success'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
 
       const { rerender } = renderWithReactFlow(
         <WorkflowNode
@@ -416,7 +416,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
   describe('Preserves Existing Node Functionality', () => {
     it('preserves label and elementType icon when executionStatus added', async () => {
       mockBlockExecutionStatus = 'success'
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -441,7 +441,7 @@ describe('WorkflowNode Execution State - REQ-3.2.2.15, REQ-3.2.2.16, V-CANVAS-04
     it('renders action row with execution state when single-selected', async () => {
       mockBlockExecutionStatus = 'running'
       mockWorkflowStore.selectedNodeIds = ['node-1']
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"

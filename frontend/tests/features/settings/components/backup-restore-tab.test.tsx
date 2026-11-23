@@ -225,7 +225,7 @@ function expectFieldsHidden() {
   }
 }
 
-/** Every state of section 7.3 the section can be in, by name. */
+/** Every state the periodic backup section can be in, by name. */
 const SECTION_STATES: Array<[string, Partial<PeriodicBackup>]> = [
   ['first read pending', { status: 'pending', saved: undefined }],
   ['first read failed', { status: 'failed', error: SCHEDULE_READ_FAILURE, saved: undefined }],
@@ -530,7 +530,7 @@ describe('BackupRestoreTab', () => {
       )
     })
 
-    it('no longer renders the include-credentials toggle', () => {
+    it('renders no include-credentials toggle', () => {
       renderTab()
       expect(screen.queryByTestId('include-credentials-toggle')).not.toBeInTheDocument()
     })

@@ -129,7 +129,7 @@ def get_component_health() -> dict[str, str]:
     resource_status = check_resource_health()
 
     # Build components dictionary
-    # Storage and database share same check for now
+    # Storage and database share one check
     components = {
         "storage": storage_status,
         "database": storage_status,  # Reuse storage status

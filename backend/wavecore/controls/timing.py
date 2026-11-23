@@ -28,8 +28,8 @@ def _evaluate_duration(duration_value: Any) -> int:
     """
     Validate and return duration value.
 
-    Duration must be a positive integer (milliseconds). Post expression-migration,
-    values arrive already resolved by resolve_parameters() upstream.
+    Duration must be a positive integer (milliseconds). Values arrive already
+    resolved by resolve_parameters() upstream.
 
     Args:
         duration_value: The duration parameter value (must be positive int)

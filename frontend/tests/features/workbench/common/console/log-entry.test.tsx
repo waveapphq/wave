@@ -236,7 +236,7 @@ describe('LogEntry Component', () => {
       const sourceElement = screen.getByTestId('log-entry-source')
       await user.hover(sourceElement)
 
-      // The browser popup is gone; the full source comes from the one tooltip.
+      // No browser title popup; the full source comes from the one tooltip.
       expect(sourceElement).not.toHaveAttribute('title')
       fireEvent.focus(sourceElement)
       expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(

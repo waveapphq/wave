@@ -1,7 +1,7 @@
 # V-PLUGIN-HTTP: the HTTP Block against real servers
 
 End-to-end proof for the HTTP Client Block: every method, every parameter and
-every output over the published `http-echo` service; the reworked auth, body
+every output over the published `http-echo` service; the auth, body
 and trace surfaces; artifact containment on an upload source; and - in
 `v-plugin-http-filepath.spec.ts` - where a file-mode download lands and what the
 `body` output then holds. `v-http-remote-proxy-choice-functional.spec.ts` covers
@@ -16,13 +16,13 @@ Execution body.
   `v-plugin-http-execution.spec.ts` and `v-plugin-http-filepath.spec.ts` drive
   the published `http-echo` listener through `HTTP_TARGET_HOST` +
   `HTTP_MAIN_PORT`; never hardcode the endpoint.
-  `v-plugin-http-rework-functional.spec.ts` and
+  `v-plugin-http-flow-functional.spec.ts` and
   `v-plugin-http-artifact-containment.spec.ts` also stand up an in-spec
   recording server, because their byte-ordering and received-bytes proofs are per-spec
   state a shared service cannot hold.
 - `fixture.json` - the 55-node parameter and method matrix, plus the fail cases
   wrapped in Try/Catch
-- `rework-fixture.json` - the reworked auth sections, body modes, the
+- `flow-fixture.json` - the auth sections, body modes, the
   literal-vs-expression wire matrix, download, cap and trace
 - `artifact-traversal.fixture.json` - a marker file planted outside the run's
   artifacts and an upload pointed at it through an `artifact://` reference
@@ -71,7 +71,7 @@ Proxy choice spec (no run):
 
 - **Methods and parameters:** every success node ends `success` and logs its
   captured outputs; every fail node is caught and logs the expected message
-- **Rework surfaces:** auth composes and masks, the generated Content-Type wins,
+- **Auth, body and trace:** auth composes and masks, the generated Content-Type wins,
   a manual Content-Length is refused before send, and the trace reports its hops
 - **Null query entry:** a query entry given `None` is sent as empty text
   (`z=`), and so is an entry whose expression gives `''`

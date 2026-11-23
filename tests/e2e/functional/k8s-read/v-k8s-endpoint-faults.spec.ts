@@ -600,7 +600,7 @@ test.describe('K8s read Blocks against the fault-injecting stub endpoint', () =>
       expect(warn?.level).toBe('WARN')
     })
 
-    await test.step('the kind is named once and the update wording is gone', async () => {
+    await test.step('the kind is named once and the message does not say "rejected the update"', async () => {
       expect(countOf(message, 'Pod')).toBe(1)
       expect(message).not.toContain('rejected the update')
     })

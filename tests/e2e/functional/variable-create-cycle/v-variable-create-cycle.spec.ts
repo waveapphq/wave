@@ -4,7 +4,7 @@
  *
  * Phase: functional-workflow (bare /workbench, no seed).
  * "+ Add" opens the floating create modal; the expression nature is a Kind
- * (Literal / Expression / Template), not the legacy `expression-toggle`. The
+ * (Literal / Expression / Template), not an `expression-toggle`. The
  * cycle gate is `useInspectCreate` -> `create-cycle-error` + Create disabled.
  *
  * Pass Criteria:

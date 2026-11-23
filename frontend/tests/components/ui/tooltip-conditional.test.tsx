@@ -490,7 +490,7 @@ describe('tooltip module surface', () => {
     'TooltipContent',
   ]
 
-  it.each(REMOVED)('no longer exports %s', (name) => {
+  it.each(REMOVED)('does not export %s', (name) => {
     expect(name in tooltipModule).toBe(false)
   })
 

@@ -366,7 +366,7 @@ test.describe('V-HTTP-02: HTTP body modes', () => {
     await importValidateAndNavigate(page, buildFixture())
     const sheet = await openConfig(page, 'http-get')
 
-    // 5. The section-card group set; the Security decoy is gone
+    // 5. The section-card group set; no Security group
     for (const name of ['Auth', 'Body', 'Timeouts & Retries', 'Response', 'TLS / Certificates', 'Connection']) {
       await expect(sheet.locator(`[data-testid="group-header-${name}"]`)).toBeVisible()
     }

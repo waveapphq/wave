@@ -153,7 +153,7 @@ test.describe('V-PLUGIN-SSHTUNNEL-01: SSH Tunnel Open Config Sheet', () => {
     await expect(checkbox(modal, 'validate_target')).toHaveAttribute('data-state', 'unchecked')
     await expect(requiredStar(modal, 'validate_target')).toHaveCount(0)
     await expect(exprToggle(modal, 'validate_target')).toHaveCount(1)
-    // The approved wireframe draws no footer under Advanced, expanded either.
+    // No footer under Advanced, expanded either.
     await expect(modal.locator('[data-testid="group-footer-Advanced"]')).toHaveCount(0)
 
     await expectInfoTooltip(page, modal, 'validate_target', VALIDATE_TARGET_HELP)

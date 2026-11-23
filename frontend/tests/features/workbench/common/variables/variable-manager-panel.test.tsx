@@ -1,7 +1,7 @@
 /**
  * Variable Manager Panel Tests
  *
- * TDD tests for the Variable Manager panel wrapper component.
+ * Tests for the Variable Manager panel wrapper component.
  *
  * REQ-3.1.3.11: Variable watching UI panel
  */

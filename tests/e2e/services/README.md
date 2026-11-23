@@ -384,8 +384,7 @@ Fidelity gaps versus a real kubelet, and what the cluster CAN fail with:
 ### kwok pod exec (`ClusterExec` in `kwok/kwok.yaml`)
 
 The `ClusterExec` doc turns on `kubectl exec` for the cluster. Without it every
-exec call fails with `no exec found for container "<name>" in pod "<ns>/<pod>"`,
-which is what the checked-in stack used to do.
+exec call fails with `no exec found for container "<name>" in pod "<ns>/<pod>"`.
 
 kwok's only exec target type is `local`, so **the command runs as a real process
 on the kwok container itself**, not in a pod. Real busybox, real exit codes, real

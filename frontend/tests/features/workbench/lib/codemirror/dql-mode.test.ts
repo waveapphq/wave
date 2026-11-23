@@ -193,7 +193,7 @@ function warning(line: number, from: number, to: number): ScriptWarning {
   return { line, message: 'm', severity: 'warning', from, to }
 }
 
-// The first line of the approved DQL wireframe, with the unknown field it underlines.
+// The first line of the DQL wireframe, with the unknown field it underlines.
 const WIREFRAME_LINE = 'log.invalid:ERROR or (log.level:INFO and message:"Load test finished")'
 
 // ============================================

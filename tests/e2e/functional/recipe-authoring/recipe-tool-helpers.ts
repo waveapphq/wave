@@ -63,6 +63,21 @@ export async function storedTestDoc(request: APIRequestContext, testId: string):
   return (await resp.json()).data as Doc
 }
 
+/** The stored Block holds `expression` in `setting` as an expression: the plain value it had is gone. */
+export async function expectStoredExpression(
+  request: APIRequestContext,
+  testId: string,
+  blockId: string,
+  setting: string,
+  expression: string,
+): Promise<void> {
+  const nodes = ((await storedTestDoc(request, testId)).workflow.nodes ?? []) as Doc[]
+  const data = nodes.find((node) => String(node.id) === blockId)?.data as Doc | undefined
+  expect(data, `Block ${blockId} is stored`).toBeTruthy()
+  expect(data?.config?.values?.[setting], `stored ${setting} of Block ${blockId}`).toBe(expression)
+  expect(data?.expressionFields ?? [], `${setting} is stored as an expression`).toContain(setting)
+}
+
 /** The ids of the stored Tests whose name is exactly `name`. */
 export async function storedTestsNamed(request: APIRequestContext, name: string): Promise<string[]> {
   const resp = await request.get(`${BACKEND_URL}/tests?search=${encodeURIComponent(name)}&per_page=100`)

@@ -28,5 +28,4 @@ No external seed script. The spec self-seeds via `POST /tests` using
 - The first scenario asserts the Delete-variable dialog opens and surfaces the
   reference count for a referenced root variable.
 - The second scenario asserts that the same confirmation dialog opens even when
-  the variable has no references; the previous "confirm only if referenced"
-  shortcut was the bug being reproduced.
+  the variable has no references.

@@ -2,8 +2,8 @@
 
 The recipe vocabulary matches the built model exactly: named branches
 each holding their own `steps` and an optional `time_limit`, a `join` mode, and
-a section-level `time_limit`. `wait_strategy`, `wait_condition`, `timeout` and
-`capture` are gone. A compiled section wires `branch_1..N` lanes and leaves
+a section-level `time_limit`, and no `wait_strategy`, `wait_condition`, `timeout`
+or `capture` key. A compiled section wires `branch_1..N` lanes and leaves
 through `then`, so a compiled test and a hand-built one are indistinguishable.
 """
 
@@ -82,7 +82,7 @@ def lane_limit_flow(limit: Any) -> list[dict[str, Any]]:
 
 
 class TestParallelShapeChecks:
-    """Section 4.2 validator messages, verbatim."""
+    """Validator messages, verbatim."""
 
     def test_a_two_branch_section_is_clean(self) -> None:
         assert validate(make_recipe(parallel_flow())) == []

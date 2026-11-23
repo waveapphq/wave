@@ -147,10 +147,10 @@ describe('Node Parameters', () => {
       expect(statusOutput!.type).toBe('integer')
     })
 
-    it('does not have output named status (old name)', () => {
+    it('has no output named status', () => {
       const outputs = PLUGIN_OUTPUTS['http-client']
-      const oldStatus = outputs.find((o) => o.name === 'status')
-      expect(oldStatus).toBeUndefined()
+      const bareStatus = outputs.find((o) => o.name === 'status')
+      expect(bareStatus).toBeUndefined()
     })
 
     it('has output headers with map type', () => {
@@ -1134,7 +1134,7 @@ describe('Node Parameters', () => {
       expect(PARAM_TYPE_TO_VAR_TYPE['table']).toBe('table')
     })
 
-    it('does not contain legacy type keys', () => {
+    it('has no number, duration, enum, expression or object type keys', () => {
       expect(PARAM_TYPE_TO_VAR_TYPE['number']).toBeUndefined()
       expect(PARAM_TYPE_TO_VAR_TYPE['duration']).toBeUndefined()
       expect(PARAM_TYPE_TO_VAR_TYPE['enum']).toBeUndefined()
@@ -1398,7 +1398,7 @@ describe('Node Parameters', () => {
       expect(CONTROL_OUTPUTS['wait-until'].map((o) => o.type)).toEqual(['boolean', 'integer'])
     })
 
-    it('drops the parameters and output the control no longer has', () => {
+    it('has no condition or poll_interval input and no timedOut output', () => {
       const names = waitInputs().map((p) => p.name)
       expect(names).not.toContain('condition')
       expect(names).not.toContain('poll_interval')

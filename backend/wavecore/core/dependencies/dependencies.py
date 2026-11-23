@@ -22,6 +22,8 @@ from typing import Any, Literal
 
 from wavecore.models.blocks import BlockDependency
 
+ResolutionStrategy = Literal["highest", "lowest", "exact"]
+
 # Semantic versioning pattern
 SEMVER_RE = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
@@ -151,7 +153,7 @@ class VersionResolver:
         self,
         constraint: str,
         available_versions: list[str],
-        strategy: Literal["highest", "lowest", "exact"] = "highest",
+        strategy: ResolutionStrategy = "highest",
     ) -> str:
         """
         Resolve a version constraint to a specific version.
@@ -202,7 +204,7 @@ class VersionResolver:
         self,
         constraints: list[str],
         available_versions: list[str],
-        strategy: Literal["highest", "lowest", "exact"] = "highest",
+        strategy: ResolutionStrategy = "highest",
     ) -> str:
         """
         Resolve multiple constraints to find a version satisfying all.
@@ -664,7 +666,9 @@ class DependencyResolver:
     Handles transitive dependency collection and version resolution.
     """
 
-    def __init__(self, registry: ComponentRegistry, default_strategy: str = "highest") -> None:
+    def __init__(
+        self, registry: ComponentRegistry, default_strategy: ResolutionStrategy = "highest"
+    ) -> None:
         """
         Initialize dependency resolver.
 
@@ -674,9 +678,9 @@ class DependencyResolver:
         """
         self._registry = registry
         self._default_strategy = default_strategy
-        self._workflow_strategies: dict[str, str] = {}
-        self._block_strategies: dict[str, str] = {}
-        self._dependency_strategies: dict[str, str] = {}
+        self._workflow_strategies: dict[str, ResolutionStrategy] = {}
+        self._block_strategies: dict[str, ResolutionStrategy] = {}
+        self._dependency_strategies: dict[str, ResolutionStrategy] = {}
         self._version_resolver = VersionResolver()
         self._cache: dict[str, dict[str, Any]] = {}
 
@@ -763,7 +767,7 @@ class DependencyResolver:
             )
 
             resolved_ver = self._version_resolver.resolve_version(
-                dep.version_constraint, available_versions, strategy=strategy  # type: ignore[arg-type]
+                dep.version_constraint, available_versions, strategy=strategy
             )
             resolved[f"{dep.component_id}@{resolved_ver}"] = resolved_ver
 
@@ -794,7 +798,7 @@ class DependencyResolver:
         block_version: str,
         dependency_id: str,
         workflow_id: str | None = None,
-    ) -> str:
+    ) -> ResolutionStrategy:
         """
         Get resolution strategy following override hierarchy.
 
@@ -824,16 +828,20 @@ class DependencyResolver:
         # System default
         return self._default_strategy
 
-    def set_workflow_strategy(self, workflow_id: str, strategy: str) -> None:
+    def set_workflow_strategy(self, workflow_id: str, strategy: ResolutionStrategy) -> None:
         """Set resolution strategy for a workflow."""
         self._workflow_strategies[workflow_id] = strategy
 
-    def set_block_strategy(self, block_key: str, strategy: str) -> None:
+    def set_block_strategy(self, block_key: str, strategy: ResolutionStrategy) -> None:
         """Set resolution strategy for a block."""
         self._block_strategies[block_key] = strategy
 
     def set_dependency_strategy(
-        self, block_id: str, block_version: str, dependency_id: str, strategy: str
+        self,
+        block_id: str,
+        block_version: str,
+        dependency_id: str,
+        strategy: ResolutionStrategy,
     ) -> None:
         """Set resolution strategy for a specific dependency."""
         dep_key = f"{block_id}@{block_version}:{dependency_id}"
@@ -910,8 +918,7 @@ class DependencyInjector:
         """
         Initialize a dependency component.
 
-        NOTE: This is a placeholder implementation. Actual component initialization
-        will be implemented by the plugin system in a future phase.
+        NOTE: Placeholder; the plugin system initializes components.
 
         Args:
             component_id: Component identifier

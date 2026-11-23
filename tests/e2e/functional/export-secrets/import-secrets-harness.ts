@@ -37,7 +37,7 @@ type Json = Record<string, any>
 export type SecretKind = 'foreign' | 'masked'
 
 // ---------------------------------------------------------------------------
-// Pinned texts (blueprint-backend.md 2.4)
+// Pinned texts
 // ---------------------------------------------------------------------------
 
 /** What the Try catches when a header reads a secret that holds null. */

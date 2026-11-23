@@ -27,9 +27,9 @@ import logging
 import time
 import traceback
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterable, Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -48,8 +48,15 @@ from wavecore.core.logging.log_safe import log_safe
 # Constant for the generic internal error message (used in multiple places)
 _ERR_INTERNAL = "An internal server error occurred"
 
-# Set up logger - use the canonical module path so that log records
-# keep the name "wavecore.api.middleware" after the package refactor.
+
+@runtime_checkable
+class _StreamedResponse(Protocol):
+    """A response whose body arrives as a stream, as call_next returns it."""
+
+    body_iterator: AsyncIterable[bytes | str]
+
+
+# The canonical module path keeps log records named "wavecore.api.middleware".
 logger = logging.getLogger("wavecore.api.middleware")
 
 # Context variable for correlation ID - accessible from any code running in the request
@@ -689,7 +696,8 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         if _logging_config.get("log_response_body", True):
             try:
                 body_chunks = []
-                async for chunk in response.body_iterator:  # type: ignore[attr-defined]
+                assert isinstance(response, _StreamedResponse)
+                async for chunk in response.body_iterator:
                     body_chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
                 response_body = b"".join(body_chunks)
                 # Rebuild the response with the captured body

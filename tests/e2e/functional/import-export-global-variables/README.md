@@ -1,7 +1,6 @@
 # System Variables Export/Import Functional Test
 
 End-to-end proof of the server-side System Variables export/import: the
-client-side serializer (which wrote JSON into a `.yaml` file) is gone, and the
 Settings UI drives the shared Export/Import dialogs against the real endpoints.
 
 ## Fixture

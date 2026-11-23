@@ -1,5 +1,5 @@
 /**
- * EditDetailsDialog shared-field migration tests.
+ * EditDetailsDialog shared-field tests.
  *
  * Shared metadata-edit dialog opened by Suite + Regression metadata sidebars.
  * Contract under test:
@@ -36,7 +36,7 @@ function renderDialog(
   return render(<EditDetailsDialog {...props} />)
 }
 
-describe('EditDetailsDialog - shared field primitives migration', () => {
+describe('EditDetailsDialog - shared field primitives', () => {
   describe('name field uses NameField with MAX_ENTITY_NAME_LENGTH', () => {
     it('renders the name input with the entity-name maxLength (64)', () => {
       renderDialog()

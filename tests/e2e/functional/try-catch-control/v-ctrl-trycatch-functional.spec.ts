@@ -225,9 +225,6 @@ test.describe('Try/Catch Control E2E Execution', () => {
   })
 
   /**
-   * KNOWN-FAILING - records an unfixed defect. Do not skip it and do not weaken
-   * the assertion; it goes green when the engine is fixed.
-   *
    * Asserts REQ-3.2.2.6:
    *   "The handler receives a structured error object containing type, message,
    *    origin location, and execution context, then executes within the same
@@ -235,10 +232,6 @@ test.describe('Try/Catch Control E2E Execution', () => {
    *    recovery, logging, or propagation decisions."
    *   "Special variables containing the error object are accessible via
    *    standard variable references."
-   *
-   * The control binds its `error` and `caught` outputs only after the catch
-   * chain has finished, so a catch block reads the pre-run values instead:
-   * error is null and caught is false while the handler runs.
    */
   test('Catch path can read the error object and caught flag while it runs', async ({ page }) => {
     await importValidateAndNavigate(page, loadFixture('fixture-catch-sees-error.json'))

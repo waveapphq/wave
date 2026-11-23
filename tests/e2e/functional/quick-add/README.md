@@ -55,8 +55,8 @@ end-to-end, proving the inserted blocks carry real ids, configs, and wiring
 
 ## V-QADD-03: the published-Function half is server-paged
 
-The window used to request one page of the library and filter it in the
-browser, so anything past that page was silently unreachable. This spec proves
+The window pages the library from the server, so nothing past the first page
+is unreachable. This spec proves
 the whole library is reachable (CANVAS-241, CANVAS-244..247, PICKER-1,
 REQ-4.2.5).
 
@@ -100,7 +100,7 @@ REQ-4.2.5).
   "110 Functions". Rows 1, 26, 51 and 110 are the alphabetically expected
   entries, so the order holds across page boundaries.
 - No row that fails the applied search ever appears on a later page.
-- The 110th Function - past the single page the window used to request - is
+- The 110th Function, past the first page, is
   highlightable with PgDn and Enter places it on the canvas.
 - Arrowing onto the last loaded row loads the next page, so the keyboard
   reaches the whole library without the mouse.

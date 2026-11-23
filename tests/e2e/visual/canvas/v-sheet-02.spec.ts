@@ -58,7 +58,7 @@ test.describe('V-SHEET-02: library sheet on the DraggableSheet primitive', () =>
     // The shared resize handle is part of the sheet shell.
     await expect(library.locator('[data-testid="dialog-resize-handle"]')).toBeAttached()
 
-    // Library chrome unchanged by the migration (baseline parity).
+    // Library chrome (baseline parity).
     await expect(
       library.locator('textarea[aria-label="Search Functions"], input[aria-label="Search Functions"]').first(),
     ).toBeVisible({ timeout: 10_000 })

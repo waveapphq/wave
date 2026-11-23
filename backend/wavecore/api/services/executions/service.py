@@ -116,9 +116,12 @@ def _build_suite_composition_for_execution(
     for tid in entity.get("tests") or []:
         fetched = test_service.get_test(tid)
         test_lookup[tid] = fetched or {"id": tid, "name": tid}
+    selected_test_ids = (
+        None if selected_tests is None else [t for t in selected_tests if isinstance(t, str)]
+    )
     return orchestrator.build_suite_composition(
         entity,
-        selected_test_ids=selected_tests,  # type: ignore[arg-type]
+        selected_test_ids=selected_test_ids,
         test_lookup=test_lookup,
     )
 
@@ -141,9 +144,12 @@ def _build_regression_composition_for_execution(
             if tid not in reg_test_lookup:
                 fetched = test_service.get_test(tid)
                 reg_test_lookup[tid] = fetched or {"id": tid, "name": tid}
+    selected_pairs = (
+        None if selected_tests is None else [p for p in selected_tests if isinstance(p, dict)]
+    )
     return orchestrator.build_regression_composition(
         entity,
-        selected_pairs=selected_tests,  # type: ignore[arg-type]
+        selected_pairs=selected_pairs,
         suite_lookup=suite_lookup,
         test_lookup=reg_test_lookup,
     )
@@ -1032,7 +1038,7 @@ def get_execution_variables(execution_id: str) -> dict[str, Any] | None:
 def get_historical_test_run(run_id: str) -> dict[str, Any] | None:
     """Return the Historical Test Canvas payload for a single test run.
 
-    The response carries TWO variable views so the redesigned Variable
+    The response carries TWO variable views so the Variable
     Manager panel's eye toggle is meaningful in read-only history mode:
 
     - ``variable_definitions`` is the test's declared variables (type,

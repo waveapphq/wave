@@ -1379,7 +1379,7 @@ describe('Value Editor Sheet', () => {
     expect(screen.getByTestId('ves-type')).toHaveTextContent(/^array$/)
   })
 
-  it('NEVER opens a legacy array/map/table editor modal', async () => {
+  it('NEVER opens an array/map/table editor modal', async () => {
     const user = userEvent.setup({ delay: null })
     renderEditor({ slots: { variables: { my_map: { k: 'v' } }, rowTypes: { my_map: 'map' } } })
 
@@ -1717,7 +1717,7 @@ describe('Autocomplete Selection', () => {
     expect(screen.getByTestId('varset-type-select-0')).toHaveTextContent(/integer/i)
   })
 
-  it('selecting an existing complex variable seeds a typed-empty value (regression: array Edit crash)', async () => {
+  it('selecting an existing complex variable seeds a typed-empty value', async () => {
     // An existing array var reset to '' crashed the Edit sheet's ArrayEditBody
     // (value.map). Selecting it must reset type-appropriately ([] for an array).
     const user = userEvent.setup({ delay: null })

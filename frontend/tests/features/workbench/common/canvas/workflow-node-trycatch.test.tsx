@@ -73,7 +73,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
 
   describe('Default handles (catch on, finally off) - 3 handles', () => {
     it('renders try, catch, and then handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -93,7 +93,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('does not render the default single output handle', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -110,7 +110,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('still renders input handle', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -127,7 +127,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('try handle has blue background', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -145,7 +145,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('catch handle has red background', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -163,7 +163,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('then handle has gray background', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -183,7 +183,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
 
   describe('All enabled (catch on, finally on) - 4 handles', () => {
     it('renders try, catch, finally, and then handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -203,7 +203,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('finally handle has amber background', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -223,7 +223,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
 
   describe('Catch off, finally off - 2 handles', () => {
     it('renders only try and then handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -245,7 +245,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
 
   describe('Catch off, finally on - 3 handles', () => {
     it('renders try, finally, and then handles', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -267,7 +267,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
 
   describe('Handle positioning and dynamic classes', () => {
     it('applies left position style when multiple handles present', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -291,10 +291,10 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
       expect(thenHandle.style.left).toBe('176px')
     })
 
-    it('no longer applies a bottom offset (action row is inside the card, handles anchor to outer bottom)', async () => {
+    it('applies no bottom offset (action row is inside the card, handles anchor to outer bottom)', async () => {
       mockWorkflowStore.selectedNodeIds = ['node-1']
 
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -313,7 +313,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
     })
 
     it('applies proximity source ring when proximitySource is true', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"
@@ -336,7 +336,7 @@ describe('WorkflowNode Try/Catch Handle Rendering (REQ-3.2.2.6)', () => {
 
   describe('Handle names', () => {
     it('each handle carries its role as an accessible name', async () => {
-      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node')
+      const { WorkflowNode } = await import('@/features/workbench/common/canvas/workflow-node/node')
       renderWithReactFlow(
         <WorkflowNode
           id="node-1"

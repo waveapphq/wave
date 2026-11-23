@@ -695,7 +695,7 @@ describe('Workflow Store - setNodes/setEdges/setVariables under drill with skipD
 })
 
 // ---------------------------------------------------------------------------
-// Drill-aware refactor of node-level actions (deleteSelected, duplicate,
+// Drill-aware node-level actions (deleteSelected, duplicate,
 // copy/cut/paste, unlinkNode, toggleDisable, toggleSkip, renameVariable,
 // selectAll, selectNodesInRect, chainSelect).
 //

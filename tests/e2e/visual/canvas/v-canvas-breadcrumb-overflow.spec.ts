@@ -121,7 +121,7 @@ test.describe('V-CANVAS-BREADCRUMB-OVERFLOW: long name truncates and right side 
     expect(measured.sw).toBeGreaterThan(measured.cw + 1)
 
     // Hover surfaces the Radix multiline tooltip (now portal-rendered via
-    // TruncatedName's createPortal, not the legacy inline-block Tooltip
+    // TruncatedName's createPortal, not an inline-block Tooltip
     // wrapper) with the full long name.
     await leafSpan.hover()
     const tooltip = page.getByRole('tooltip').first()

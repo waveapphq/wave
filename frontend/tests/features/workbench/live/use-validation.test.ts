@@ -223,7 +223,7 @@ describe('useValidation', () => {
   // -------------------------------------------------------------------------
   describe('handleValidationClose', () => {
     it('in load mode (non-fatal) just closes the dialog and keeps the test loaded with regular alerts', () => {
-      // Per user spec: Cancel on a non-fatal Load validation dialog keeps the
+      // Cancel on a non-fatal Load validation dialog keeps the
       // test on canvas. Per-node alerts come from `computeNodeIssues`
       // (regular, not pulsing). No navigation, no reset, no pulse.
       const state = setupStore()

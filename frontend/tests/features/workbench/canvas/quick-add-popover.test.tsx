@@ -1063,7 +1063,7 @@ describe('Quick Insert - footer hints', () => {
     expect(hint.querySelector('svg')).toBeInTheDocument()
   })
 
-  it('no longer advertises Alt+Enter', () => {
+  it('does not advertise Alt+Enter', () => {
     renderPopover({ hasSelection: true })
 
     expect(screen.queryByText(/alt\+enter/i)).not.toBeInTheDocument()

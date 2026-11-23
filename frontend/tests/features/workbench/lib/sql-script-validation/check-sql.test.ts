@@ -283,7 +283,7 @@ describe('findSqlPlaceholders', () => {
 // ============================================
 
 describe('checkSqlScript Parameters entries', () => {
-  it('flags an unused entry and a script ending on SET as the editor mockup shows them', () => {
+  it('flags an unused entry and a script ending on SET', () => {
     const found = checkSqlScript(
       MOCKUP_SCRIPT,
       input({ parameterNames: ['customer', 'status', 'limit'] }),

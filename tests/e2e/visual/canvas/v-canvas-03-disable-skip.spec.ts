@@ -124,7 +124,7 @@ test.describe('V-CANVAS-03: Disabled / Skipped / Unreachable Visual Treatment', 
     await expect(badge).toHaveText('DISABLED')
 
     // Disabled wrapper is grayscale + 0.55 opacity.
-    // The dashed-border indicator is gone.
+    // No dashed-border indicator.
     await expect(firstNode).toHaveClass(/grayscale/)
     await expect(firstNode).toHaveClass(/opacity-\[0\.55\]/)
   })

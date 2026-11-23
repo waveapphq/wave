@@ -20,10 +20,9 @@
  * this spec created>`. STORAGE_BASE_PATH is already per-stack, so nothing here
  * can reach another shard's data.
  *
- * NOT asserted here, because these are known and unfixed: a record file
- * MODIFIED in place is still served stale (the check is presence-based),
- * saves are not atomic, and an unreadable record is invisible rather than
- * flagged.
+ * Not asserted: a record file modified in place being served fresh (an open bug).
+ * Not asserted: atomic saves (an open bug).
+ * Not asserted: an unreadable record being flagged (an open bug).
  */
 
 import fs from 'fs'

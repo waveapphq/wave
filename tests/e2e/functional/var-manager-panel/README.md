@@ -1,6 +1,6 @@
 # Variable Manager Panel - Functional
 
-End-to-end coverage of the redesigned Variable Manager panel.
+End-to-end coverage of the Variable Manager panel.
 
 Six specs live here:
 

@@ -560,7 +560,7 @@ describe('VariableEditor - renderValueCell', () => {
 })
 
 // ============================================================================
-// Shared Field Primitives Migration
+// Shared Field Primitives
 // ============================================================================
 
 describe('VariableEditor - adopts shared field primitives (name field)', () => {

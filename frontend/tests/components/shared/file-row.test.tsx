@@ -31,12 +31,12 @@ function buttonLabels(row: HTMLElement): string[] {
     .map((button) => button.getAttribute('aria-label') ?? button.textContent ?? '')
 }
 
-describe('FileRow - the rename leaves nothing behind', () => {
-  it('no longer ships an artifact-file-row module', () => {
+describe('FileRow - module name', () => {
+  it('ships no artifact-file-row module', () => {
     expect(existsSync(resolve(SRC, 'components/shared/artifact-file-row.tsx'))).toBe(false)
   })
 
-  it('is referenced by no source file under its old name', () => {
+  it('is referenced by no source file as artifact-file-row', () => {
     const offenders = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
       .filter((entry) => entry.endsWith('.ts') || entry.endsWith('.tsx'))
       .filter((entry) => readFileSync(resolve(SRC, entry), 'utf8').includes('artifact-file-row'))
@@ -50,7 +50,7 @@ describe('FileRow - the rename leaves nothing behind', () => {
     expect(screen.getByTestId('file-row')).toBeInTheDocument()
   })
 
-  it('no longer stamps the old test id', () => {
+  it('does not stamp the artifact-file-row test id', () => {
     renderRow()
 
     expect(screen.queryByTestId('artifact-file-row')).not.toBeInTheDocument()

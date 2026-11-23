@@ -151,8 +151,7 @@ test.describe('V-PYEDIT-06: the tips of the Python script editor help', () => {
     )
     expect(region.contentHeight, 'there are more tips than fit').toBeGreaterThan(region.areaHeight)
 
-    // Declared deviation (blueprint-tests section 3): the X rides the content
-    // instead of being pinned over the visible area.
+    // The X rides the content instead of being pinned over the visible area.
     const closePosition = await popover(page)
       .getByRole('button', { name: 'Close help' })
       .evaluate((element) => globalThis.getComputedStyle(element).position)

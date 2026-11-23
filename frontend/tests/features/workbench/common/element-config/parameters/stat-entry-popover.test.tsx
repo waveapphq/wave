@@ -569,7 +569,7 @@ describe('StatEntryPopover', () => {
   })
 })
 
-// The popover's Field is a form box, as the approved stat popover wireframe draws it (OS-7).
+// The popover's Field is a form box (OS-7).
 describe('StatEntryPopover - the Field box look', () => {
   it('keeps the plain form box look, not the sheet row look', async () => {
     const user = userEvent.setup()

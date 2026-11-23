@@ -3,8 +3,8 @@
  *
  * Pins the entity-name + test-name caps in the field-constraints module, and
  * the one rule for when a capped field shows its counter. The
- * migration-completeness test in
- * `tests/migration/no-bare-inputs-in-target-surfaces.test.ts` reads these
+ * no-bare-inputs test in
+ * `tests/design-system/no-bare-inputs-in-target-surfaces.test.ts` reads these
  * values via runtime import and re-asserts them in production source.
  *
  * Existing constants `MAX_ELEMENT_NAME_LENGTH` and `MAX_VARIABLE_NAME_LENGTH`

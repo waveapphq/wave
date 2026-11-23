@@ -97,7 +97,7 @@ describe('ElementConfigModal - no displayName field (negative DOM)', () => {
     expect(input).toHaveValue('HTTP Client')
   })
 
-  it('does not render the legacy "Give this element a descriptive name" helper text', async () => {
+  it('does not render the "Give this element a descriptive name" helper text', async () => {
     const { ElementConfigModal } = await import(
       '@/features/workbench/common/element-config'
     )

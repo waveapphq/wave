@@ -252,7 +252,7 @@ describe('ConfigModalBody - Parallel', () => {
   })
 
   describe('Output variables', () => {
-    // Guard: the placeholder `results` output is gone, so the section must not
+    // Guard: Parallel declares no output, so the section must not
     // render an empty shell where authors would look for a binding.
     it('renders no Output Variables section', () => {
       renderParallel()

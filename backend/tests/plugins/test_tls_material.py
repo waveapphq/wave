@@ -136,7 +136,7 @@ class TestReadPem:
 
 
 class TestOneHome:
-    """The rule lives only here; its former copies are gone and every reader imports it."""
+    """The rule lives only here and every reader imports it."""
 
     def test_the_http_block_has_no_reader_of_its_own(self) -> None:
         assert not hasattr(HTTPClientPlugin, "_resolve_pem")
