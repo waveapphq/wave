@@ -235,6 +235,27 @@ def _hidden_output(
     return _condition_state(shown_when, values, sources, entry) is False
 
 
+def _typed_names(
+    param: str,
+    value: Any,
+    items: list[DeclaredName],
+    values: Mapping[str, Any],
+    sources: Collection[str],
+) -> tuple[dict[str, str], set[str]]:
+    """One declaring setting's output types per name, and the names bound to themselves."""
+    typed: dict[str, str] = {}
+    self_bound: set[str] = set()
+    for item in items:
+        if not isinstance(item.name, str):
+            continue
+        if isinstance(value, dict):
+            typed[item.name] = _declared_type(param, item.name, values, sources)
+            self_bound.add(item.name)
+        else:
+            typed[item.name] = "string"
+    return typed, self_bound
+
+
 def step_outputs(
     entry: BlockEntry, values: Mapping[str, Any], sources: Collection[str] = ()
 ) -> StepOutputs:
@@ -253,14 +274,9 @@ def step_outputs(
         declaring_param = param
         value = None if param in sources else values.get(param)
         names[param] = _declared_names(value)
-        for item in names[param]:
-            if not isinstance(item.name, str):
-                continue
-            if isinstance(value, dict):
-                declared[item.name] = _declared_type(param, item.name, values, sources)
-                self_bound.add(item.name)
-            else:
-                declared[item.name] = "string"
+        typed, bound = _typed_names(param, value, names[param], values, sources)
+        declared.update(typed)
+        self_bound.update(bound)
     fixed = {
         name: output_type
         for name, output_type in entry.outputs.items()

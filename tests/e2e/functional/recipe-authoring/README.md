@@ -247,3 +247,8 @@ keeps every untouched block in place and leaves no two blocks overlapping
 
 - Spec: `v-mcp-recipe-declared-outputs-kept-functional.spec.ts`; fixture: none (each recipe is built in the spec; the hand-built Shell Script Test is saved through `POST /tests` in `beforeAll`; every Test is deleted after).
 - A Shell Script and a Python capture their `script_variables` exports into variables of other names: `validate_recipe` accepts it, `create_test_from_recipe` stores the bindings and the Secret mark on `TOKEN` and declares each undeclared target a string, and `get_test_recipe` reads back the captures and `secret_outputs`. An invalid export name, a fixed output name, a repeated name and a capture of a name the list does not export refuse with their exact texts at the entry they name. A Combined-mode JSON Parser, written out or by default, captures `results` into a map variable. A hand-built Shell Script Test reads back and amends with its bindings and Secret export kept (REQ-5.2.7.3, REQ-3.4.2.2).
+
+## V-MCP-RECIPE-DECLARED-OUTPUTS-FORMS-FUNCTIONAL
+
+- Spec: `v-mcp-recipe-declared-outputs-forms-functional.spec.ts`; fixture: none (each recipe is built in the spec; the created Test is deleted after).
+- A Shell Script export list written as `{literal: [COUNT]}` still declares `COUNT`: `validate_recipe` accepts a capture of it into another name and `create_test_from_recipe` stores that binding. An export list written as an expression declares no output: a capture of `COUNT` refuses with `UNKNOWN_CAPTURE_OUTPUT`, its fix listing only the fixed outputs and pointing at `settings.script_variables`, and a capture of the fixed `stdout` validates (REQ-5.2.7.3, REQ-3.4.2.2).

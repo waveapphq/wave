@@ -476,9 +476,9 @@ export function useSessionOwnership(): SessionOwnership {
     // (none in a change's first step); a person's frame is diffed, at any
     // nesting depth. Bumps the tick so a repeated change re-fires.
     // A rejoin apply moves the whole viewport instead, so it never signals.
-    if (live) {
-      store.signalMirrorChange(mirrorChangeTarget(payload, prevMirrorNodesRef.current, nodes))
-    }
+    // A frame that changes no Block keeps the last change, so a trailing frame never cuts its pulse.
+    const changed = live ? mirrorChangeTarget(payload, prevMirrorNodesRef.current, nodes) : null
+    if (changed !== null) store.signalMirrorChange(changed)
     prevMirrorNodesRef.current = nodes
   }, [])
 

@@ -1451,3 +1451,89 @@ describe('useSessionOwnership - the staying Blocks of a watched change glide to 
     expect(store().nodes).toEqual(STEP_ONE)
   })
 })
+
+describe('useSessionOwnership - a person frame that changes no Block after a Block change', () => {
+  const MOVED = [block('a', 0), block('b', 260, 'Old B', { message: 'old' }), block('r', 400)]
+  const FUNCTION_BODY = [block('inner-a', 0), block('inner-b', 200)]
+  const MOVED_BODY = [block('inner-a', 120), block('inner-b', 200)]
+
+  function functionBlock(body: NodeType[]): NodeType {
+    return {
+      id: 'fn-1',
+      type: 'function',
+      position: { x: 0, y: 600 },
+      data: { label: 'Function_1', config: {}, localDefinition: { workflow: { nodes: body, edges: [] } } },
+    } as unknown as NodeType
+  }
+
+  function ashleyFrame(nodes: NodeType[], overrides: Record<string, unknown> = {}) {
+    return {
+      event: 'draft_snapshot',
+      from_holder_id: ASHLEY.id,
+      nodes,
+      edges: [],
+      variables: [],
+      ...CHANGED_TEST,
+      dirty: true,
+      ...overrides,
+    }
+  }
+
+  it('keeps the ring on the moved Block through a trailing frame of the same Blocks', async () => {
+    await mountWatchingAshley()
+    emit(ashleyFrame(MOVED))
+    const tick = store().mirrorChangeTick
+
+    emit(ashleyFrame(MOVED), ashleyFrame(MOVED, { dirty: false }))
+
+    expect(store().mirrorLastChangeNodeId).toBe('b')
+    expect(store().mirrorChangeTick).toBe(tick)
+  })
+
+  it('keeps the ring on the moved Block through a variable-only frame', async () => {
+    await mountWatchingAshley()
+    emit(ashleyFrame(MOVED))
+    const tick = store().mirrorChangeTick
+
+    emit(ashleyFrame(MOVED, { variables: [{ id: 'var-host', name: 'host', value: 'x', type: 'string' }] }))
+
+    expect(store().mirrorLastChangeNodeId).toBe('b')
+    expect(store().mirrorChangeTick).toBe(tick)
+  })
+
+  it('keeps the ring on a Block moved inside a Function through a trailing frame', async () => {
+    await mountWatchingAshley()
+    emit(ashleyFrame([...STORED, functionBlock(FUNCTION_BODY)]))
+    emit(ashleyFrame([...STORED, functionBlock(MOVED_BODY)]))
+    expect(store().mirrorLastChangeNodeId).toBe('inner-a')
+    const tick = store().mirrorChangeTick
+
+    emit(ashleyFrame([...STORED, functionBlock(MOVED_BODY)], { dirty: false }))
+
+    expect(store().mirrorLastChangeNodeId).toBe('inner-a')
+    expect(store().mirrorChangeTick).toBe(tick)
+  })
+
+  it('a following watcher does not re-center on the trailing frame, and re-centers on the next change', async () => {
+    const { result } = await mountWatchingAshley()
+    act(() => result.current.follow.toggleFollow())
+    emit(ashleyFrame(MOVED))
+    expect(mockFocusCurrentBlock).toHaveBeenLastCalledWith('b')
+    mockFocusCurrentBlock.mockClear()
+
+    emit(ashleyFrame(MOVED, { dirty: false }))
+    expect(mockFocusCurrentBlock).not.toHaveBeenCalled()
+
+    emit(ashleyFrame([block('a', 80), ...MOVED.slice(1)]))
+    expect(mockFocusCurrentBlock).toHaveBeenLastCalledWith('a')
+  })
+
+  it('stopping the watch still drops the ring', async () => {
+    const { result } = await mountWatchingAshley()
+    emit(ashleyFrame(MOVED))
+
+    act(() => result.current.ownership.browseAway())
+
+    expect(store().mirrorLastChangeNodeId).toBeNull()
+  })
+})
