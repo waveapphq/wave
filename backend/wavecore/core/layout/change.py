@@ -1,16 +1,9 @@
-"""The layout of a changed workflow: the flow order of a fresh build, made from the stored layout.
-
-Rows go top down in flow order by the fresh build's rules. A Block the change keeps in its lane
-keeps its column, and its distance from what is above it unless WAVE laid it one row step below;
-every other Block goes under the Block before it, and a new lane where a fresh build puts it
-beside its construct. Then lanes move apart, whole lanes at a time and only as far as needed,
-deepest construct first; the main line never moves sideways. A Block that still crowds one
-before it moves down a row step below it, and the layout is worked out again.
-"""
+"""The layout of a changed workflow: a fresh build's flow order, made from the stored layout."""
 
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from wavecore.controls.note import NOTE_NODE_TYPE
 from wavecore.core.layout.dimensions import estimate_node_size
 from wavecore.core.layout.engine import (
     GUTTER_X,
@@ -40,6 +33,7 @@ class _Shape:
             str(node["id"]): estimate_node_size(node, ingress.get(str(node["id"]), 0))
             for node in nodes
         }
+        self.notes = {str(node["id"]) for node in nodes if node.get("type") == NOTE_NODE_TYPE}
         self.chains = flow_rows(nodes, edges)
         self.row: dict[str, Row] = {}
         self.parent: dict[str, str | None] = {}
@@ -220,8 +214,7 @@ class _ChangeLayout:
         return max(self.old_top[old_id], need + min(slack, 0.0))
 
     def _first_column(self, rows: tuple[Row, ...], construct: str | None) -> float:
-        """The column of a lane's first Block: the lane's own, or a fresh build's beside its
-        construct for a new lane."""
+        """A lane's first column: the lane's own, or a fresh build's for a new lane."""
         for row in rows:
             if row.node_id in self.kept:
                 shift = self.side[construct] if construct is not None else 0.0
@@ -344,8 +337,8 @@ class _ChangeLayout:
         return (self.center[node_id] - width / 2, self.top[node_id], width, height)
 
     def _crowded_before(self, first: str, second: str) -> bool:
-        """Whether two kept Blocks crowded each other already, as a person arranged them."""
-        if first not in self.kept or second not in self.kept:
+        """Whether two kept Blocks already crowded; one a Note crowds always moves (REQ-5.2.7.4)."""
+        if first not in self.kept or second not in self.kept or first in self.new.notes:
             return False
         boxes = []
         for node_id in (self.matches[first], self.matches[second]):
@@ -389,9 +382,5 @@ def layout_change(
     matches: Mapping[str, str],
     lanes: LanePairs,
 ) -> dict[str, dict[str, float]]:
-    """node_id -> {x, y} of each revised node, laid out as a change of the stored workflow.
-
-    ``matches`` pairs each recognized revised node with its stored node, and ``lanes`` each
-    lane of a recognized construct with its stored lane.
-    """
+    """node_id -> {x, y} of each revised node, laid out as a change of the stored workflow."""
     return _ChangeLayout(stored, revised, matches, lanes).positions()

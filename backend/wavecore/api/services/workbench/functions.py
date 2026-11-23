@@ -48,9 +48,7 @@ def _load_function_definition(node_data: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(local_def, dict):
             raise FunctionLoadError("Local Function block missing localDefinition")
         return local_def
-    # Edit-mode: the in-Test draft body is the execution contract (the
-    # source-version definition is not consulted while editMode is true), so
-    # the draft stays self-contained even if the library entry is deleted.
+    # Edit-mode: the in-Test draft body is the execution contract.
     draft = node_data.get("draft")
     if node_data.get("editMode") and isinstance(draft, dict):
         return draft
@@ -87,8 +85,7 @@ def new_instance_scope(session_id: str | None = None, path: tuple[str, ...] = ()
 
 
 def resumed_instance_scope(recorded: Mapping[str, Any]) -> dict[str, Any]:
-    """The scope an ad-hoc run resumes: what the session gave the instance, so a local
-    variable no block wrote is seeded from its definition again (REQ-3.2.1.5)."""
+    """The scope an ad-hoc run resumes (REQ-3.2.1.5)."""
     if isinstance(recorded, LazyVariables):
         return cast(dict[str, Any], recorded.given())
     return cast(dict[str, Any], LazyVariables(dict(recorded)))
@@ -340,10 +337,7 @@ def _resolved_inputs(
     session_id: str,
     node_id: str,
 ) -> dict[str, Any]:
-    """The Function Block's fields resolved over the outer flow like any Block's (REQ-3.1.1.5).
-
-    A refusal prints the result line and fails the Block before its Function flow starts.
-    """
+    """The Function Block's fields resolved over the outer flow like any Block's (REQ-3.1.1.5)."""
     from wavecore.core.functions.executor import FunctionInvocationResult
 
     try:
@@ -369,11 +363,7 @@ async def handle_function_node(
     session_id: str,
     node_id: str,
 ) -> dict[str, Any]:
-    """Execute the Function instance referenced by ``node_fields``.
-
-    Returns a dict keyed by declared output name so the engine's existing
-    ``_assign_output_bindings`` helper can map outputs to the outer flow's variables.
-    """
+    """Execute the Function instance referenced by ``node_fields``."""
     from wavecore.core.functions.executor import execute_function
 
     node_data = node_fields["node_data"]
@@ -408,8 +398,7 @@ async def handle_function_node(
         )
 
     if result.status != "passed":
-        # The Function boundary converts an inner scope failure into an outer
-        # exception, so the parent engine treats it like any failed node.
+        # The Function boundary converts an inner scope failure into an outer exception.
         if result.error is not None:
             raise RuntimeError(result.error)
         function_name = function_def.get("name", "function")
@@ -446,8 +435,7 @@ def _touch_test_timestamp(test: dict[str, Any]) -> None:
 
 
 def _load_test_and_node(test_id: str, node_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Resolve (test, node) by id, raising NotFoundException with precise wording
-    (``Test '{id}' not found`` / ``Block '{id}' not found in Test '{id}'``)."""
+    """Resolve by id, raising NotFoundException with precise wording."""
     test = _test_service._load_test(test_id)
     if test is None:
         msg = f"Test '{test_id}' not found"
@@ -526,18 +514,7 @@ def publish_local_function(
     *,
     repairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Promote a local Function node to a published library entry.
-
-    Atomically creates the library record via ``services.functions.create_function``
-    and rewrites the owning Test's node from ``functionLifecycle="local"``
-    to ``functionLifecycle="shared"`` carrying the new ``functionId``. The
-    library entry never carries per-instance Profile bindings; those live on
-    the Test node and are preserved across the transition.
-
-    Rolls the library entry back if the Test save fails so the system can
-    never persist a half-published state. The wires the library save removed
-    go into ``repairs`` when given.
-    """
+    """Promote a local Function node to a published library entry."""
     test, node = _load_test_and_node(test_id, node_id)
     data = node.get("data") or {}
     is_function = data.get("nodeType") == "function"
@@ -562,6 +539,7 @@ def publish_local_function(
     new_data["functionLifecycle"] = "shared"
     new_data["functionId"] = function_id
     new_data["functionVersion"] = version_str
+    new_data["originalLibraryName"] = name
     new_node = dict(node)
     new_node["data"] = new_data
     new_test = copy.deepcopy(test)

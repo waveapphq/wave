@@ -23,6 +23,8 @@ _PLAIN_INTEGER = re.compile(r"-?\d+", re.ASCII)
 _PLAIN_FLOAT = re.compile(r"-?\d+\.\d+", re.ASCII)
 _INT_TAG = "tag:yaml.org,2002:int"
 _FLOAT_TAG = "tag:yaml.org,2002:float"
+_MAP_TAG = "tag:yaml.org,2002:map"
+_MERGE_TAG = "tag:yaml.org,2002:merge"
 
 
 def may_hold_unencodable(raw: bytes | str) -> bool:
@@ -103,13 +105,44 @@ class _ExactLoader(_Loader):
         return WaveDecimal(text) if _PLAIN_FLOAT.fullmatch(text) else text
 
 
+class RepeatedKeyMap(dict[Any, Any]):
+    """A loaded mapping whose text names a key more than once: the last value is kept."""
+
+    def __init__(self, repeated_keys: tuple[Any, ...]) -> None:
+        super().__init__()
+        self.repeated_keys = repeated_keys
+
+
+def written_keys(mapping: dict[Any, Any]) -> list[Any]:
+    """A loaded mapping's keys, each repeat in its text named once more."""
+    repeated = mapping.repeated_keys if isinstance(mapping, RepeatedKeyMap) else ()
+    return [*mapping, *repeated]
+
+
+def _construct_exact_map(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict[Any, Any]:
+    """A mapping as YAML loads it, built whole so a repeated key can be named on it."""
+    written = [key_node for key_node, _ in node.value if key_node.tag != _MERGE_TAG]
+    mapping = loader.construct_mapping(node)
+    seen: set[Any] = set()
+    repeated: list[Any] = []
+    for key in (loader.constructed_objects[key_node] for key_node in written):
+        if key in seen:
+            repeated.append(key)
+        seen.add(key)
+    if not repeated:
+        return mapping
+    data = RepeatedKeyMap(tuple(repeated))
+    data.update(mapping)
+    return data
+
+
 _ExactLoader.add_constructor(_INT_TAG, _ExactLoader.construct_exact_int)
 _ExactLoader.add_constructor(_FLOAT_TAG, _ExactLoader.construct_exact_float)
+_ExactLoader.add_constructor(_MAP_TAG, _construct_exact_map)
 
 
 def load_exact_yaml(text: bytes | str) -> Any:
-    """What ``load_yaml`` gives, numbers aside: a plain decimal integer is an ``int``, a plain
-    decimal float a ``WaveDecimal`` with every digit, and every other number form is its text."""
+    """What ``load_yaml`` gives, but an integer is ``int``, a decimal ``WaveDecimal``, else text."""
     return _ExactLoader(text).get_single_data()
 
 
@@ -131,8 +164,13 @@ class _ExactDumper(yaml.SafeDumper):
             return self.represent_str(str(data))
         return self.represent_scalar(_FLOAT_TAG, _plain_float(data))
 
+    def represent_repeated_keys(self, data: RepeatedKeyMap) -> yaml.MappingNode:
+        pairs = [*((key, data[key]) for key in data.repeated_keys), *data.items()]
+        return self.represent_mapping(_MAP_TAG, pairs)
+
 
 _ExactDumper.add_representer(float, _ExactDumper.represent_plain_float)
+_ExactDumper.add_representer(RepeatedKeyMap, _ExactDumper.represent_repeated_keys)
 _ExactDumper.add_multi_representer(Decimal, _ExactDumper.represent_decimal)
 
 

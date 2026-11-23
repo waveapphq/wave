@@ -20,8 +20,18 @@ self-seeds its data via `POST /functions` (library entries) and `POST /tests`
 | `v-fn-lib-drop-functional.spec.ts` | library → canvas | a card dragged from the Functions Library; V-FN-LIB-CONTRACT: dropped on the Test flow, into a For Loop body, into a Local Function body, pasted, Quick Insert, a library Block inside a library body (drilled in a Test, library View, edit mode), a contract read that fails once | The new Block is a shared reference; its sheet lists the library Function's inputs right away (no reload), an input value saves (stored as an expression field) and the run prints it; inside a Local Function body the input is listed again after the Test is opened anew; a library Block stored with no contract inside a library body lists its inputs when the body opens and saves an input value in edit mode; a failed contract read blocks the page with "Could not load Function versions" until Try Again reads it |
 | `v-fn-publish-locals-functional.spec.ts` | local → shared, edit mode → new version, library → canvas, shared → local | Publish to Library from Local / publish a new version from edit mode / drag a library Function onto the canvas / Make Local | Every transition keeps the Function's local variables: the stored body holds them, the library View lists them, and the run prints the local's value |
 | `v-fn-regression-guards.spec.ts`  | n/a (bundle)   | POST /tests dup name returns 409 / GET /functions/tags is deduped sorted / Ctrl+A + Delete clears the selection | Three orthogonal guards that didn't fit on any single lifecycle wireframe |
+| `v-fn-publish-reload-name-functional.spec.ts` | local → shared, then reload | Publish to Library from a saved Test with no other edit, reload | The server copy stores the library name: the From library link, the Changelog and Documentation titles and the missing-Function banner name it |
 
 ## Steps + Issue mapping
+
+### v-fn-publish-reload-name-functional
+
+Seeds (API): one `zz-b29-` Test holding a Local Function Block under Start.
+
+1. **Publish** - open the Test; kebab → Publish to Library under a `zz-b29-pub-` name unlike the Block name.
+2. **Reload** - read the stored Block and open the Test again. Assert: the Block is Shared and stores the library name.
+3. **Window** - open the Block's window. Assert: `From library: <name>`, the Changelog and Documentation dialogs are titled with the name, the link opens the library on it.
+4. **Missing** - delete the library Function and reload. Assert: the banner reads `Function '<name>' is no longer available in the library`.
 
 ### v-fn-publish-functional
 

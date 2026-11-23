@@ -1,14 +1,4 @@
-"""Unit tests for the unified write-path validation pipeline.
-
-Covers:
-- _apply_safe_autofixes: applies NODE/EDGE/VARIABLE fixes, leaves visible codes alone.
-- _validate_for_persist: returns residual user-actionable errors after autofixes.
-- create_test / update_test: invoke the pipeline and raise SaveValidationError on residuals.
-- _validate_test_data: emits INVALID_OUTPUT_BINDING_TYPE on save/run, warning on load.
-- POST /tests, PUT /tests/{id}: 422 with top-level message ^Test has \\d+ validation error\\(s\\)$.
-- /tests/{id}/fix: preserves visible warnings post-fix.
-- validate_test_data_for_create: public dry-run (deep copy, name-conflict prepend, parity).
-"""
+"""Unit tests for the unified write-path validation pipeline."""
 
 import re
 import uuid
@@ -154,11 +144,9 @@ class TestApplySafeAutofixes:
         assert result == {"plain": "raw_string_value"}
 
     def test_normalize_target_handles_clears_stale_handle_on_single_ingress(self) -> None:
-        """_post_fix_edge_cleanup drops a stale targetHandle when the target
-        has only one ingress."""
+        """The post-fix cleanup drops a stale targetHandle on a single-ingress target."""
         good = _make_workflow_node("node-good")
-        # Build a workflow where after autofix the only remaining edge has
-        # a stale targetHandle - the normalize step removes it.
+        # Build a workflow where after autofix the only remaining edge has a stale targetHandle.
         test = {
             "name": "Stale Handle Normalize",
             "workflow": {
@@ -322,14 +310,7 @@ class TestValidateForPersist:
         assert hasattr(test_service, "_validate_for_persist")
 
     def test_validate_for_persist_returns_empty_for_clean_test(self) -> None:
-        """Clean workflow yields no errors.
-
-        The default `_make_workflow_node` builds a variable-setter that
-        writes `my_var`, so a clean test must also declare `my_var` in the
-        variables dict. Per the UNDECLARED_VARIABLE contract (no implicit
-        save-time autofix), leaving `variables` empty here would surface
-        an UNDECLARED_VARIABLE error instead of an empty residual.
-        """
+        """Clean workflow yields no errors."""
         node = _make_workflow_node("node-1")
         test = {
             "name": "Clean",
@@ -380,12 +361,7 @@ class TestCreateTestPipeline:
         _reset_storage_and_registry()
 
     def test_create_test_with_only_structural_errors_persists_clean(self) -> None:
-        """Structural-only errors are auto-fixed silently and the test persists.
-
-        The default `_make_workflow_node` is a variable-setter writing
-        `my_var`, so we declare `my_var` in the variables map to keep the
-        only outstanding error the structural ghost edge (autofixable).
-        """
+        """Structural-only errors are auto-fixed silently and the test persists."""
         good = _make_workflow_node("node-good")
         data = {
             "name": "Auto Fixable Test",
@@ -1203,36 +1179,20 @@ class TestRoutesHaveNoSaveValidationHelper:
     """Save validation lives in the service pipeline, not in a route helper."""
 
     def test_routes_module_has_no_check_save_validation(self) -> None:
-        """`_check_save_validation` is not a symbol of the routes module.
-
-        The pipeline runs unconditionally inside the service layer.
-        """
+        """`_check_save_validation` is not a symbol of the routes module."""
         from wavecore.api.routes.tests import routes as tests_routes
 
         assert not hasattr(tests_routes, "_check_save_validation")
 
 
 class TestUpdateTestUndeclaredVariableBlocksSave:
-    """UNDECLARED_VARIABLE save-time behavior under the user-initiated-fix contract.
-
-    update_test raises SaveValidationError when the payload
-    references a variable that is not declared - the FE catches the 422 and
-    surfaces the Fix-or-Cancel dialog, and only the user-initiated Fix
-    button (which routes through `fix_test`) actually recreates the
-    variable. UNDECLARED_VARIABLE lives in `_ON_DEMAND_VARIABLE_FIX_CODES`,
-    not `_VARIABLE_FIX_CODES`.
-    """
+    """A save with an undeclared variable is refused; only the Fix button declares it."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
 
     def test_update_test_raises_on_undeclared_variable(self) -> None:
-        """UNDECLARED_VARIABLE is NOT silently auto-fixed during save.
-
-        update_test must raise SaveValidationError so the FE shows the
-        Fix-or-Cancel dialog rather than the BE quietly recreating the
-        variable behind the user's back.
-        """
+        """UNDECLARED_VARIABLE is refused on save, never silently auto-fixed."""
         created = test_service.create_test(
             {
                 "name": "Undeclared Auto Fix",
@@ -1264,11 +1224,7 @@ class TestUpdateTestUndeclaredVariableBlocksSave:
 
 
 class TestValidateTestDataForCreate:
-    """Public dry-run wrapper for the create pipeline (REQ-5.2.7.9).
-
-    Runs the persist validation on a deep copy plus the create-path
-    name-conflict scan; persists nothing and never mutates the caller's dict.
-    """
+    """Public dry-run wrapper for the create pipeline (REQ-5.2.7.9)."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -1303,8 +1259,7 @@ class TestValidateTestDataForCreate:
         import copy
 
         data = self._clean_data("Dry Untouched")
-        # A ghost edge is autofixed in the pipeline; the dry run must apply
-        # that fix to its own deep copy only.
+        # A ghost edge is autofixed in the pipeline.
         data["workflow"]["edges"] = [{"id": "e1", "source": "node-good", "target": "ghost-node"}]
         snapshot = copy.deepcopy(data)
         test_service.validate_test_data_for_create(data)
@@ -1500,12 +1455,7 @@ class TestValidateTestDataForCreate:
 
 
 class TestHaltFunctionScopeValidation:
-    """`function` Halt scope is only valid inside a Function body.
-
-    The FE hides the option outside a Function; the backend rejects it on the
-    import / hand-edited paths the FE guard does not cover. A Halt inside a
-    Function body keeps the scope (validated via the embedded-Function walk).
-    """
+    """`function` Halt scope is only valid inside a Function body."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -1592,11 +1542,7 @@ class TestHaltFunctionScopeValidation:
         assert "HALT_FUNCTION_SCOPE_OUTSIDE_FUNCTION" not in codes
 
 
-# ---------------------------------------------------------------------------
-# validate_test_data_for_update: the update-path dry-run seam (amend loop).
-# The amend loop dry-runs an amended workflow before persisting; distinct
-# per-(target, targetHandle) ingress_N rejoins must survive as zero errors.
-# ---------------------------------------------------------------------------
+# validate_test_data_for_update: an amend's ingress_N rejoins validate clean.
 
 
 def _clean_v1_data(name: str) -> dict[str, Any]:
@@ -1982,12 +1928,7 @@ def _combined_rejoin_data(name: str) -> dict[str, Any]:
 
 
 class TestValidateTestDataForUpdate:
-    """Public dry-run wrapper for the UPDATE pipeline (amend loop).
-
-    Mirrors validate_test_data_for_create: runs the persist validation on a
-    deep copy, does not flag the target's own name as a conflict, persists
-    nothing, and never mutates the caller's dict.
-    """
+    """Public dry-run wrapper for the UPDATE pipeline (amend loop)."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -2088,13 +2029,7 @@ class TestValidateTestDataForUpdate:
 
 
 class TestRejoinPreservationOnUpdate:
-    """Amended workflows with per-(target, targetHandle) ingress_N rejoins validate clean.
-
-    Each construct's branch tails converge on one join node using DISTINCT
-    ingress handles (default, ingress_1, ingress_2 ...). The dry run must
-    preserve every rejoin - no MULTIPLE_EDGES / DANGLING_EDGE finding - and
-    return zero errors.
-    """
+    """Amended workflows with per-(target, targetHandle) ingress_N rejoins validate clean."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -2263,9 +2198,7 @@ class TestConjunctivelyRequiredParameters:
         assert required is False
 
 
-# ---------------------------------------------------------------------------
 # The K8s read blocks are gated before the run, not only at the failing block
-# ---------------------------------------------------------------------------
 
 _K8S_SESSION = "kubeconfig-text"
 
@@ -2518,9 +2451,7 @@ class TestK8sReadBlocksAreGatedBeforeTheRun:
         await _k8s_plugin(element_type).validate({"session": _K8S_SESSION, **values})
 
 
-# ---------------------------------------------------------------------------
 # HTTP Request and SSH Session Open are refused half-filled at save and run
-# ---------------------------------------------------------------------------
 
 # The values each Block needs whatever its mode, so only the field under test is missing.
 _BASE_VALUES: dict[str, dict[str, Any]] = {
@@ -2705,9 +2636,7 @@ class TestHalfFilledHttpAndSshOpenBlocks:
         assert test_service._validate_test_data(data, context=context)["errors"] == []
 
 
-# ---------------------------------------------------------------------------
 # Read-only fields are refused at save, not only at run
-# ---------------------------------------------------------------------------
 
 
 def _log_node(
@@ -2764,11 +2693,7 @@ _ROWS = {"rows": {"type": "array", "value": [1]}}
 
 
 class TestReadOnlyFieldsAreRefusedAtSave:
-    """A field that changes a variable is refused when the test is saved.
-
-    The run-time gate stays the backstop; this stops an author saving a test
-    that is guaranteed to fail later.
-    """
+    """A field that changes a variable is refused when the test is saved."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -2957,8 +2882,7 @@ class TestReadOnlySaveWalkerShapes:
 
 
 class TestReferenceParametersAreRefusedAtSave:
-    """A parameter that names a variable is evaluated as an expression at run,
-    so the save walk checks it with the same rule."""
+    """A parameter that names a variable is evaluated as an expression at run."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -3068,8 +2992,7 @@ class TestReferenceParametersAreRefusedAtSave:
 
 
 class TestShellExecIsAKnownBlock:
-    """SHRUN-17 / REQ-3.4.1.18: a saved Shell Exec block is a known element type, so the
-    save-stage autofix keeps it instead of removing it as unknown."""
+    """SHRUN-17 / REQ-3.4.1.18."""
 
     def setup_method(self) -> None:
         _reset_storage_and_registry()
@@ -3104,9 +3027,7 @@ class TestShellExecIsAKnownBlock:
         assert [n["data"]["elementType"] for n in result["workflow"]["nodes"]] == ["shell-exec"]
 
 
-# ---------------------------------------------------------------------------
 # A saved Block's values get the same checks the recipe gives them
-# ---------------------------------------------------------------------------
 
 
 def _one_block_test(
@@ -3339,6 +3260,58 @@ class TestFieldValuesAreCheckedAtSave:
         ]
 
 
+_PING_ABOVE_COUNT = (
+    "Ping",
+    "SETTING_ABOVE_MAXIMUM",
+    "Setting 'min_replies' of block 'ping' must be at most the value of setting 'count' (4), "
+    "got 5",
+    "Provide a value of at most 4",
+)
+
+
+def _ping_test(**values: Any) -> dict[str, Any]:
+    return _one_block_test("ping", "plugin", "Ping", {"host": "example.com", **values})
+
+
+class TestPingMinimumRepliesCeilingAtSave:
+    """REQ-3.4.2.2: a Test save refuses Minimum replies above Count under At least N replies."""
+
+    @pytest.fixture(autouse=True)
+    def _registered_ping(self) -> Any:
+        from wavecore.core.plugin_registry import clear_registry, register_plugin
+        from wavecore.plugins.ping import PingPlugin
+
+        _reset_storage_and_registry()
+        register_plugin(PingPlugin())
+        yield
+        clear_registry()
+
+    def test_minimum_replies_above_count_is_refused(self) -> None:
+        test = _ping_test(pass_when="min_replies", count=4, min_replies=5)
+
+        assert _save_findings(test) == [_PING_ABOVE_COUNT]
+
+    def test_an_unset_count_is_its_default_of_four(self) -> None:
+        test = _ping_test(pass_when="min_replies", min_replies=5)
+
+        assert _save_findings(test) == [_PING_ABOVE_COUNT]
+
+    def test_the_create_pipeline_refuses_it_and_stores_nothing(self) -> None:
+        test = _ping_test(pass_when="min_replies", count=4, min_replies=5)
+
+        with pytest.raises(SaveValidationError) as refused:
+            test_service.create_test(test)
+
+        assert [(e["code"], e["message"]) for e in refused.value.errors] == [_PING_ABOVE_COUNT[1:3]]
+        assert [t["name"] for t in test_service._list_all_tests()] == []
+
+    def test_minimum_replies_equal_to_count_saves(self) -> None:
+        assert _save_findings(_ping_test(pass_when="min_replies", count=4, min_replies=4)) == []
+
+    def test_another_pass_rule_saves(self) -> None:
+        assert _save_findings(_ping_test(pass_when="all", count=4, min_replies=5)) == []
+
+
 class TestNumbersFollowTheOneRuleAtSave:
     """REQ-3.1.3.14: every number a Test holds follows the one number rule at Save."""
 
@@ -3436,9 +3409,7 @@ class TestNumbersFollowTheOneRuleAtSave:
         ]
 
 
-# ---------------------------------------------------------------------------
 # Control findings follow the context: a required part is a warning on load
-# ---------------------------------------------------------------------------
 
 
 def _if_else_node(branches: list[dict[str, Any]]) -> dict[str, Any]:
@@ -3554,8 +3525,7 @@ def _found(entries: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
 
 
 class TestControlFindingsByContext:
-    """REQ-3.5.0.3: a missing or empty condition part of a control is a warning when a Test is
-    opened and an error on save, import and run; a structure problem is an error everywhere."""
+    """REQ-3.5.0.3: a missing condition part warns on open, fails on save."""
 
     @pytest.fixture
     def client(self) -> TestClient:

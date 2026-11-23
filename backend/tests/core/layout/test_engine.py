@@ -1,10 +1,9 @@
-"""Deterministic recursive column layout (algorithm + invariants).
-
-Canonical pixel cases, determinism, geometric invariants, the walker's flows.
-"""
+"""Deterministic recursive column layout (algorithm + invariants)."""
 
 import math
 from typing import Any
+
+import pytest
 
 
 def layout(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
@@ -346,8 +345,7 @@ class TestCanonicalPixelCases:
         }
 
     def test_try_sections_all_pack_left_of_the_continuation_lane(self) -> None:
-        # Multi-section constructs with a then egress hang EVERY section column
-        # left of the spine in handle order; the continuation stays on the spine.
+        # Every section column hangs left of the spine; the continuation stays on it.
         nodes = [
             make_node(
                 "node-1",
@@ -537,8 +535,7 @@ def crowding_pairs(
 
 
 def nested_release_workflow() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """An If/Else whose then-branch holds a Remote Execution with a two-Block body; the
-    Remote's continuation carries the rest of the flow, the else-branch ends in a Halt."""
+    """An If/Else whose then-branch holds a Remote Execution with a two-Block body."""
     nodes = [
         make_node("node-1"),
         make_node("node-2", "if-else", "control", values=two_branch_if_values()),
@@ -733,3 +730,41 @@ class TestCrowding:
         from wavecore.core.layout.engine import row_step
 
         assert [row_step(height) for height in (73, 108, 109, 174)] == [140, 140, 280, 280]
+
+
+def note_in_chain(text: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """node-1, a wired Note holding ``text``, then node-2."""
+    note = {
+        "id": "note-1",
+        "type": "noteNode",
+        "data": {
+            "label": "Note",
+            "elementType": "note",
+            "nodeType": "control",
+            "config": {"values": {"text": text}},
+        },
+    }
+    nodes = [make_node("node-1"), note, make_node("node-2")]
+    edges = [
+        make_edge("start-node", "node-1"),
+        make_edge("node-1", "note-1"),
+        make_edge("note-1", "node-2"),
+    ]
+    return nodes, edges
+
+
+class TestANoteNeverCrowdsTheNextBlock:
+    """REQ-5.2.7.4: the Block after a Note starts on a whole row at least 32 px below it."""
+
+    @pytest.mark.parametrize(
+        ("lines", "note_height"), [(4, 142), (8, 233)], ids=["four-lines", "eight-lines"]
+    )
+    def test_the_next_block_moves_down_whole_rows(self, lines: int, note_height: int) -> None:
+        nodes, edges = note_in_chain("\n".join(f"line {index}" for index in range(lines)))
+
+        positions = layout(nodes, edges)
+
+        step = positions["node-2"]["y"] - positions["note-1"]["y"]
+        assert step == math.ceil((note_height + 32) / 140) * 140
+        assert step - note_height >= 32
+        assert crowding_pairs(nodes, edges, positions) == []

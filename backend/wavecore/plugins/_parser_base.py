@@ -1,10 +1,4 @@
-"""
-Query Parser Base Class
-
-Shared base class for query-based parser plugins (JSON, XML, etc.).
-Provides common validation methods for queries, output modes, query output types,
-and type coercion methods for converting parsed values to WAVE types.
-"""
+"""Shared base class for the query parser plugins (REQ-3.4.1.16, REQ-3.4.1.11)."""
 
 import sys
 from decimal import Decimal
@@ -40,10 +34,14 @@ QUERY_OUTPUT_TYPES_PARAM: dict[str, Any] = {
     ),
 }
 
-PARSER_OUTPUT_SCHEMA: list[dict[str, str]] = [
+PARSER_OUTPUT_SCHEMA: list[dict[str, Any]] = [
     {"name": "success", "type": "boolean"},
     {"name": "errors", "type": "array"},
-    {"name": "results", "type": "map"},
+    {
+        "name": "results",
+        "type": "map",
+        "show_when": {"field": "output_mode", "values": ["combined"]},
+    },
 ]
 
 
@@ -65,27 +63,22 @@ def queries_param(expression_kind: str) -> dict[str, Any]:
         "name": "queries",
         "type": "map",
         "required": True,
+        "declares_outputs": True,
+        "declares_outputs_when": {"field": "output_mode", "values": ["individual"]},
         "description": (
             f"Map of query names to {expression_kind} expressions. "
-            "Each query result is returned in the results map with the query name "
-            "as key. At least one query is required; a null entry fails the run."
+            "In individual output mode each query name is its own output; in "
+            "combined mode each result is returned in the results map with the "
+            "query name as key. At least one query is required; a null entry "
+            "fails the run."
         ),
     }
 
 
 class QueryParserBase(PluginBase):
-    """
-    Abstract base class for query-based parser plugins.
+    """Abstract base class for query-based parser plugins."""
 
-    Provides shared validation and type coercion infrastructure used by
-    JSON Parser (JSONPath) and XML Parser (XPath) plugins. Subclasses
-    must still implement metadata, execute, and validate (which may call
-    the shared validation helpers).
-    """
-
-    # ------------------------------------------------------------------
     # Shared validation helpers
-    # ------------------------------------------------------------------
 
     def _validate_queries(self, params: dict[str, Any], *, query_type: str) -> None:
         """Validate the required 'queries' parameter and its entries."""
@@ -133,9 +126,7 @@ class QueryParserBase(PluginBase):
                     f"Query output type for '{key}' must be a string, got {type(val).__name__}"
                 )
 
-    # ------------------------------------------------------------------
     # Shared result building / storage
-    # ------------------------------------------------------------------
 
     def _store_query_result(
         self,
@@ -175,28 +166,10 @@ class QueryParserBase(PluginBase):
             result.update(results)
         return result
 
-    # ------------------------------------------------------------------
     # Shared type coercion
-    # ------------------------------------------------------------------
 
     def _coerce_value(self, value: Any, expected_type: str) -> Any:
-        """
-        Coerce a query result value to the expected type.
-
-        Used in individual output mode to convert query results to the type
-        specified in query_output_types.
-
-        Args:
-            value: The value to coerce
-            expected_type: Target type (string, integer, float, boolean)
-
-        Returns:
-            The coerced value; a null stays null under every type
-
-        Raises:
-            ValueError: If the value cannot be converted to the expected type
-            TypeError: If the value type is incompatible with the expected type
-        """
+        """Coerce a query result value to the expected type."""
         if value is None:
             return None
         coercers: dict[str, Any] = {
@@ -272,20 +245,10 @@ class QueryParserBase(PluginBase):
             return False
         raise ValueError(f"Cannot convert '{value}' to boolean")
 
-    # ------------------------------------------------------------------
     # Shared type detection
-    # ------------------------------------------------------------------
 
     def _detect_type(self, value: Any) -> dict[str, Any]:
-        """
-        Detect the WAVE type for a parsed value.
-
-        Args:
-            value: A Python value from parsed content
-
-        Returns:
-            dict: Map with 'type' and 'value' fields
-        """
+        """Detect the WAVE type for a parsed value."""
         if value is None:
             return {"type": "null", "value": None}
 

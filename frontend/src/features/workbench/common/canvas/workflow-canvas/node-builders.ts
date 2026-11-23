@@ -1,7 +1,4 @@
-/**
- * Shared node construction + egress wiring for palette drop and quick-add,
- * promoted out of `use-canvas-drop.ts` so both surfaces build identical nodes.
- */
+/** Shared node construction and egress wiring for palette drop and Quick Insert. */
 
 import { getControlVersions } from '@/features/workbench/docs/_loader'
 import type { FunctionInput } from '@/features/functions/api/types'
@@ -36,10 +33,7 @@ export interface NewNodeData {
   version?: string
   config?: Record<string, unknown>
   functionLifecycle?: 'local' | 'shared'
-  // The local function definition's nested workflow holds the same node /
-  // edge shapes as the parent. `Record<string, never>[]` would be wrong; we
-  // intentionally keep the inner arrays unknown[] at construction time and
-  // let the store widen them on insert.
+  // Inner arrays stay unknown[] here; the store widens them on insert.
   localDefinition?: {
     name?: string
     workflow: { nodes: never[]; edges: never[] }
@@ -65,9 +59,7 @@ export function buildLocalFunctionNode(
   position: { x: number; y: number },
   existingNodes: ReadonlyArray<{ data: { label: string; nodeType?: string } }>,
 ): NewNode {
-  // The canvas label IS the user-facing Function name for a Local instance.
-  // The save-time validator reads ``localDefinition.name`` for the
-  // structural name check, so the two must stay in sync from creation.
+  // The label is the Local Function's name and must equal localDefinition.name for the save check.
   const name: string = getNextFunctionInstanceName(existingNodes)
   return {
     id: newNodeId,
@@ -99,11 +91,7 @@ export function buildPublishedFunctionNode(
   payload: { functionId: string; name: string; version?: string; inputs?: readonly FunctionInput[] },
   existingNodes: ReadonlyArray<{ data: { label: string; nodeType?: string } }>,
 ): NewNode {
-  // Shared instances auto-name from the LIBRARY entry's name (e.g.
-  // "fetch_user", "fetch_user_1", ...) so the canvas label is immediately
-  // meaningful. The library entry's name is also stored verbatim in
-  // `originalLibraryName` so the modal can surface a "From library:
-  // <name>" inline link that survives later user renames of the label.
+  // Shared instances take the library name, also kept in originalLibraryName for the From library link.
   const name: string = getNextSequencedName(existingNodes, payload.name)
   return {
     id: newNodeId,
@@ -170,13 +158,7 @@ export function buildPaletteNode(
   const initialVersion = controlVersions[0]?.version || '1.0.0'
   const nodeType = paletteData.id === 'note' ? 'noteNode' : 'workflowNode'
   const defaultConfig = buildDefaultConfigForPalette(paletteData.id)
-  // Auto-name with the universal "base first, _N afterwards" rule:
-  // the FIRST drop of "Log" is just "Log", the second is "Log_1", and
-  // so on. Collision check is canvas-wide (no type predicate) so a
-  // plugin "Log" and a Function "Log" don't both exist with the same
-  // label - that would confuse variable references and the user's
-  // mental model. Notes are inline labels and keep the palette's raw
-  // name as their initial content.
+  // Auto-name canvas-wide as base, then base_N, so no two Blocks share a label; a Note keeps the raw name.
   const label =
     paletteData.id === 'note'
       ? paletteData.name
@@ -281,8 +263,7 @@ const OUTPUT_HANDLES = new Map<string, OutputHandlesOf>([
   ['halt', noHandles],
 ])
 
-/** Named output handles for a multi-handle node, [] for no-egress nodes,
- *  or null for single-default-handle nodes. */
+/** Named output handles of a multi-handle node, [] with no egress, null for one default handle. */
 export function getNodeOutputHandles(node: EgressNode): string[] | null {
   const handlesOf = OUTPUT_HANDLES.get(node.data?.elementType ?? '')
   if (handlesOf === undefined) return null
@@ -290,7 +271,7 @@ export function getNodeOutputHandles(node: EgressNode): string[] | null {
 }
 
 /** First free sourceHandle of a node, or a "none free" marker. */
-function findFirstFreeEgress(
+export function findFirstFreeEgress(
   node: EgressNode,
   edges: ReadonlyArray<EgressEdge>,
 ): { free: boolean; sourceHandle?: string } {
@@ -319,9 +300,7 @@ export interface ConnectFromFirstFreeEgressParams {
   addEdge: (edge: EgressEdge) => void
 }
 
-/** Link `newNodeId` from the anchor's first free egress handle; returns
- *  whether an edge was added (false on no anchor, no free handle, or
- *  validator rejection). */
+/** Link `newNodeId` from the anchor's first free egress; returns whether an edge was added. */
 export function connectFromFirstFreeEgress({
   anchorId,
   newNodeId,

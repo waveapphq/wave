@@ -1,12 +1,9 @@
-"""Node size estimation mirroring the canvas card.
-
-Mirrors frontend workflow-node constants and computeNodeMinWidth; the recipe
-compiler persists the fitted width, so a drift here lands in stored tests. The
-height is the whole card the canvas draws: its body and its status bar.
-"""
+"""Node size estimation mirroring the canvas card; the compiler stores the fitted width."""
 
 import math
 from typing import Any
+
+from wavecore.controls.note import NOTE_NODE_TYPE
 
 NODE_MIN_WIDTH = 160
 NODE_FUNCTION_MIN_WIDTH = 192
@@ -38,6 +35,14 @@ TALLEST_COLLAPSED_HEIGHT = (
     + DESCRIPTION_MAX_LINES * DESCRIPTION_LINE_HEIGHT
     + STATUS_BAR_HEIGHT
 )
+
+# An unresized Note: 8 px glyphs, 26 px side chrome, 22.75 px lines, 18 px padding, 33 px bar.
+NOTE_MIN_WIDTH = 120
+NOTE_MIN_HEIGHT = 60
+NOTE_CHAR_WIDTH = 8
+NOTE_CHROME_WIDTH = 26
+NOTE_LINE_HEIGHT = 22.75
+NOTE_CHROME_HEIGHT = 18 + 33
 
 _HANDLE_EDGE_PAD = 96
 _HANDLE_STEP = 64
@@ -108,8 +113,7 @@ def _handle_min(data: dict[str, Any], ingress_count: int) -> int:
 
 
 def fit_node_width(node: dict[str, Any], ingress_count: int) -> int:
-    """Width the canvas draws for a block sized to fit its title: the text fit
-    within the resize bounds, never narrower than the block's handle row."""
+    """The width drawn for a block fitted to its title, within resize bounds and its handle row."""
     data = node.get("data") or {}
     title = str(data.get("label") or data.get("elementType") or "")
     text_fit = _clamp_width(TITLE_CHROME_WIDTH + TITLE_CHAR_WIDTH * len(title), data)
@@ -134,12 +138,26 @@ def _card_height(data: dict[str, Any], width: int) -> float:
     return body + STATUS_BAR_HEIGHT
 
 
+def _note_size(node: dict[str, Any]) -> tuple[int, float]:
+    """A Note's stored width and height, each one unset estimated from its text (REQ-5.2.7.4)."""
+    values = (node.get("data") or {}).get("config", {}).get("values") or {}
+    lines = str(values.get("text") or "").split("\n")
+    width, height = node.get("width"), node.get("height")
+    if not isinstance(width, int | float):
+        longest = max(len(line) for line in lines)
+        width = max(NOTE_MIN_WIDTH, NOTE_CHROME_WIDTH + NOTE_CHAR_WIDTH * longest)
+    if not isinstance(height, int | float):
+        height = max(NOTE_MIN_HEIGHT, len(lines) * NOTE_LINE_HEIGHT + NOTE_CHROME_HEIGHT)
+    return math.ceil(width), math.ceil(height)
+
+
 def estimate_node_size(node: dict[str, Any], ingress_count: int) -> tuple[int, float]:
     """Estimated (width, height) for a node given its incoming edge count."""
+    if node.get("type") == NOTE_NODE_TYPE:
+        return _note_size(node)
     data = node.get("data") or {}
 
-    # A stored width is honored as on the canvas; un-resized nodes sit at the floor.
-    # The height follows the card's content only; it is never set by hand.
+    # A stored width is honored as on the canvas, else the floor; the height follows content only.
     stored = node.get("width")
     base = (
         _clamp_width(round(stored), data) if isinstance(stored, int | float) else _width_floor(data)

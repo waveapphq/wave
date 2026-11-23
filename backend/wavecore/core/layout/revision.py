@@ -1,12 +1,4 @@
-"""Carry what a person set on the canvas across a revision of a workflow.
-
-A Block of the revised workflow is the Block it was when it is the same kind,
-in the same section of the same construct, recognized by its name and settings
-rather than by its place in the list; a section is recognized by what it is, never
-by its number. A recognized Block keeps any width a person set, a Note's height and
-the canvas settings a recipe cannot say, and the revision is laid out as a change of
-the stored layout, so it reads in flow order.
-"""
+"""Carry what a person set on the canvas across a revision of a workflow."""
 
 import copy
 import json
@@ -14,6 +6,7 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from difflib import SequenceMatcher
 from typing import Any
 
+from wavecore.controls.note import NOTE_NODE_TYPE
 from wavecore.core.layout.change import layout_change
 from wavecore.core.layout.dimensions import fit_node_width
 from wavecore.core.layout.engine import FlowTree, flow_tree, ingress_counts, is_numbered_section
@@ -90,8 +83,7 @@ def _pairs(
     old_at: int = 0,
     new_at: int = 0,
 ) -> Iterator[tuple[int, int]]:
-    """Index pairs of old and new items by their keys, one key per level, strongest first; each
-    weaker level pairs only what the stronger ones left between their pairs."""
+    """Index pairs of old and new items by their keys, strongest level first, weaker within gaps."""
     if not old or not new or level == len(old[0]):
         return
     matcher = SequenceMatcher(
@@ -175,8 +167,7 @@ class _Matcher:
         handles: list[str],
         sections: Mapping[str, FlowTree],
     ) -> list[tuple[Hashable, ...]]:
-        """What each numbered lane is, strongest first: its settings with its Blocks, its
-        settings - a case's value, a branch's name - then its kind, such as a case or an else."""
+        """Each numbered lane's keys, strongest first: settings with Blocks, settings, then kind."""
         records = _lane_records(data.get(construct) or {})
         keys: list[tuple[Hashable, ...]] = []
         for handle in handles:
@@ -210,9 +201,11 @@ def match_blocks(
 
 
 def _hand_set_width(node: dict[str, Any], ingress: int) -> dict[str, float]:
-    """The stored width a person set; one equal to the generated fit is the compiler's."""
+    """A person's stored width; on a Block, one equal to the generated fit is the compiler's."""
     width = node.get("width")
-    if not isinstance(width, int | float) or width == fit_node_width(node, ingress):
+    if not isinstance(width, int | float):
+        return {}
+    if node.get("type") != NOTE_NODE_TYPE and width == fit_node_width(node, ingress):
         return {}
     return {"width": width}
 
@@ -220,15 +213,14 @@ def _hand_set_width(node: dict[str, Any], ingress: int) -> dict[str, float]:
 def _note_height(old: Mapping[str, Any], node: Mapping[str, Any]) -> dict[str, float]:
     """A Note's stored height; a Block card's height follows its content, never a hand."""
     height = old.get("height")
-    notes = old.get("type") == node.get("type") == "noteNode"
+    notes = old.get("type") == node.get("type") == NOTE_NODE_TYPE
     if not notes or not isinstance(height, int | float):
         return {}
     return {"height": height}
 
 
 def _carry_settings(old: Mapping[str, Any], node: dict[str, Any]) -> None:
-    """Give the revised Block the canvas settings its stored Block holds, when it is still
-    that kind of Block: a key can pair Blocks of two kinds, and a reveal choice is per kind."""
+    """Copy the stored Block's canvas settings onto the revised one when it is the same kind."""
     old_data = old.get("data") or {}
     if _kind(old_data) != _kind(node.get("data") or {}):
         return
@@ -246,11 +238,7 @@ def carry_canvas_state(
     revised: dict[str, Any],
     anchors: Mapping[str, str] | None = None,
 ) -> dict[str, str]:
-    """Give each revised Block the hand-set size and canvas settings of the Block it was, then
-    lay the revision out as a change of the previous layout.
-
-    Returns the pairs it found: revised node id -> previous node id.
-    """
+    """Carry hand-set sizes and settings over and lay out the change; returns new -> old ids."""
     matcher = _match(previous, revised, anchors or {})
     old_nodes = {str(node["id"]): node for node in previous.get("nodes") or []}
     old_ingress = ingress_counts(list(previous.get("edges") or []))

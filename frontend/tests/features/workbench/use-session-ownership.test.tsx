@@ -1626,7 +1626,7 @@ describe('useSessionOwnership - watch-mode active node', () => {
         {}
       )
     })
-    expect(mockSignalMirrorChange).toHaveBeenLastCalledWith(null)
+    expect(mockSignalMirrorChange).not.toHaveBeenCalled()
 
     // Second snapshot moves block `a`: the diff makes it the follow target.
     act(() => {

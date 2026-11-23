@@ -1,10 +1,4 @@
-"""Amend enablers on the compiler side: recipeKey stamping, key identity, keyed relayout, rejoins.
-
-The compiler-side enablers the amend loop rides on: every emitted node carries a
-stable opaque recipeKey, an explicit key sibling maps through verbatim, keys
-recognize Blocks across the relayout of a change, and construct rejoins survive
-recompile. A Test holding a setting no recipe can express is refused.
-"""
+"""Amend enablers on the compiler side."""
 
 import copy
 from collections.abc import Callable
@@ -150,8 +144,7 @@ PING_STEP = log_step("Ping app server")
 
 
 def release_recipe(body: list[dict[str, Any]], name: str = "Release Smoke Check") -> str:
-    """An If/Else whose then-branch holds a Remote Execution running `body`, followed by
-    top-level steps the Remote's continuation carries; the else-branch ends in a Halt."""
+    """An If/Else whose then-branch holds a Remote Execution running `body`."""
     remote = {"remote": {"settings": {"session_id": {"expr": "ssh_session"}}, "body": body}}
     halt = {"halt": {"scope": "test", "status": "failed", "message": "service down"}}
     flow = [
@@ -292,8 +285,7 @@ def _field_loss_workflow() -> dict[str, Any]:
 
 
 class TestAmendRefusesAFieldLoss:
-    """A stored Test holding a setting the recipe format cannot express is never amended,
-    so nothing it holds is silently dropped (REQ-5.2.7.6)."""
+    """A Test holding an inexpressible setting is never amended (REQ-5.2.7.6)."""
 
     def test_amending_a_test_that_holds_a_field_loss_is_refused_with_the_problem_text(
         self,
@@ -369,8 +361,7 @@ def logs(*labels: str) -> list[dict[str, Any]]:
 
 
 class TestAmendKeepsEachBlocksId:
-    """A Block the amendment recognizes keeps its id; a new one gets an id no Block of the
-    stored test ever had, and every wire and reference follows."""
+    """A Block the amendment recognizes keeps its id."""
 
     def test_the_blocks_after_an_inserted_one_keep_their_ids(self) -> None:
         stored, revised, _ = revise(
@@ -485,8 +476,7 @@ def body_of(workflow: dict[str, Any]) -> dict[str, Any]:
 
 
 def revise_body(adjust: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
-    """The revised body after a Block goes in before the Function; ``adjust`` is what a person
-    did to the stored body's first Block on the canvas."""
+    """The revised body after a Block goes in before the Function."""
     from wavecore.core.recipes.amend import revise as revise_fn
 
     stored = compile_clean(make_recipe([{"function": "probe"}], functions=PROBE_FUNCTIONS))
@@ -500,8 +490,7 @@ def revise_body(adjust: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
 
 
 class TestAmendCarriesTheCanvasIntoLocalBodies:
-    """A recognized Block inside a local Function body keeps what a person set on the canvas,
-    as a Block of the test does."""
+    """A recognized Block inside a local Function body keeps what a person set on the canvas."""
 
     def test_a_block_in_a_local_body_keeps_how_it_masks_and_its_open_description(self) -> None:
         def set_on_the_canvas(node: dict[str, Any]) -> None:
@@ -592,3 +581,66 @@ class TestReadbackForm:
 
         assert decompile_test_data(unknown_level)["expressible"] is True
         assert readback_form(unknown_level) is None
+
+
+FOUR_LINE_NOTE = "one\ntwo\nthree\nfour"
+# REQ-5.2.7.4: four lines x 22.75 + 18 + 33 px, rounded up.
+FOUR_LINE_NOTE_HEIGHT = 142
+
+
+def note_flow(*tail: dict[str, Any]) -> str:
+    return make_recipe([log_step("Alpha"), {"note": FOUR_LINE_NOTE}, log_step("Bravo"), *tail])
+
+
+def note_of(workflow: dict[str, Any]) -> dict[str, Any]:
+    (note,) = [node for node in workflow["nodes"] if node["data"]["elementType"] == "note"]
+    return note
+
+
+def label_node(workflow: dict[str, Any], label: str) -> dict[str, Any]:
+    (node,) = [node for node in workflow["nodes"] if node["data"]["label"] == label]
+    return node
+
+
+class TestAmendSizesNotes:
+    """An amend keeps Note sizes and moves a Block a Note crowds (REQ-5.2.7.4)."""
+
+    def _revise(self, adjust: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
+        from wavecore.core.recipes.amend import revise as revise_fn
+
+        stored = compile_clean(note_flow())["test_data"]["workflow"]
+        adjust(stored)
+        result = compile_clean(note_flow(log_step("Charlie")))
+        revised = result["test_data"]["workflow"]
+        revise_fn(stored, revised, result["step_map"])
+        return revised
+
+    def test_a_note_resized_to_160_keeps_its_size(self) -> None:
+        revised = self._revise(lambda stored: note_of(stored).update(width=160, height=150))
+
+        assert (note_of(revised).get("width"), note_of(revised).get("height")) == (160, 150)
+
+    def test_a_note_resized_to_300_by_200_keeps_its_size(self) -> None:
+        revised = self._revise(lambda stored: note_of(stored).update(width=300, height=200))
+
+        assert (note_of(revised).get("width"), note_of(revised).get("height")) == (300, 200)
+
+    def test_a_block_a_note_crowds_moves_below_it(self) -> None:
+        def crowd(stored: dict[str, Any]) -> None:
+            note_y = note_of(stored)["position"]["y"]
+            bravo = label_node(stored, "Bravo")
+            bravo["position"] = {"x": bravo["position"]["x"], "y": note_y + 140}
+
+        revised = self._revise(crowd)
+
+        note_bottom = note_of(revised)["position"]["y"] + FOUR_LINE_NOTE_HEIGHT
+        assert label_node(revised, "Bravo")["position"]["y"] - note_bottom >= 32
+
+    def test_a_block_below_a_tall_resized_note_moves_below_it(self) -> None:
+        def resize(stored: dict[str, Any]) -> None:
+            note_of(stored).update(width=300, height=400)
+
+        revised = self._revise(resize)
+
+        note_bottom = note_of(revised)["position"]["y"] + 400
+        assert label_node(revised, "Bravo")["position"]["y"] - note_bottom >= 32

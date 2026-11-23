@@ -50,7 +50,7 @@ RECORD_GATE = {"field": "on_error", "values": ["record"]}
 PASS_WHEN_VALUES = ["any", "all", "min_replies", "min_rate"]
 IP_VERSION_VALUES = ["auto", "v4", "v6"]
 
-# Every key beyond name, type and description, per parameter (PING-12, PING-17).
+# Every key beyond name, type and description, per parameter (PING-12, PING-17, REQ-3.4.2.2).
 PARAM_KEYS: dict[str, dict[str, Any]] = {
     "host": {"required": True, "trim": True},
     "count": {"default": 4, "minimum": 1, "maximum": 1000},
@@ -61,6 +61,7 @@ PARAM_KEYS: dict[str, dict[str, Any]] = {
     "min_replies": {
         "default": 1,
         "minimum": 1,
+        "maximum_field": "count",
         "required_when": MIN_REPLIES_GATE,
         "show_when": MIN_REPLIES_GATE,
     },

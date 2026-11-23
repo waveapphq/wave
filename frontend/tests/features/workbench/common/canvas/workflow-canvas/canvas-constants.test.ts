@@ -1,8 +1,4 @@
-/**
- * Tests for canvas-constants.ts
- *
- * Covers pure utility functions and exported constants.
- */
+/** Tests for canvas-constants.ts. */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
@@ -21,6 +17,8 @@ vi.mock('@/lib/utils', () => ({
 import {
   START_NODE_ID,
   START_NODE_POSITION,
+  START_NODE_WIDTH,
+  getSourceHandleCenter,
   ONBOARDING_NODE_ID,
   ONBOARDING_NODE_POSITION,
   GHOST_EDGE_ID,
@@ -36,10 +34,6 @@ import {
   generateNodeId,
 } from '@/features/workbench/common/canvas/workflow-canvas/canvas-constants'
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 describe('canvas constants', () => {
   it('exports expected node IDs', () => {
     expect(START_NODE_ID).toBe('start-node')
@@ -49,7 +43,16 @@ describe('canvas constants', () => {
 
   it('exports expected positions', () => {
     expect(START_NODE_POSITION).toEqual({ x: -50, y: 0 })
-    expect(ONBOARDING_NODE_POSITION).toEqual({ x: -115, y: 100 })
+    expect(ONBOARDING_NODE_POSITION).toEqual({ x: -110, y: 100 })
+  })
+
+  it('draws Start 100 px wide with its center on x 0 (CANVAS-248)', () => {
+    expect(START_NODE_WIDTH).toBe(100)
+    expect(START_NODE_POSITION.x + START_NODE_WIDTH / 2).toBe(0)
+  })
+
+  it('centers the 220 px onboarding placeholder under Start', () => {
+    expect(ONBOARDING_NODE_POSITION.x + 220 / 2).toBe(START_NODE_POSITION.x + START_NODE_WIDTH / 2)
   })
 
   it('exports expected threshold values', () => {
@@ -63,10 +66,6 @@ describe('canvas constants', () => {
     expect(AUTO_PAN_SPEED).toBeLessThan(BORDER_TRIGGER_RANGE / 4)
   })
 })
-
-// =============================================================================
-// wouldCreateCycle
-// =============================================================================
 
 describe('wouldCreateCycle', () => {
   it('returns false for empty edge list', () => {
@@ -143,10 +142,6 @@ describe('wouldCreateCycle', () => {
   })
 })
 
-// =============================================================================
-// distToNodeBounds
-// =============================================================================
-
 describe('distToNodeBounds', () => {
   // Node at (10, 10) with width=100, height=50
   const nodeX = 10
@@ -189,10 +184,6 @@ describe('distToNodeBounds', () => {
   })
 })
 
-// =============================================================================
-// useThemeSafe
-// =============================================================================
-
 describe('useThemeSafe', () => {
   beforeEach(() => {
     mockUseTheme.mockReset()
@@ -211,10 +202,6 @@ describe('useThemeSafe', () => {
   })
 })
 
-// =============================================================================
-// generateNodeId
-// =============================================================================
-
 describe('generateNodeId', () => {
   it('returns a string starting with "node-"', () => {
     const id = generateNodeId()
@@ -224,9 +211,7 @@ describe('generateNodeId', () => {
   it('generates unique IDs on subsequent calls', () => {
     const id1 = generateNodeId()
     const id2 = generateNodeId()
-    // With mocked secureRandomId both share the same suffix,
-    // but Date.now() ensures uniqueness in practice.
-    // In test with fast execution they may match, so just verify format
+    // With mocked secureRandomId both share the same suffix.
     expect(id1).toMatch(/^node-/)
     expect(id2).toMatch(/^node-/)
   })
@@ -269,5 +254,41 @@ describe('isBlockFullyVisible', () => {
     const far = { x: 1500, y: 1200 }
     expect(isBlockFullyVisible({ x: 400, y: 500 }, panned, far)).toBe(false)
     expect(isBlockFullyVisible({ x: 600, y: 500 }, panned, far)).toBe(true)
+  })
+})
+
+describe('getSourceHandleCenter', () => {
+  const measuredIfElse = {
+    internals: {
+      positionAbsolute: { x: 100, y: 200 },
+      handleBounds: {
+        source: [
+          { id: 'branch_0', x: 60, y: 90, width: 16, height: 8 },
+          { id: 'branch_1', x: 124, y: 90, width: 16, height: 8 },
+        ],
+      },
+    },
+    measured: { width: 260, height: 98 },
+  }
+
+  it('returns the flow center of the named source handle', () => {
+    expect(getSourceHandleCenter(measuredIfElse, 'branch_1')).toEqual({ x: 100 + 124 + 8, y: 200 + 90 + 4 })
+  })
+
+  it('returns the first source handle when no handle is named', () => {
+    expect(getSourceHandleCenter(measuredIfElse)).toEqual({ x: 100 + 60 + 8, y: 200 + 90 + 4 })
+  })
+
+  it('falls back to the bottom center of the measured node before its handles are measured', () => {
+    const node = {
+      internals: { positionAbsolute: { x: 40, y: 10 } },
+      measured: { width: 300, height: 60 },
+    }
+    expect(getSourceHandleCenter(node)).toEqual({ x: 40 + 150, y: 10 + 60 })
+  })
+
+  it('falls back to a 120 x 50 node before the node is measured', () => {
+    const node = { internals: { positionAbsolute: { x: 40, y: 10 } } }
+    expect(getSourceHandleCenter(node)).toEqual({ x: 40 + 60, y: 10 + 50 })
   })
 })

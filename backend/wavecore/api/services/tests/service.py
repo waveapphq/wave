@@ -1,14 +1,4 @@
-"""Test service layer for business logic (REQ-5.2.4.3).
-
-This module provides the service layer for test workflow operations.
-It acts as an intermediary between API routes and the storage layer,
-providing test lifecycle management, version control, workflow management,
-variable configuration, and validation.
-
-Tests are composable workflows built from blocks with sequential and parallel
-execution paths, control flow structures, and variable management, forming the
-executable units within suites and regressions.
-"""
+"""Test service layer for business logic (REQ-5.2.4.3)."""
 
 import ast
 import hashlib
@@ -65,6 +55,7 @@ from wavecore.api.services.typed_numbers import store_workflow_numbers
 from wavecore.api.services.variable_service import refuse_value_problems
 from wavecore.api.services.workbench.block_source import node_type_name
 from wavecore.controls.assertion_evaluator import CHECK_OPERATORS
+from wavecore.controls.note import NOTE_NODE_TYPE
 from wavecore.core.execution.field_checks import FieldFinding, check_block_fields
 from wavecore.core.execution.row_checks import block_row_findings
 from wavecore.core.expressions.template import _TEMPLATE_PATTERN
@@ -91,7 +82,11 @@ from wavecore.core.secrets.sealing import (
 )
 from wavecore.core.utf8_text import load_yaml
 from wavecore.core.variables.computed import extract_expression_names
-from wavecore.core.variables.declared_types import types_of_declarations
+from wavecore.core.variables.declared_types import (
+    binds_to,
+    output_binding_type_message,
+    types_of_declarations,
+)
 from wavecore.core.variables.usage import (
     NameSite,
     SiteKind,
@@ -114,16 +109,11 @@ _FoundSites = list[tuple[dict[str, Any], NameSite]]
 _SOURCE_KINDS = frozenset({SiteKind.EXPRESSION, SiteKind.TEMPLATE})
 
 # In-memory cache for test metadata (everything except workflow).
-# The storage directory is the record; this cache is reconciled against it on read.
 _test_cache: dict[str, dict[str, Any]] = {}
 
 
 def _node_binding_pids(node: Any) -> list[str]:
-    """Extract profile ids from a single workflow node's profileBindings.
-
-    Returns an empty list when the node shape is anything other than the
-    expected dict/data/config/profileBindings nested structure.
-    """
+    """Extract profile ids from a single workflow node's profileBindings."""
     if not isinstance(node, dict):
         return []
     data = node.get("data")
@@ -143,14 +133,7 @@ def _node_binding_pids(node: Any) -> list[str]:
 
 
 def _collect_profile_refs(test: dict[str, Any]) -> list[str]:
-    """Collect every profile id this test references (metadata + node bindings).
-
-    Returned at view-extraction time so callers in profile usage paths don't
-    have to reload the full workflow from disk. Tolerant of malformed
-    workflow shapes (e.g., nodes that aren't dicts) - those are simply skipped
-    so this can run on every saved test, including invalid ones loaded from
-    disk.
-    """
+    """Collect every profile id this test references (metadata + node bindings)."""
     refs: set[str] = set()
     meta_pid = (test.get("metadata") or {}).get("profile_id")
     if meta_pid:
@@ -319,16 +302,7 @@ def _apply_safe_autofixes(
     reference_index: _ReferenceIndex | None = None,
     removed_body_wires: list[RemovedWire] | None = None,
 ) -> dict[str, Any]:
-    """Stage 1 of the unified write-path pipeline.
-
-    Runs save-context validation, applies structural autofixes
-    (NODE_FIX_CODES + EDGE_FIX_CODES + VARIABLE_FIX_CODES) in-place, and
-    returns the (mutated) test dict. Visible-class codes
-    (REQUIRED_PARAM_MISSING/EMPTY, INVALID_OUTPUT_BINDING_TYPE) are NOT
-    auto-fixable and remain to be surfaced by `_validate_for_persist`.
-    Deletions are recorded into `repairs` when the caller supplies a list,
-    and the wires the lane rule took out of Function bodies into `removed_body_wires`.
-    """
+    """Stage 1 of the unified write-path pipeline."""
     workflow = test.get("workflow") or {"nodes": [], "edges": []}
     nodes = workflow.get("nodes", [])
     edges = workflow.get("edges", [])
@@ -385,13 +359,7 @@ def _validate_for_persist(
     reference_index: _ReferenceIndex | None = None,
     refuse_masked: bool = True,
 ) -> list[dict[str, Any]]:
-    """Stage 2 of the unified write-path pipeline.
-
-    Runs `_apply_safe_autofixes` then re-validates at save context. Returns
-    the residual user-actionable errors. The caller raises
-    `SaveValidationError(errors)` if non-empty. ``refuse_masked`` refuses a
-    secret held only as the mask.
-    """
+    """Stage 2 of the unified write-path pipeline."""
     removed_body_wires: list[RemovedWire] = []
     _apply_safe_autofixes(
         test,
@@ -580,10 +548,7 @@ def _seal_for_storage(test: dict[str, Any]) -> None:
 
 
 def stored_form(data: Mapping[str, Any], test_id: str | None = None) -> dict[str, Any]:
-    """The workflow and variables a save of this test would store, sealed; writes nothing.
-
-    Saved over ``test_id``, a masked secret keeps that test's stored value, as an update does.
-    """
+    """The workflow and variables a save of this test would store, sealed; writes nothing."""
     import copy
 
     workflow = copy.deepcopy(data.get("workflow"))
@@ -598,10 +563,7 @@ def stored_form(data: Mapping[str, Any], test_id: str | None = None) -> dict[str
 
 
 def served_form(data: Mapping[str, Any], test_id: str | None = None) -> dict[str, Any]:
-    """The workflow and variables a read of this test would serve once saved; writes nothing.
-
-    Saved over ``test_id``, a masked secret keeps that test's stored value, as an update does.
-    """
+    """The workflow and variables a read of this test would serve once saved; writes nothing."""
     test = stored_form(data, test_id)
     return {"workflow": _read_workflow(test["workflow"]), "variables": _read_variables(test)}
 
@@ -655,11 +617,7 @@ def _list_all_tests() -> list[dict[str, Any]]:
 
 
 def _cached_tests() -> list[dict[str, Any]]:
-    """Test metadata views for counts derived elsewhere, with no directory scan.
-
-    The Tests list reconciles; a page that only counts references into tests
-    must not pay for that scan on top of its own.
-    """
+    """Test metadata views for counts derived elsewhere, with no directory scan."""
     _test_directory.ensure_loaded()
     return list(_test_cache.values())
 
@@ -683,14 +641,7 @@ def list_test_documents() -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
 
 
 def _generate_etag(test: dict[str, Any]) -> str:
-    """Generate ETag hash for a test based on its content.
-
-    Args:
-        test: Test data dictionary
-
-    Returns:
-        Quoted hex string ETag
-    """
+    """Generate ETag hash for a test based on its content."""
     content = f"{test.get('id')}{test.get('version')}{test.get('updated_at')}"
     return f'"{hashlib.sha256(content.encode()).hexdigest()}"'
 
@@ -701,10 +652,7 @@ def _read_workflow(workflow: Any) -> Any:
 
 
 def _reveal_or_mask_secret_variables(variables: dict[str, Any]) -> dict[str, Any]:
-    """A test's secret variable values on read: masked to the placeholder by default,
-    or unsealed to plaintext when the test-variables unmask is on - the flag governing
-    the workbench Variable Manager panel and its watchers (REQ-3.1.3.17). Encryption at
-    rest is unaffected."""
+    """A test's secret variable values on read (REQ-3.1.3.17)."""
     if masking_settings.is_test_variables_revealed():
         return unseal_variables(variables)
     return shared.mask_secret_variables(variables, flag_masked=True)
@@ -772,10 +720,7 @@ _TERMINAL_STATUSES = {"passed", "failed", "stopped"}
 
 
 def _build_latest_execution_by_test_id() -> dict[str, dict[str, Any]]:
-    """Most recent execution record keyed by `entity_id` for tests.
-
-    Single pass over the executions cache; ties broken by `started_at`.
-    """
+    """Most recent execution record keyed by `entity_id` for tests."""
     from wavecore.api.services.executions._storage import (
         _ensure_cache_loaded as _ensure_exec_cache_loaded,
     )
@@ -800,9 +745,7 @@ def _build_latest_execution_by_test_id() -> dict[str, dict[str, Any]]:
 def _patch_metadata_from_latest_execution(
     test: dict[str, Any], latest_by_test_id: dict[str, dict[str, Any]]
 ) -> None:
-    """Overwrite `metadata.status` and `metadata.last_run` with values derived
-    from the most recent execution for this test. If no execution exists, the
-    existing metadata is preserved (defaults to `never_run`)."""
+    """Set `status` and `last_run` from the test's latest execution, if any."""
     test_id = test.get("id")
     if not test_id:
         return
@@ -811,8 +754,7 @@ def _patch_metadata_from_latest_execution(
         return
     metadata = test.setdefault("metadata", {})
     metadata["status"] = execution.get("status", "never_run")
-    # For terminal statuses prefer the ended_at; otherwise the started_at reflects
-    # when the live execution began.
+    # For terminal statuses prefer the ended_at.
     last_run = execution.get("ended_at") if execution.get("status") in _TERMINAL_STATUSES else None
     metadata["last_run"] = last_run or execution.get("started_at")
 
@@ -840,30 +782,14 @@ def list_tests(
     sort_by: str | None = None,
     sort_order: str | None = "asc",
 ) -> dict[str, Any]:
-    """List tests with filtering and pagination.
-
-    Args:
-        page: Page number (1-based)
-        per_page: Number of results per page
-        search: Text search query (searches name and description)
-        suite_ids: Filter by suite IDs (any match)
-        tags: Filter by tags (all tags must match)
-        status: Filter by execution status list (any match: passed, failed, never_run)
-        sort_by: Sort by field (name, status, lastRun)
-        sort_order: Sort order (asc, desc)
-
-    Returns:
-        Dictionary with tests list and pagination info
-    """
+    """List tests with filtering and pagination."""
     # Work on copies so metadata patching does not mutate the in-memory cache.
     filtered_tests = [t.copy() for t in _list_all_tests()]
     for t in filtered_tests:
         # Copy metadata too; the cached dict is shared.
         t["metadata"] = dict(t.get("metadata", {}))
 
-    # Derive status/last_run from the most recent execution for each test so
-    # the Tests List reflects live execution state instead of whatever was
-    # persisted to test metadata at creation time.
+    # The Tests List shows live state from each test's latest execution.
     latest_by_test_id = _build_latest_execution_by_test_id()
     for t in filtered_tests:
         _patch_metadata_from_latest_execution(t, latest_by_test_id)
@@ -928,18 +854,7 @@ def _draft_saved(test_id: str | None, holder_id: str | None) -> None:
 
 
 def create_test(data: dict[str, Any], holder_id: str | None = None) -> dict[str, Any]:
-    """Create a new test.
-
-    Args:
-        data: Test data including name, description, workflow, variables, etc.
-        holder_id: The workbench tab that saves the draft it holds, if any
-
-    Returns:
-        Created test with metadata
-
-    Raises:
-        ConflictException: If test name already exists
-    """
+    """Create a new test."""
     name = data.get("name", "")
     _refuse_taken_name(name)
 
@@ -1010,11 +925,7 @@ def validate_test_data_for_create(
     reference_index: _ReferenceIndex | None = None,
     masked_secrets_settled: bool = False,
 ) -> list[dict[str, Any]]:
-    """Dry-run the create pipeline: name-conflict scan + persist validation.
-
-    Runs on a deep copy so the caller's dict is never mutated; persists nothing.
-    ``masked_secrets_settled`` is for a writer that settles each masked secret itself.
-    """
+    """Dry-run the create pipeline: name-conflict scan + persist validation."""
     import copy
 
     errors: list[dict[str, Any]] = []
@@ -1040,11 +951,7 @@ def validate_test_data_for_create(
 
 
 def validate_test_data_for_update(test_id: str, data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Dry-run the update pipeline: merge onto the stored test + persist validation.
-
-    Mirrors update_test's merge on a deep copy so neither the caller's dict nor
-    stored state changes; the target's own name is never flagged as a conflict.
-    """
+    """Dry-run the update pipeline: merge onto the stored test + persist validation."""
     import copy
 
     test = _load_test(test_id)
@@ -1081,11 +988,7 @@ def _collect_suite_variables(
     membership: list[dict[str, str]],
     suite_service: Any,
 ) -> list[dict[str, str]]:
-    """Merge variable metadata (name + type) from all suites containing this test.
-
-    Types are guaranteed consistent by collision validation, so the merge is
-    simply a deduplicated union.  Returns a flat list for autocomplete.
-    """
+    """Merge variable metadata (name + type) from all suites containing this test."""
     seen: dict[str, str] = {}
     for suite_info in membership:
         suite_vars = suite_service.get_suite_variables(suite_info["id"])
@@ -1103,11 +1006,7 @@ def _collect_suite_variables(
 def _collect_regression_variables(
     suite_ids: list[str],
 ) -> list[dict[str, str]]:
-    """Merge variable metadata (name + type) from all regressions containing the test's suites.
-
-    Finds all regressions that reference any of the given suite IDs, then
-    collects and deduplicates their variables into a flat list for autocomplete.
-    """
+    """Merge variable metadata (name + type) from all regressions containing the test's suites."""
     from wavecore.api.services.regressions import service as regression_service
 
     all_regressions = regression_service._list_all_regressions()
@@ -1131,14 +1030,7 @@ def _collect_regression_variables(
 
 
 def get_test(test_id: str) -> dict[str, Any] | None:
-    """Get test by ID.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        Test data with masked secrets, or None if not found
-    """
+    """Get test by ID."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1180,23 +1072,7 @@ def _refuse_taken_rename(test: Mapping[str, Any], data: Mapping[str, Any]) -> No
 def update_test(
     test_id: str, data: dict[str, Any], etag: str | None = None, holder_id: str | None = None
 ) -> dict[str, Any] | None:
-    """Update test.
-
-    Args:
-        test_id: Test UUID
-        data: Update data
-        etag: Optional ETag for concurrency control
-        holder_id: The workbench tab that saves the draft it holds, if any
-
-    Returns:
-        Updated test or None if not found
-
-    Raises:
-        PreconditionRequiredException: If the ETag does not match
-        ConflictException: If the new name is taken
-        ValidationException: If the stored version is not MAJOR.MINOR.PATCH
-        SaveValidationError: If validation errors remain after autofix
-    """
+    """Update test."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1231,8 +1107,7 @@ def update_test(
     _merge_metadata_from_data(data, existing_metadata)
     test["metadata"] = existing_metadata
 
-    # Process variables through save pipeline if provided. Restore masked secrets
-    # against the stored (sealed) values so a placeholder never overwrites a secret.
+    # Process variables through save pipeline if provided.
     if "variables" in data:
         variables = shared.restore_masked_secrets(data["variables"], kept.get("variables", {}))
         restored = shared.restore_masked_secrets(variables, test.get("variables", {}))
@@ -1275,22 +1150,7 @@ def update_test(
 def update_test_metadata(
     test_id: str, data: dict[str, Any], etag: str | None = None
 ) -> dict[str, Any] | None:
-    """Update only test metadata (name, description, tags, suite_id).
-
-    Does NOT update workflow or increment version.
-
-    Args:
-        test_id: Test UUID
-        data: Metadata update data
-        etag: Optional ETag for concurrency control
-
-    Returns:
-        Updated test or None if not found
-
-    Raises:
-        PreconditionRequiredException: If the ETag does not match
-        ConflictException: If the new name is taken
-    """
+    """Update only test metadata (name, description, tags, suite_id)."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1328,19 +1188,7 @@ def update_test_metadata(
 
 
 def delete_test(test_id: str) -> bool:
-    """Delete test.
-
-    Rejects with ``ConflictException`` while a tracked execution of the test,
-    a Suite or Regression execution running it, or a workbench session on it
-    is ``running`` or ``paused``. The exception carries the blocking IDs so
-    the route layer can surface them in the 409 response.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        True if deleted, False if not found
-    """
+    """Delete test."""
     from wavecore.api.exceptions import ConflictException
     from wavecore.api.services.relations import service as relation_service
     from wavecore.api.services.suites import version_service as suite_version_service
@@ -1361,9 +1209,7 @@ def delete_test(test_id: str) -> bool:
     for suite_id in affected_suite_ids:
         suite_version_service.remove_test_from_suite(suite_id, test_id)
 
-    # Delete test files. Tracked execution records are persisted separately
-    # under the executions storage and are intentionally preserved so the
-    # Historical Test Canvas can still paint past runs of a deleted test.
+    # Execution records stay so past runs of a deleted test still paint.
     _delete_test_files(test_id)
     testdata_service.delete_for_test(test_id)
 
@@ -1371,14 +1217,7 @@ def delete_test(test_id: str) -> bool:
 
 
 def batch_create_tests(tests: list[Any]) -> dict[str, Any]:
-    """Create multiple tests in a batch.
-
-    Args:
-        tests: List of test data dictionaries
-
-    Returns:
-        Dictionary with created IDs, failed items and each created test's repairs by its ID
-    """
+    """Create multiple tests in a batch."""
     created: list[str] = []
     failed: list[dict[str, Any]] = []
     repairs: dict[str, list[dict[str, Any]]] = {}
@@ -1402,15 +1241,7 @@ def batch_create_tests(tests: list[Any]) -> dict[str, Any]:
 
 
 def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
-    """Update multiple tests in a batch.
-
-    Args:
-        updates: List of dictionaries with 'id' and update fields.
-                 Supports both {id, update: {...}} and {id, metadata: {...}} formats.
-
-    Returns:
-        Dictionary with updated IDs, failed items and each updated test's repairs by its ID
-    """
+    """Update multiple tests in a batch."""
     updated: list[str] = []
     failed: list[dict[str, Any]] = []
     repairs: dict[str, list[dict[str, Any]]] = {}
@@ -1444,27 +1275,12 @@ def batch_update_tests(updates: list[Any]) -> dict[str, Any]:
 
 
 def batch_delete_tests(test_ids: list[Any]) -> dict[str, Any]:
-    """Delete multiple tests in a batch.
-
-    Args:
-        test_ids: List of test UUIDs to delete
-
-    Returns:
-        Dictionary with deleted IDs and failed items
-    """
+    """Delete multiple tests in a batch."""
     return shared.batch_delete(test_ids, delete_test, "Test")
 
 
 def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
-    """Add a new version to a test.
-
-    Args:
-        test_id: Test UUID
-        data: Version data
-
-    Returns:
-        Updated test with new version or None if not found
-    """
+    """Add a new version to a test."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1503,18 +1319,7 @@ def add_test_version(test_id: str, data: dict[str, Any]) -> dict[str, Any] | Non
 
 
 def delete_test_version(test_id: str, version: str) -> bool:
-    """Delete specific test version.
-
-    Args:
-        test_id: Test UUID
-        version: Semantic version string
-
-    Returns:
-        True if deleted, False if not found
-
-    Raises:
-        ConflictException: If version has dependencies
-    """
+    """Delete specific test version."""
     test = _load_test(test_id)
     if test is None:
         return False
@@ -1542,14 +1347,7 @@ def delete_test_version(test_id: str, version: str) -> bool:
 
 
 def get_test_workflow(test_id: str) -> dict[str, Any] | None:
-    """Get test workflow graph.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        Workflow graph (nodes and edges) or None if not found
-    """
+    """Get test workflow graph."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1560,14 +1358,7 @@ def get_test_workflow(test_id: str) -> dict[str, Any] | None:
 
 
 def get_test_variables(test_id: str) -> dict[str, Any] | None:
-    """Get test variables.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        Variable declarations with masked secrets or None if not found
-    """
+    """Get test variables."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1583,11 +1374,7 @@ def get_test_workflow_raw(test_id: str) -> dict[str, Any] | None:
 
 
 def get_test_variables_raw(test_id: str) -> dict[str, Any] | None:
-    """Test variables without masking, for engine injection only.
-
-    The masked getter stays the API-facing read; the run path must receive
-    real values so secret-flagged ones register with the run registry.
-    """
+    """Test variables without masking, for engine injection only."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1599,10 +1386,7 @@ def get_test_variables_raw(test_id: str) -> dict[str, Any] | None:
 
 
 def stored_fingerprint(test_id: str) -> str | None:
-    """A digest of the test as stored, which every save that changes it changes; None when gone.
-
-    Not every save bumps the version or the update time; each one rewrites the stored file.
-    """
+    """A digest of the test as stored, which every save that changes it changes."""
     try:
         stored = (_get_test_dir(test_id) / _TEST_FILENAME).read_bytes()
     except FileNotFoundError:
@@ -1663,28 +1447,14 @@ def _reject_read_only_variables(variables: dict[str, Any]) -> None:
 def update_test_variables(
     test_id: str, variables: dict[str, Any], merge: bool = False
 ) -> dict[str, Any] | None:
-    """Update test variables.
-
-    Args:
-        test_id: Test UUID
-        variables: New variable declarations
-        merge: If True, merge with existing variables; if False, replace
-
-    Returns:
-        Updated variable declarations or None if not found
-
-    Raises:
-        ValidationException: If type mismatch or invalid expression syntax
-        SaveValidationError: If a secret holds the mask and no stored value stands behind it
-    """
+    """Update test variables."""
     test = _load_test(test_id)
     if test is None:
         return None
 
     existing_vars = test.get("variables", {})
 
-    # A placeholder secret value must resolve to the stored (sealed) value, never seal
-    # the mask over the real secret.
+    # A placeholder secret value must resolve to the stored value.
     variables = shared.restore_masked_secrets(variables, existing_vars)
     masked = _masked_variable_errors(variables)
     if masked:
@@ -1706,23 +1476,7 @@ def update_test_variables(
 
 
 def validate_test(test_id: str, context: str = "load") -> dict[str, Any] | None:
-    """Validate test definition with two-phase validation.
-
-    Step 1 (fatal): MISSING_WORKFLOW, INVALID_NODES, CYCLE_DETECTED
-    - If any fatal error exists, returns immediately with only fatal errors.
-
-    Step 2 (fixable + warnings): all remaining validations
-    - Each fixable error includes a fix_action description.
-    - REQUIRED_PARAM_MISSING/EMPTY: warning on load, error on import/run.
-    - Disabled elements skip required param checks.
-
-    Args:
-        test_id: Test UUID
-        context: Validation context - "load", "import", or "run"
-
-    Returns:
-        Validation result dict, or None if test not found
-    """
+    """Validate test definition with two-phase validation."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -1884,15 +1638,7 @@ def _detect_cycles(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Detect cycles in the workflow graph using DFS.
-
-    Args:
-        nodes: Workflow node list
-        edges: Workflow edge list
-
-    Returns:
-        List of fatal CYCLE_DETECTED error dicts (empty if acyclic)
-    """
+    """Detect cycles in the workflow graph using DFS."""
     node_ids_for_cycle, adj = _build_cycle_adj(nodes, edges)
     visited: set[str] = set()
     rec_stack: set[str] = set()
@@ -1912,13 +1658,7 @@ def _detect_cycles(
 def _validate_fatal_checks(
     test: dict[str, Any],
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]], list[dict[str, Any]]]:
-    """Run step 1 fatal validation checks on a test.
-
-    Returns:
-        (fatal_result_or_None, nodes, edges)
-        If fatal_result is not None, validation should stop and return it.
-        Otherwise nodes and edges are extracted for step 2.
-    """
+    """Run step 1 fatal validation checks on a test."""
     workflow = test.get("workflow")
     if not workflow or not isinstance(workflow, dict):
         return (
@@ -2072,12 +1812,7 @@ def _emit_top_level_halt_scope_error(
     node_label: str | None,
     errors: list[dict[str, Any]],
 ) -> None:
-    """Reject a `function`-scope Halt at the Test top level (no enclosing Function).
-
-    The FE hides the option outside a Function; this guards the import / hand-edited
-    paths it does not cover. Body Halts are validated via the embedded-Function walk,
-    so this top-level-only check never flags a Halt inside a Function.
-    """
+    """Reject a `function`-scope Halt at the Test top level (no enclosing Function)."""
     if element_type != "halt":
         return
     scope = ((data.get("config") or {}).get("values") or {}).get("scope")
@@ -2108,11 +1843,7 @@ def _validate_all_nodes(
     library: _FunctionLibrary | None = None,
 ) -> set[str]:
     """Validate all workflow nodes. Returns set of valid node IDs."""
-    # Function nodes are neither controls nor plugins; "function" is the
-    # Function-paradigm marker elementType written by the canvas-drop path
-    # for both local ("+" handle) and shared (library card) instances. The
-    # validator must accept it or the persist-stage autofix will strip the
-    # node on save and the user silently loses their work.
+    # Function Blocks carry elementType "function"; the autofix must not strip them.
     all_known_element_types = control_ids | KNOWN_PLUGIN_IDS | {"function"}
     node_ids: set[str] = set()
 
@@ -2142,13 +1873,7 @@ def _validate_all_nodes(
                 )
             )
             continue
-        # Node ids are the load-bearing key for every per-node structure
-        # (block_states map, log blockId attribution, breakpoints, React
-        # Flow rendering, engine's node_map). Duplicates cause silent
-        # data loss at run time: dict collisions drop one node, logs are
-        # misattributed, the canvas renders the wrong state. Reject at
-        # validation time so automation that mints duplicates fails
-        # fast instead of producing corrupt executions.
+        # Node ids are the load-bearing key for every per-node structure.
         if node_id in node_ids:
             errors.append(
                 error_entry(
@@ -2165,7 +1890,7 @@ def _validate_all_nodes(
         node_ids.add(node_id)
 
         # Validate node type
-        valid_node_types = {"workflowNode", "noteNode"}
+        valid_node_types = {"workflowNode", NOTE_NODE_TYPE}
         if node_type not in valid_node_types:
             errors.append(
                 error_entry(
@@ -2236,10 +1961,7 @@ def _binding_type_mismatch_kwargs(
         "node_label": node_label,
         "element_type": element_type,
         "code": "INVALID_OUTPUT_BINDING_TYPE",
-        "message": (
-            f"Output '{param_name}' (type {param_type}) cannot bind to variable "
-            f"'{var_name}' (type {var_type})"
-        ),
+        "message": output_binding_type_message(param_name, param_type, var_name, var_type),
     }
 
 
@@ -2263,8 +1985,7 @@ def _resolve_binding_type_mismatch(
         var_type = var_info.get("type")
         if not isinstance(var_type, str):
             continue
-        compatible = _OUTPUT_TYPE_COMPAT.get(param_type, {param_type})
-        if var_type in compatible:
+        if binds_to(param_type, var_type):
             continue
         yield param_name, param_type, var_name, var_type
 
@@ -2281,11 +2002,7 @@ def _node_binding_type_mismatches(
     variables: dict[str, Any],
     library: _FunctionLibrary | None = None,
 ) -> Iterator[tuple[str, str, str, str]]:
-    """Yield one node's output bindings whose bound variable type is incompatible.
-
-    Yields nothing for a node that carries no checkable binding: disabled,
-    no binding map, or an element whose schema cannot be resolved.
-    """
+    """Yield one node's output bindings whose bound variable type is incompatible."""
     if data.get("disabled"):
         return
     bindings = (data.get("config") or {}).get("outputBindings", {})
@@ -2310,11 +2027,7 @@ def _validate_output_binding_types(
     warnings: list[dict[str, Any]],
     library: _FunctionLibrary | None = None,
 ) -> None:
-    """Emit INVALID_OUTPUT_BINDING_TYPE for output bindings whose variable type is incompatible.
-
-    On `load` context the issue is reported as a warning (visible class).
-    On every other context (save/run/import/debug) it is reported as an error.
-    """
+    """Emit INVALID_OUTPUT_BINDING_TYPE for output bindings whose variable type is incompatible."""
     for idx, node in enumerate(nodes):
         data = node.get("data") or {}
         for param_name, param_type, var_name, var_type in _node_binding_type_mismatches(
@@ -2420,8 +2133,7 @@ def _get_node_branching_max(data: dict[str, Any], control_ids: set[str]) -> int 
     from wavecore.models.enums import ControlId
 
     element_type = data.get("elementType")
-    # Remote Execution is a plugin-catalog container with For-Loop-style egress
-    # (a cyan body sub-flow + a then continuation), so it allows two outgoing edges.
+    # Remote Execution is a plugin-catalog container with For-Loop-style egress.
     if element_type == "remote-execution":
         return 2
     if not element_type or element_type not in control_ids:
@@ -2923,14 +2635,7 @@ def _validate_undeclared_and_setter_targets(
     node_label_map: dict[str, str | None],
     errors: list[dict[str, Any]],
 ) -> None:
-    """Validate undeclared variable references and namespace setter targets.
-
-    UNDECLARED_VARIABLE is emitted as an error in every context. The fix is
-    user-initiated: the FE validation dialog offers Fix (adds the missing
-    variable) or Cancel (keeps the workflow as-is with a node alert). The
-    implicit save-time autofix is intentionally disabled - variables must
-    not be resurrected without the user's explicit consent.
-    """
+    """Validate undeclared variable references and namespace setter targets."""
     undeclared, namespace_binding_targets = _find_undeclared_variables(nodes, set(variables.keys()))
     for var_name, found in undeclared.items():
         fix_action = _infer_fix_action_for_undeclared(found)
@@ -2977,16 +2682,7 @@ def _validate_test_data(
     reference_index: _ReferenceIndex | None = None,
     removed_body_wires: Iterable[RemovedWire] = (),
 ) -> dict[str, Any]:
-    """Validate test data with two-phase validation.
-
-    Args:
-        test: Test data dict (loaded or in-memory)
-        context: Validation context - "load", "import", or "run"
-        removed_body_wires: The wires the save's lane rule took out of Function bodies
-
-    Returns:
-        Validation result with fatal flag, errors, and warnings
-    """
+    """Validate test data with two-phase validation."""
     from wavecore.models.enums import ControlId
 
     control_ids = {cid.value for cid in ControlId}
@@ -3056,8 +2752,7 @@ def _validate_test_data(
 def _local_function_node_payload(
     node: Any,
 ) -> tuple[dict[str, Any], str, str] | None:
-    """Return ``(localDefinition, outer_id, outer_label)`` for a Local Function
-    instance node, or ``None`` if the node is not a validatable Local."""
+    """A Local Function node's ``(localDefinition, outer_id, outer_label)``, else ``None``."""
     if not isinstance(node, dict):
         return None
     data = node.get("data") or {}
@@ -3074,8 +2769,7 @@ def _local_function_node_payload(
     return local_def, outer_node_id, outer_node_label
 
 
-# Defensive bound on recursive descent into nested Local Function bodies. A
-# finding's function_path trail never exceeds this depth.
+# Defensive bound on recursive descent into nested Local Function bodies.
 MAX_VALIDATION_DEPTH = 25
 
 
@@ -3110,12 +2804,7 @@ def _emit_embedded_issue(
     errors: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
 ) -> None:
-    """Attach a Function-body issue to its leaf and root-to-leaf function_path.
-
-    A body-node issue's leaf is that node; the trail is the enclosing Functions
-    including this one. A Function-level issue (no node_id) makes the Function
-    instance itself the leaf; the trail is its enclosing Functions only.
-    """
+    """Attach a Function-body issue to its leaf and root-to-leaf function_path."""
     if issue.node_id:
         leaf_id = issue.node_id
         leaf_label = issue.node_label or issue.node_id
@@ -3132,6 +2821,7 @@ def _emit_embedded_issue(
             "node_id": leaf_id,
             "node_label": leaf_label,
             "function_path": function_path,
+            "fix_action": issue.fix_action,
             **_reference_fields(issue),
         },
         errors,
@@ -3145,8 +2835,7 @@ def _validate_top_level_shared_instance(
     library: _FunctionLibrary,
     errors: list[dict[str, Any]],
 ) -> None:
-    """The version-availability gate of a top-level Shared Function Block (REQ-3.1.2.4); its
-    fields are checked with every Block's (REQ-3.1.1.5)."""
+    """A top-level Shared Function Block's version gate (REQ-3.1.2.4, REQ-3.1.1.5)."""
     from wavecore.api.services.functions._storage import _shared_function_reference_issues
 
     node_id = node.get("id", "") or ""
@@ -3238,8 +2927,7 @@ def _emit_nested_editmode_guard(
     *,
     in_body: bool,
 ) -> None:
-    """A Shared instance still in edit mode INSIDE a Function flow blocks publish (one on
-    a Test's own canvas is the normal edit flow)."""
+    """A Shared instance still in edit mode INSIDE a Function flow blocks publish."""
     # The run gate executes nested drafts; only persisting paths block.
     if context == "run" or not in_body or not data.get("editMode"):
         return
@@ -3267,8 +2955,7 @@ def _emit_self_reference_guard(
     reference_index: _ReferenceIndex,
     errors: list[dict[str, Any]],
 ) -> None:
-    """A Shared instance whose library entry references itself directly
-    or transitively is a blocking composition cycle."""
+    """A Shared instance whose library entry reaches itself is a blocking cycle."""
     from wavecore.api.services.functions._storage import detect_circular_deps
 
     cycle = detect_circular_deps(data.get("functionId", ""), reference_index)
@@ -3314,15 +3001,7 @@ def _walk_function_instances(
     removed: RemovedByFlow,
     in_body: bool = False,
 ) -> None:
-    """Validate every Function instance reachable from ``nodes``.
-
-    Local instances and Shared edit-mode drafts have their immediate body
-    validated (issues carry a root-to-leaf ``function_path``) and are descended
-    into. Shared instances at any depth are checked for a self-referential
-    composition cycle and, inside a Function flow (``in_body``), for an unresolved
-    edit-mode draft. Shared instances on a Test's own canvas additionally run the
-    version gate. Descent is bounded by MAX_VALIDATION_DEPTH.
-    """
+    """Validate every Function instance reachable from ``nodes``."""
     if len(enclosing_path) >= MAX_VALIDATION_DEPTH:
         return
     for node in nodes:
@@ -3392,12 +3071,7 @@ def _validate_embedded_function_instances(
     library: _FunctionLibrary | None = None,
     removed_body_wires: Iterable[RemovedWire] = (),
 ) -> None:
-    """Canonical Function-instance validation across the whole workflow.
-
-    Descends Local bodies and Shared edit-mode drafts to any depth attaching a path
-    trail, and gates top-level Shared instances on version availability.
-    ``removed_body_wires`` lets a body's unreached Block name the retry wire the save took out.
-    """
+    """Canonical Function-instance validation across the whole workflow."""
     if library is None:
         library = _function_library(
             nodes,
@@ -3425,8 +3099,7 @@ def nested_function_errors(
     context: str,
     removed: RemovedByFlow,
 ) -> list[dict[str, Any]]:
-    """The errors of the Function Blocks a Function flow holds, each body at any depth
-    included, by the walk a Test runs under its Function bodies (REQ-3.1.2.4)."""
+    """The errors of the Function Blocks a Function flow holds (REQ-3.1.2.4)."""
     errors: list[dict[str, Any]] = []
     library = _function_library(nodes, function_registry=function_registry)
     if library is not None:
@@ -3502,8 +3175,7 @@ def _function_block_schema(
 def _validate_function_block_params(
     data: dict[str, Any], library: _FunctionLibrary | None, site: _ReportSite
 ) -> None:
-    """A Function Block's stored values against the inputs its Function declares; a Required
-    input with no value is refused by the save, and by the run when it starts (REQ-3.1.2.10)."""
+    """A Function Block's stored values against the inputs its Function declares (REQ-3.1.2.10)."""
     from wavecore.api.services.functions._storage import function_block_name
 
     schema = _function_block_schema(data, library)
@@ -3668,13 +3340,7 @@ def _blocked_key_findings(
 def _generated_key_names(
     policy: dict[str, Any], values: dict[str, Any], param_schema: list[Any]
 ) -> set[str]:
-    """Lowercase key names the saved config generates at send time.
-
-    Rules come from the plugin metadata: each matches when every `when`
-    condition's effective value (stored value, else the param default) is in
-    its allowed list; the generated name is the `key` literal or the
-    effective value of `key_param`.
-    """
+    """Lowercase key names the saved config generates at send time."""
     defaults = {str(p.get("name")): p.get("default") for p in param_schema if isinstance(p, dict)}
 
     def effective(name: str) -> Any:
@@ -3871,17 +3537,6 @@ _ZIP_MEDIA_TYPE = "application/zip"
 _Documents = list[tuple[str, dict[str, Any]]]
 _FilesByTestId = dict[str, list[tuple[str, bytes]]]
 
-# Output param type -> set of compatible variable types (mirrors FE OUTPUT_TYPE_COMPAT).
-_OUTPUT_TYPE_COMPAT: dict[str, set[str]] = {
-    "string": {"string"},
-    "integer": {"integer"},
-    "float": {"float", "integer"},
-    "boolean": {"boolean"},
-    "map": {"map"},
-    "array": {"array"},
-    "table": {"table"},
-}
-
 
 # Where each declaration problem points inside the variable, and the fix it offers.
 _DECLARATION_FIXES: dict[str, tuple[str, str]] = {
@@ -3930,8 +3585,7 @@ def _validate_variables(
                 fix_action=problem.fix,
             )
 
-        # Cross-namespace conflict: variable name collides with a profile alias
-        # bound by some element in this test.
+        # A variable name may not collide with a profile alias bound in this test.
         if var_name in aliases:
             add_error(
                 path=var_path,
@@ -3998,11 +3652,7 @@ def _find_undeclared_variables(
     nodes: list[dict[str, Any]],
     declared: set[str],
 ) -> tuple[dict[str, _FoundSites], list[tuple[str, str]]]:
-    """Names blocks read or write with no declaration, plus output bindings into a namespace.
-
-    The second list holds (block id, target) for each output binding that targets
-    a namespace variable; such a target is never reported undeclared.
-    """
+    """Names blocks read or write with no declaration, plus output bindings into a namespace."""
     from wavecore.core.variables.reserved import RESERVED_VARIABLE_NAMES
 
     undeclared: dict[str, _FoundSites] = {}
@@ -4076,28 +3726,8 @@ def _expected_type(node: dict[str, Any], setting: str) -> str | None:
 
 
 def _rename_variable_in_expression(expr: str, old_name: str, new_name: str) -> str:
-    """Rename a variable in a Python expression using AST to avoid replacing string literals.
-
-    Uses Python's AST parser to find actual identifier (Name) nodes matching
-    old_name and replaces only those, leaving string content untouched.
-
-    Example:
-        f'my_var: {my_var}' with my_var -> new_var
-        Result: f'my_var: {new_var}'  (literal text preserved, identifier renamed)
-
-    Falls back to exact-match-only replacement if the expression can't be parsed.
-
-    Args:
-        expr: The expression string
-        old_name: Variable name to find
-        new_name: Variable name to replace with
-
-    Returns:
-        Expression with identifiers renamed
-    """
+    """Rename a variable in a Python expression using AST to avoid replacing string literals."""
     # If the entire expression is the variable name, replace directly.
-    # This handles invalid variable names (e.g., "2-used-same") that may
-    # coincidentally parse as valid Python (2 - used - same).
     if expr == old_name:
         return new_name
 
@@ -4528,12 +4158,7 @@ _EDGE_FIX_CODES = frozenset(
     }
 )
 
-# Error codes handled by variable-level fixer during implicit save-time autofix.
-# UNDECLARED_VARIABLE is intentionally NOT in this set: silently recreating a
-# referenced-but-undeclared variable overrides the user's explicit deletion.
-# It lives in `_ON_DEMAND_VARIABLE_FIX_CODES` instead, so the user-initiated
-# Fix button (via `fix_test`) still applies the fix while implicit save flows
-# surface the error and let the FE dialog ask for consent.
+# Save-time autofix codes; UNDECLARED_VARIABLE is on demand only, so a deletion sticks.
 _VARIABLE_FIX_CODES = frozenset(
     {
         "INVALID_VARIABLE",
@@ -4541,8 +4166,7 @@ _VARIABLE_FIX_CODES = frozenset(
     }
 )
 
-# Variable-level fixes applied only on explicit user action (the Fix button
-# in the validation dialog calls `fix_test`, which opts in to this set).
+# Variable-level fixes applied only on explicit user action.
 _ON_DEMAND_VARIABLE_FIX_CODES = frozenset(
     {
         "UNDECLARED_VARIABLE",
@@ -4558,13 +4182,7 @@ def _apply_error_fixes(
     *,
     include_on_demand: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], set[str]]:
-    """Apply fixes for all errors. Returns (nodes, edges, nodes_to_remove).
-
-    `include_on_demand` opts the user-initiated Fix path (the validation
-    dialog's Fix button -> `fix_test`) into `_ON_DEMAND_VARIABLE_FIX_CODES`.
-    Implicit save-time autofix leaves this flag off so deletions are never
-    silently reverted.
-    """
+    """Apply fixes for all errors."""
     nodes_to_remove: set[str] = set()
     variable_fix_codes = _VARIABLE_FIX_CODES
     if include_on_demand:
@@ -4633,15 +4251,7 @@ def _fix_multi_edges(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Remove edges for nodes whose outgoing count exceeds their structure-hint
-    max, or whose incoming count on the same handle exceeds 1.
-
-    The per-node outgoing max comes from `_compute_branching_max_edges`, which
-    reads each control's `structure_hints` (branching / scoped / looping) from
-    the registry. This is the same source the validator uses, so the auto-fix
-    no longer prunes legitimate body+then edges from for / for-each / while
-    loops just because their element types aren't in a hardcoded whitelist.
-    """
+    """Remove edges for nodes whose outgoing count exceeds their structure-hint max."""
     from wavecore.models.enums import ControlId
 
     control_ids = {cid.value for cid in ControlId}
@@ -4679,11 +4289,7 @@ def _fix_multi_edges(
 
 
 def _fix_duplicate_source_handles(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Keep only the first outgoing edge on each named source handle.
-
-    First-wins matches the runtime handle-target map, which routes to the
-    first target it sees and ignores the rest.
-    """
+    """Keep only the first outgoing edge on each named source handle."""
     seen: set[tuple[str, str]] = set()
     kept: list[dict[str, Any]] = []
     dropped = 0
@@ -4725,22 +4331,7 @@ def _normalize_target_handles(edges: list[dict[str, Any]]) -> None:
 
 
 def fix_test(test_id: str) -> dict[str, Any] | None:
-    """Apply automatic fixes to a test.
-
-    Validates the test, applies all fixable fixes, saves, and returns
-    the fixed test data along with any post-fix warnings.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        Dict with "test" (fixed test data) and "warnings" (post-fix
-        validation warnings), or None if test not found
-
-    Raises:
-        ValidationException: If test has fatal errors that cannot be fixed
-        SaveValidationError: If edges of the test repeat an id; nothing is repaired
-    """
+    """Apply automatic fixes to a test."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -4772,9 +4363,7 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
     nodes = workflow.get("nodes", [])
     edges = workflow.get("edges", [])
 
-    # Apply per-error fixes. fix_test is the explicit, user-initiated Fix
-    # path (the validation dialog's Fix button) so on-demand fixes
-    # (`_ON_DEMAND_VARIABLE_FIX_CODES`, currently UNDECLARED_VARIABLE) opt in.
+    # fix_test is the user's Fix button, so on-demand fixes opt in.
     nodes, edges, nodes_to_remove = _apply_error_fixes(
         errors,
         test,
@@ -4794,10 +4383,7 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
     _save_test(test)
     logger.debug("  Fix complete: %d node(s), %d edge(s) remaining", len(nodes), len(edges))
 
-    # Re-validate after fix to detect cascading issues. On load context,
-    # visible-class issues (REQUIRED_PARAM_*, INVALID_OUTPUT_BINDING_TYPE)
-    # are surfaced as warnings (not errors); preserve them so the FE can
-    # render alert icons after the auto-fix completes.
+    # Re-validate after fix to detect cascading issues.
     post_fix_validation = _validate_test_data(test, context="load")
     post_fix_warnings = post_fix_validation.get("warnings", [])
 
@@ -4809,16 +4395,7 @@ def fix_test(test_id: str) -> dict[str, Any] | None:
 def clone_test(
     test_id: str, new_name: str, new_version: str | None = None
 ) -> dict[str, Any] | None:
-    """Clone a test with a new name no other test has.
-
-    Args:
-        test_id: Source test UUID
-        new_name: Name for the cloned test
-        new_version: Optional version for the clone
-
-    Returns:
-        Cloned test or None if source not found
-    """
+    """Clone a test with a new name no other test has."""
     source = _load_test(test_id)
     if source is None:
         return None
@@ -4858,14 +4435,7 @@ def clone_test(
 
 
 def get_test_dependency_graph(test_id: str) -> dict[str, Any] | None:
-    """Get test dependency graph.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        Dependency graph with nodes and edges or None if not found
-    """
+    """Get test dependency graph."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -4894,14 +4464,7 @@ def get_test_dependency_graph(test_id: str) -> dict[str, Any] | None:
 
 
 def get_test_history(test_id: str) -> dict[str, Any] | None:
-    """Get complete version history for a test.
-
-    Args:
-        test_id: Test UUID
-
-    Returns:
-        Version history or None if test not found
-    """
+    """Get complete version history for a test."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -4915,18 +4478,7 @@ def get_test_history(test_id: str) -> dict[str, Any] | None:
 
 
 def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
-    """Restore test to a specific version.
-
-    Args:
-        test_id: Test UUID
-        version: Version to restore to
-
-    Returns:
-        Test with new version created from restore, or None if not found
-
-    Raises:
-        NotFoundException: If version not found
-    """
+    """Restore test to a specific version."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -4968,13 +4520,7 @@ def restore_test_version(test_id: str, version: str) -> dict[str, Any] | None:
 
 
 def list_all_tags() -> list[str]:
-    """Get all unique tags from all tests.
-
-    Tags are stored in metadata.tags for tests.
-
-    Returns:
-        List of unique tag strings, sorted alphabetically
-    """
+    """Get all unique tags from all tests."""
     tags_set: set[str] = set()
     for test in _list_all_tests():
         metadata = test.get("metadata", {})
@@ -4982,51 +4528,21 @@ def list_all_tags() -> list[str]:
     return sorted(tags_set)
 
 
-# ============================================================================
 # Import / Export (REQ-5.2.4.9)
-# ============================================================================
 
 
 def _sanitize_filename(name: str) -> str:
-    """Remove special characters from a name for use as a filename.
-
-    Replaces spaces with hyphens and strips anything that is not
-    alphanumeric, hyphen, or underscore.
-
-    Args:
-        name: Raw test name
-
-    Returns:
-        Filesystem-safe filename (without extension)
-    """
+    """Remove special characters from a name for use as a filename."""
     return shared.export_file_stem(name, "test")
 
 
 def _generate_unique_name(base_name: str) -> str:
-    """Append (2), (3), etc. until the name is unique among existing tests.
-
-    Args:
-        base_name: Desired test name
-
-    Returns:
-        A unique name (may be base_name itself if already unique)
-    """
+    """Append (2), (3), etc. until the name is unique among existing tests."""
     return shared.first_free_name(base_name, {t["name"] for t in _list_all_tests() if "name" in t})
 
 
 def _parse_test_file(content: bytes, filename: str) -> dict[str, Any]:
-    """Parse a single YAML or JSON file into a test dict.
-
-    Args:
-        content: Raw file bytes
-        filename: Original filename (used to detect format)
-
-    Returns:
-        Parsed test data dict
-
-    Raises:
-        ValidationException: If the file cannot be parsed
-    """
+    """Parse a single YAML or JSON file into a test dict."""
     lower = filename.lower()
     if lower.endswith(_EXT_JSON):
         kind = "JSON"
@@ -5070,11 +4586,7 @@ def _valid_testdata_path(rel: str) -> bool:
 def collect_testdata_member(
     files: _FilesByTestId, zf: zipfile.ZipFile, member: str, prefix: str
 ) -> None:
-    """Route one ``<prefix><test id>/<rel>`` archive member into files; folder entries are ignored.
-
-    Raises:
-        ValidationException: ``Invalid test data path`` with the full member name on a bad entry
-    """
+    """Route one ``<prefix><test id>/<rel>`` archive member into files."""
     if member.endswith("/"):
         return
     test_id, _sep, rel = member[len(prefix) :].partition("/")
@@ -5084,15 +4596,7 @@ def collect_testdata_member(
 
 
 def _parse_zip_file(content: bytes) -> tuple[_Documents, _FilesByTestId]:
-    """Split an import archive into its test documents and its test data files.
-
-    ``testdata/<test id>/<rel>`` members are partitioned out before the
-    document scan, so a fixture with a document extension is never a test.
-
-    Raises:
-        ValidationException: If the ZIP is invalid, carries a bad test data
-            entry, or contains no importable documents
-    """
+    """Split an import archive into its test documents and its test data files."""
     files: _FilesByTestId = {}
 
     def claim(zf: zipfile.ZipFile, member: str) -> bool:
@@ -5141,12 +4645,7 @@ def _export_document(test: dict[str, Any], fmt: str, secrets: str) -> tuple[str,
 def export_test(
     test_id: str, fmt: str = "yaml", secrets: str = "mask"
 ) -> tuple[str | bytes, str, str] | None:
-    """Export a single test as (content, filename, media_type), or None if not found.
-
-    A test without files exports its document; a test with files exports a
-    zip of the document plus its ``testdata/<test id>/<rel>`` entries under
-    the same stem.
-    """
+    """Export a single test as (content, filename, media_type), or None if not found."""
     test = _load_test(test_id)
     if test is None:
         return None
@@ -5166,15 +4665,7 @@ def export_test(
 def export_tests_batch(
     test_ids: list[str], fmt: str = "yaml", secrets: str = "mask"
 ) -> tuple[list[tuple[str, str, str]], list[tuple[str, str, Path]]]:
-    """Export multiple tests.
-
-    Returns the (test_id, content, filename) documents with disambiguated
-    filenames, plus the (test_id, relative path, on-disk path) files of every
-    selected test that has any.
-
-    Raises:
-        NotFoundException: If any test is not found
-    """
+    """Export multiple tests."""
     documents: list[tuple[str, str, str]] = []
     files: list[tuple[str, str, Path]] = []
     seen_filenames: set[str] = set()
@@ -5215,26 +4706,14 @@ def _read_only_errors(validation: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _blocking_import_errors(validation: dict[str, Any]) -> list[dict[str, Any]]:
-    """The findings that block an import: a read-only refusal, a refused variable value or a
-    repeated edge id."""
+    """The findings that block an import."""
     return _errors_with(
         validation, frozenset({READ_ONLY_CODE, _REFUSED_VALUE_CODE, DUPLICATE_EDGE_ID_CODE})
     )
 
 
 def validate_test_import(content: bytes, filename: str) -> dict[str, Any]:
-    """Validate file content for import without persisting.
-
-    Args:
-        content: Raw file bytes
-        filename: Original filename
-
-    Returns:
-        Validation results with per-test status
-
-    Raises:
-        ValidationException: If file cannot be parsed at all
-    """
+    """Validate file content for import without persisting."""
     documents, files_by_id = _parse_import_entries(content, filename)
 
     existing_names = {t.get("name"): t.get("id") for t in _list_all_tests()}
@@ -5494,21 +4973,7 @@ def _import_history(test_data: dict[str, Any]) -> list[dict[str, Any]]:
 def import_tests(
     content: bytes, filename: str, conflict_resolutions: dict[str, str] | None = None
 ) -> dict[str, Any]:
-    """Import tests from file content.
-
-    Args:
-        content: Raw file bytes
-        filename: Original filename
-        conflict_resolutions: Per-test conflict resolution
-            (test_name -> "rename"|"overwrite"|"skip")
-
-    Returns:
-        Import results dict
-
-    Raises:
-        ValidationException: If file cannot be parsed or a test refuses to import
-        UnprocessableEntityException: If a test has errors no import fix repairs
-    """
+    """Import tests from file content."""
     if conflict_resolutions is None:
         conflict_resolutions = {}
 

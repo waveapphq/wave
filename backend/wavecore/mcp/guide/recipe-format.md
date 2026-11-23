@@ -263,8 +263,13 @@ then capture it like any output. The value is read as the target variable's
 type, so declare the target with its type; an undeclared target is auto-declared
 `string`. Shell Script reads back text; a Python export keeps the script
 variable's own value, so a table stays a table and a decimal keeps its exact
-digits, and a Python `None` export becomes null. See `09-shell-blocks` and
-`10-python`.
+digits, and a Python `None` export becomes null. The JSON Parser and the XML
+Parser declare outputs through `queries` while `output_mode` is `individual`:
+each query name is an output, typed by its `query_output_types` entry, or
+string when that entry is unset or the query is an expression, and `results` is
+not an output then. Capture a query only into the variable of the same name, as
+`<query>: <query>`. In `combined` mode, capture `results`. See
+`09-shell-blocks`, `10-python` and `13-json-parser-individual`.
 
 A block step marks outputs Secret with `secret_outputs: [session]` beside its
 `capture`, as the Secret column of the block's outputs table does: the variable a

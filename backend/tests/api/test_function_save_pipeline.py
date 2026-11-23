@@ -10,9 +10,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-# ---------------------------------------------------------------------------
 # Fixtures & helpers
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -24,10 +22,7 @@ def client() -> TestClient:
 
 @pytest.fixture(autouse=True)
 def register_plugins_and_controls() -> Any:
-    """Plugins/controls are registered at app startup but the bare ``TestClient``
-    used here is not entered as a context manager, so we register them
-    explicitly. Mirrors the autouse fixture in ``test_workbench_function_runs``.
-    """
+    """The bare TestClient skips app startup, so register plugins and controls here."""
     from wavecore.controls.registry import _registry, register_all_core_controls
     from wavecore.core.plugin_registry import clear_registry, register_plugin
     from wavecore.plugins.log import LogPlugin
@@ -113,9 +108,7 @@ RE_OUTPUT_TYPE_MISSING = re.compile(r"^Function output '.+' has no declared type
 RE_DUPLICATE_INPUT_NAME = re.compile(r"^Function declares input '.+' more than once$")
 RE_DUPLICATE_OUTPUT_NAME = re.compile(r"^Function declares output '.+' more than once$")
 RE_EMPTY_FUNCTION_BODY = re.compile(r"^Function '.+' has no blocks$")
-# Canonical save-pipeline message format: parameter-shaped text; the node
-# identity travels in the ``node_label`` field so the UI prefixes the message
-# once, uniformly.
+# Canonical save-pipeline message format: parameter-shaped text.
 RE_UNKNOWN_PLUGIN = re.compile(r"^References unknown plugin '.+'$")
 RE_UNKNOWN_FUNCTION = re.compile(r"^References unknown Function '.+'$")
 RE_REQUIRED_PARAM_MISSING = re.compile(r"^Required parameter '.+' is missing$")
@@ -128,9 +121,7 @@ RE_NODE_UNREACHABLE = re.compile(r"^Block is not reachable from the Function's e
 RE_TRY_WITHOUT_CATCH = re.compile(r"^Try construct has no matching catch branch$")
 
 
-# ---------------------------------------------------------------------------
 # POST /functions surfaces every dimension as 422 with the anchored message
-# ---------------------------------------------------------------------------
 
 
 class TestPostFunctionsSurfacesEveryDimension:
@@ -292,9 +283,7 @@ class TestPostFunctionsSurfacesEveryDimension:
         ]
 
 
-# ---------------------------------------------------------------------------
 # Warnings do not block save (severity=warning persists)
-# ---------------------------------------------------------------------------
 
 
 class TestWarningsDoNotBlockSave:
@@ -321,9 +310,7 @@ class TestWarningsDoNotBlockSave:
         assert resp.status_code in (200, 201), resp.text
 
 
-# ---------------------------------------------------------------------------
 # A Note nothing connects to sits beside the Function flow (REQ-5.2.7.3)
-# ---------------------------------------------------------------------------
 
 
 def _note_node(node_id: str) -> dict[str, Any]:
@@ -390,9 +377,7 @@ class TestANoteBesideTheFunctionFlow:
         assert [(e["source"], e["target"]) for e in body["edges"]] == [("start-node", "n-1")]
 
 
-# ---------------------------------------------------------------------------
 # POST /tests + PUT /tests/{id} surface Function validation for embedded Function instances
-# ---------------------------------------------------------------------------
 
 
 class TestSavePipelineForEmbeddedFunctionInstance:
@@ -452,8 +437,7 @@ class TestSavePipelineForEmbeddedFunctionInstance:
         resp = client.post("/tests", json=payload)
         assert resp.status_code == 422, resp.text
         body = resp.json()
-        # Either via top-level "details" or via "error.details" - both must mention
-        # the embedded Function's UNKNOWN_PLUGIN violation.
+        # Either via top-level "details" or via "error.details".
         messages = _all_messages(body)
         assert any(RE_UNKNOWN_PLUGIN.match(m) for m in messages), messages
 
@@ -496,9 +480,7 @@ class TestSavePipelineForEmbeddedFunctionInstance:
     def test_post_tests_nested_shared_in_local_resolves_against_library(
         self, client: TestClient
     ) -> None:
-        # A Shared instance nested inside a Local Function body must resolve
-        # against the library: the embedded-body validator receives
-        # the same registry the top-level Function-save path uses.
+        # A Shared instance nested inside a Local Function body must resolve against the library.
         pub = client.post(
             "/functions",
             json=_make_function_payload(
@@ -518,8 +500,7 @@ class TestSavePipelineForEmbeddedFunctionInstance:
         assert resp.status_code in (200, 201), resp.text
 
     def test_post_tests_nested_shared_unknown_id_returns_422(self, client: TestClient) -> None:
-        # Validation stays on: an unknown nested Shared id is
-        # still surfaced as missing_function_id.
+        # Validation stays on: an unknown nested Shared id is still surfaced as missing_function_id.
         local = self._nested_shared_local_definition(str(uuid.uuid4()))
         payload = self._test_payload_with_function_instance(local)
         resp = client.post("/tests", json=payload)
@@ -527,10 +508,7 @@ class TestSavePipelineForEmbeddedFunctionInstance:
         assert _has_code(resp.json(), "MISSING_FUNCTION_ID")
 
 
-# ---------------------------------------------------------------------------
-# Declaration rules reach the library save and the Test save as 422
-# (REQ-3.1.2.4, REQ-3.1.2.10, REQ-3.1.2.11)
-# ---------------------------------------------------------------------------
+# Declaration rules refuse library and Test saves (REQ-3.1.2.4, REQ-3.1.2.10).
 
 
 def _level(**fields: Any) -> dict[str, Any]:
@@ -728,8 +706,7 @@ def _issue(body: dict[str, Any], expected: tuple[str, str]) -> dict[str, Any]:
 
 
 class TestDeclarationRulesReachEverySave:
-    """Enum rules, the true/false default and one name per Function are refused at
-    the library save and at the Test save, each with its exact message."""
+    """Enum, true/false default and name rules refuse both saves, exact message."""
 
     @pytest.mark.parametrize(("declarations", "expected"), _DECLARATION_CASES)
     def test_post_functions_refuses_it(
@@ -849,8 +826,7 @@ def _test_holding_draft(
 
 
 class TestDeclarationRulesReachASharedFunctionBlockDraft:
-    """A Test save refuses a malformed declaration in a Shared Function Block's edit-mode draft
-    as it does in a Local body (REQ-3.1.2.4, REQ-3.1.2.11)."""
+    """A bad declaration in a Shared draft is refused (REQ-3.1.2.4, REQ-3.1.2.11)."""
 
     @pytest.mark.parametrize(("declarations", "expected"), _DECLARATION_CASES)
     def test_post_tests_refuses_it(
@@ -901,8 +877,7 @@ _MISSING_COUNT = ("REQUIRED_PARAM_MISSING", "Required parameter 'count' is missi
 
 
 class TestALocalFunctionBlockGivesEveryRequiredInput:
-    """A Test save refuses a Local Function Block that leaves a Required input with no value;
-    the input's default never counts as one (REQ-3.1.2.4, REQ-3.1.2.10, REQ-3.1.2.11)."""
+    """A Required input with no value is refused (REQ-3.1.2.4, REQ-3.1.2.10)."""
 
     @pytest.mark.parametrize(
         ("declared", "expected"),
@@ -975,8 +950,7 @@ def _optional(name: str, value_type: str) -> dict[str, Any]:
 
 
 class TestRootFlowFunctionBlockFieldsAtTestSave:
-    """A Function Block on the Test canvas goes through the one field check every Block uses;
-    the block named in the message is its Function (REQ-3.1.1.5, REQ-3.1.2.4)."""
+    """A Function Block takes the shared field check (REQ-3.1.1.5, REQ-3.1.2.4)."""
 
     @pytest.mark.parametrize(
         ("inputs", "values", "expected"),
@@ -1349,8 +1323,7 @@ _GHOST = (
 
 
 class TestFunctionBodyControls:
-    """REQ-3.4.1.14, REQ-3.5.0.3: a Function save gives a control Block in its body the checks
-    the Test save gives it."""
+    """REQ-3.4.1.14, REQ-3.5.0.3."""
 
     @pytest.mark.parametrize(
         ("output", "rows", "flag", "expected"),
@@ -1615,9 +1588,64 @@ class TestRemoteExecutionInAFunctionBody:
         assert issues == []
 
 
+def _ping_node(node_id: str, **values: Any) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "type": "workflowNode",
+        "data": {
+            "label": node_id,
+            "elementType": "ping",
+            "nodeType": "plugin",
+            "version": "1.0.0",
+            "config": {
+                "values": {"host": "gateway.local", **values},
+                "profileBindings": [],
+                "outputBindings": {},
+            },
+            "expressionFields": [],
+            "templateFields": [],
+        },
+    }
+
+
+class TestPingMinimumRepliesCeilingAtFunctionSave:
+    """REQ-3.4.2.2: a Function save refuses Minimum replies above Count under At least N."""
+
+    @pytest.fixture(autouse=True)
+    def _registered_ping(self, register_plugins_and_controls: Any) -> None:
+        from wavecore.core.plugin_registry import register_plugin
+        from wavecore.plugins.ping import PingPlugin
+
+        register_plugin(PingPlugin())
+
+    def test_post_functions_refuses_it(self, client: TestClient) -> None:
+        node = _ping_node("ping-1", pass_when="min_replies", count=4, min_replies=5)
+        payload = _make_function_payload(name="pinger", workflow=_chained(node))
+
+        resp = client.post("/functions", json=payload)
+
+        assert _refused(resp) == [
+            (
+                "SETTING_ABOVE_MAXIMUM",
+                "Setting 'min_replies' of block 'ping' must be at most the value of setting "
+                "'count' (4), got 5",
+                "ping-1",
+            )
+        ]
+
+    def test_post_functions_accepts_minimum_replies_equal_to_count(
+        self, client: TestClient
+    ) -> None:
+        node = _ping_node("ping-1", pass_when="min_replies", count=4, min_replies=4)
+        payload = _make_function_payload(name="pinger", workflow=_chained(node))
+
+        resp = client.post("/functions", json=payload)
+
+        assert resp.status_code == 201, resp.text
+
+
 class TestLoadLibraryIndexResilience:
-    """`load_library_index` swallows per-entry version-index errors so one
-    corrupted library entry cannot poison the save pipeline (service.py 103-104)."""
+    """One corrupt library entry cannot break the save pipeline."""
 
     def test_records_no_available_versions_when_list_versions_raises(
         self, client: TestClient

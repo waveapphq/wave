@@ -13,6 +13,7 @@ Environments or the `GET` routes show for the same entities (REQ-5.2.7.8).
 | `v-mcp-list-functions-functional.spec.ts` | `list_functions` | A Function published twice is one card of its latest version, matching `GET /functions`; the secret output default is masked; `search` filters; no match answers nothing; a search sent as a number is refused |
 | `v-mcp-list-profiles-functional.spec.ts` | `list_profiles` | The seeded profile is listed with its `profile_type` and fields, the secret masked, as `GET /profiles/{id}` answers; an undeclared argument is refused with the error that names it; an unknown profile is refused by `update_profile` |
 | `v-mcp-list-variables-functional.spec.ts` | `list_variables` | `system` and `global` list the seeded System variables by name with their declarations, the secret masked, as `GET /variables/system` answers; an unknown scope is refused |
+| `v-mcp-get-block-functional.spec.ts` | `get_block` | Ping's Minimum replies carries `maximum_field: count`; the JSON Parser's and XML Parser's `queries` declare outputs while Output Mode is `individual`, and their `results` output shows only in `combined` mode; `list_blocks` serves the same entries |
 
 ## Prerequisites
 

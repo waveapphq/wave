@@ -1,11 +1,4 @@
-/**
- * useCanvasDrop - Drop handling for the workflow canvas
- *
- * Handles palette drag-and-drop, proximity feedback, and auto-connection
- * when dropping near free output handles.
- *
- * Extracted from canvas.tsx for modularity.
- */
+/** useCanvasDrop: palette drops, proximity feedback and auto-connect near free outputs. */
 
 import { use, useCallback, useMemo, useRef, useState, type DragEvent } from 'react'
 import { type Node, useReactFlow, useStoreApi } from '@xyflow/react'
@@ -22,6 +15,7 @@ import {
   START_NODE_POSITION,
   ELEMENT_PROXIMITY_THRESHOLD,
   generateNodeId,
+  getSourceHandleCenter,
 } from './canvas-constants'
 import {
   buildLocalFunctionNode,
@@ -54,11 +48,7 @@ interface FreeEgress {
 export function useCanvasDrop({ isExecuting }: UseCanvasDropParams) {
   const { screenToFlowPosition } = useReactFlow()
   const rfStoreApi = useStoreApi()
-  // Use the active subtree (deepest drilled Function) for node lookups,
-  // naming, and connection validation. Otherwise drops inside a drilled-in
-  // Function name the new node based on root siblings (breaking the
-  // per-scope counter) and connection validation runs against the wrong
-  // sibling set.
+  // Look up, name and validate against the active (deepest drilled) subtree, not the root.
   const rootNodes = useWorkflowStore((state) => state.nodes)
   const rootEdges = useWorkflowStore((state) => state.edges)
   const drillPath = useWorkflowStore((state) => state.drillPath)
@@ -67,8 +57,7 @@ export function useCanvasDrop({ isExecuting }: UseCanvasDropParams) {
     return { storeNodes: active.nodes, storeEdges: active.edges }
   }, [rootNodes, rootEdges, drillPath])
   const toast = use(ToastContext)
-  // The functionIds of every Function the user is currently drilled into.
-  // Dropping one of these into the body would nest a Function inside itself.
+  // The Functions the user is drilled into; dropping one into its own body would nest it.
   const drilledFunctionIds = useMemo(() => {
     const ids = new Set<string>()
     for (const entry of drillPath) {
@@ -93,36 +82,24 @@ export function useCanvasDrop({ isExecuting }: UseCanvasDropParams) {
   // Track the current drag target position for ghost edge rendering
   const [proximityTargetPos, setProximityTargetPos] = useState<{ x: number; y: number } | null>(null)
 
-  // Every free egress lane, each at its own position, so proximity can pick the
-  // lane the pointer is under rather than the node as a whole.
+  // One entry per free egress lane, so proximity picks the lane under the pointer.
   const findFreeEgressPoints = useCallback((): FreeEgress[] => {
     const points: FreeEgress[] = []
     const nodeLookup = rfStoreApi.getState().nodeLookup
 
     const collect = (id: string, position: { x: number; y: number }, handles: string[] | null) => {
       const internalNode = nodeLookup.get(id)
-      const width = internalNode?.measured?.width ?? 120
-      const height = internalNode?.measured?.height ?? 50
-      // Where the handles have not been measured yet, every lane collapses onto
-      // the node's bottom center and the first free one wins, as before.
-      const fallback = { x: position.x + width / 2, y: position.y + height }
-      const bounds = internalNode?.internals?.handleBounds?.source
+      // Unmeasured handles all collapse onto the bottom center; the first free one wins.
+      const located = {
+        internals: { positionAbsolute: position, handleBounds: internalNode?.internals?.handleBounds },
+        measured: internalNode?.measured,
+      }
       if (!handles) {
-        points.push({ nodeId: id, pos: fallback })
+        points.push({ nodeId: id, pos: getSourceHandleCenter({ ...located, internals: { positionAbsolute: position } }) })
         return
       }
       for (const handle of handles) {
-        const bound = bounds?.find((b) => b.id === handle)
-        points.push({
-          nodeId: id,
-          handle,
-          pos: bound
-            ? {
-                x: position.x + bound.x + bound.width / 2,
-                y: position.y + bound.y + bound.height / 2,
-              }
-            : fallback,
-        })
+        points.push({ nodeId: id, handle, pos: getSourceHandleCenter(located, handle) })
       }
     }
 
@@ -226,8 +203,7 @@ export function useCanvasDrop({ isExecuting }: UseCanvasDropParams) {
       const payload = parseDropPayload(event.dataTransfer.getData('application/wave-block'))
       if (!payload) return
 
-      // Reject nesting a Function inside itself (dropping a published
-      // instance whose functionId matches a Function the user is drilled into).
+      // Refuse nesting a Function inside itself.
       if (payload.type === 'function-published' && drilledFunctionIds.has(payload.functionId)) {
         toast?.error('A Function cannot be nested inside itself')
         return
@@ -238,9 +214,7 @@ export function useCanvasDrop({ isExecuting }: UseCanvasDropParams) {
       const newNode = buildNodeForPayload(newNodeId, position, payload)
       addNode(newNode)
 
-      // Palette-usage tracking only fires for palette-sourced drops. Function
-      // drops come from the "+" handle or the Library modal - separate
-      // surfaces that are not tracked.
+      // Only palette drops count toward palette usage.
       if (payload.type !== 'function-new-local' && payload.type !== 'function-published') {
         trackUsage(payload.id)
       }

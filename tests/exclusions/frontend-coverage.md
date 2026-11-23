@@ -1139,11 +1139,6 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 **File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-nodes.ts`
 **Root cause**: Conditional spread patterns `...(isExecuting ? {...} : {})`, `...(proximitySourceId === node.id ? {...} : {})`, etc. V8 tracks each ternary inside spread as a separate branch.
 
-### COV-BRANCH-136: GhostEdge Handle Selection Ternary with Nullish Coalescing
-
-**File**: `src/features/workbench/common/canvas/workflow-canvas/ghost-edge.tsx`
-**Root cause**: `sourceHandleId ? handles?.find(...) ?? handles?.[0] : handles?.[0]` combining ternary with optional chaining and nullish coalescing. V8 tracks multiple branches.
-
 ### COV-BRANCH-138: ComputeGeneralExecutionStyle Target Status Ternary
 
 **File**: `src/features/workbench/common/canvas/workflow-canvas/use-canvas-edges.ts`
@@ -1312,7 +1307,7 @@ The check `if (PYTHON_STATEMENT_KEYWORDS.has(classification.base))` in method_ca
 
 The `if (!el) return` guard in `useEffect` callbacks that attach programmatic event listeners to DOM elements via refs. In jsdom, `useEffect` runs after render when the ref is always populated. The null branch can only occur if the component never mounts, which doesn't happen in tests. This pattern appears in 7 files:
 - `console/content.tsx` - programmatic keydown/copy listeners
-- `note-node/note-node.tsx` - programmatic click/keydown listeners
+- `note-node/note-node.tsx` - programmatic dblclick/contextmenu listeners
 - `variable-row-inline.tsx` - programmatic click/keydown listeners
 - `workflow-canvas/canvas.tsx` - programmatic keydown listener
 - `tags-input.tsx` - programmatic keydown trigger listener

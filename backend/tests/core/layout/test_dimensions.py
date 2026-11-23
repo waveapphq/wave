@@ -1,11 +1,4 @@
-"""Node size estimation mirroring the canvas card.
-
-Un-resized nodes render at the canvas min-width floor, so
-est_width = max(floor, handle_min); floor = 160 (192 for functions);
-handle_min = max(120, ingress * 80, output_footprint). The height is the whole
-card: the body (44 px title only, more with description lines) plus the 29 px
-status bar.
-"""
+"""Node size estimation mirroring the canvas card."""
 
 from typing import Any
 
@@ -204,15 +197,7 @@ class TestParallelFootprints:
 
 
 class TestWaitUntilFootprint:
-    """Wait Until's lane count follows its mode, so a Watch node is not widened.
-
-    Asserted on ``_output_footprint`` directly: the 160px node floor already
-    dominates both the two-lane (160) and single-handle (120) footprints, so the
-    difference cannot surface through ``estimate_node_size`` today. It still has
-    to be right - this module mirrors the canvas width formula, and a Wait Until
-    dropped into the unconditional loop-like set would over-widen every Watch
-    node the moment either constant moves.
-    """
+    """Wait Until's lane count follows its mode, so a Watch node is not widened."""
 
     @staticmethod
     def footprint(values: dict[str, Any]) -> int:
@@ -403,9 +388,7 @@ def described(
 
 
 class TestCardHeight:
-    """The whole card the canvas draws: the 44 px minimum body (1 px borders, 10 px top and
-    6 px bottom padding, a 24 px title row), a 4 px gap and 16.5 px per description line
-    (12 px text, 1.375 line height, two lines unless expanded), and the 29 px status bar."""
+    """The whole card the canvas draws."""
 
     def test_the_card_constants_match_the_canvas(self) -> None:
         from wavecore.core.layout import dimensions
@@ -454,3 +437,50 @@ class TestCardHeight:
 
     def test_a_function_block_card_has_the_same_height(self) -> None:
         assert estimate(make_node("function", "function")) == (192, 73)
+
+
+def note_node(text: str, **size: Any) -> dict[str, Any]:
+    return {
+        "id": "note-1",
+        "type": "noteNode",
+        "data": {
+            "label": "Note",
+            "elementType": "note",
+            "nodeType": "control",
+            "config": {"values": {"text": text}},
+        },
+        **size,
+    }
+
+
+class TestNoteSize:
+    """A Note's size is its stored size, else estimated from its text (REQ-5.2.7.4)."""
+
+    def test_a_stored_size_is_the_size(self) -> None:
+        assert estimate(note_node("Read me", width=300, height=200)) == (300, 200)
+
+    def test_a_stored_width_of_160_is_kept(self) -> None:
+        assert estimate(note_node("Read me", width=160, height=90)) == (160, 90)
+
+    def test_a_size_stored_on_one_axis_only_estimates_the_other_from_the_text(self) -> None:
+        assert estimate(note_node("one\ntwo\nthree\nfour", width=300)) == (300, 142)
+        assert estimate(note_node("x" * 20, height=200)) == (186, 200)
+
+    def test_a_short_one_line_note_sits_at_the_width_floor(self) -> None:
+        # 7 x 8 + 26 = 82, lifted to 120; 22.75 + 51 = 73.75, rounded up.
+        assert estimate(note_node("Read me")) == (120, 74)
+
+    def test_a_long_line_widens_the_note_without_a_maximum(self) -> None:
+        assert estimate(note_node("x" * 100)) == (826, 74)
+
+    def test_the_longest_line_sets_the_width(self) -> None:
+        assert estimate(note_node("short\n" + "y" * 20 + "\nmid")) == (186, 120)
+
+    def test_four_lines_make_a_142_px_note(self) -> None:
+        # 4 x 22.75 + 51 = 142.
+        assert estimate(note_node("one\ntwo\nthree\nfour")) == (120, 142)
+
+    def test_eight_lines_make_a_233_px_note(self) -> None:
+        # 8 x 22.75 + 51 = 233.
+        text = "\n".join(f"line {index}" for index in range(1, 9))
+        assert estimate(note_node(text)) == (120, 233)

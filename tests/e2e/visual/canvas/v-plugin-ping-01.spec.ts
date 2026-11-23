@@ -29,7 +29,8 @@
  * 6. Save refuses a Count past its maximum (SETTING_ABOVE_MAXIMUM); the same value in a Test file edited by
  *    hand paints the canvas alert badge with the same message in its tooltip, keeps Save shut, and opens it
  *    again once the value is back inside the range.
- * 7. Minimum replies above Count carries the rule's own message, "Minimum replies cannot exceed
+ * 7. Save refuses Minimum replies above Count (SETTING_ABOVE_MAXIMUM naming Count); the same value in a Test
+ *    file edited by hand carries the rule's own message, "Minimum replies cannot exceed
  *    Count", on that row and blocks Save the same way.
  */
 
@@ -39,9 +40,7 @@ import { BACKEND_URL } from '../../helpers/config'
 import { deleteTest, expandGroup, openConfig } from '../../functional/file-picker/picker'
 import { expectGrayDefault } from '../../helpers/default-rule'
 
-// ---------------------------------------------------------------------------
 // Seeded Test
-// ---------------------------------------------------------------------------
 
 const NODE_ID = '7a1f6c92-4d53-4e18-9b07-2c6ea4d81f35'
 const START_EDGE_ID = 'b0d4e7a1-8c26-4f39-95be-1d7a3f620c48'
@@ -93,14 +92,13 @@ function pingFixture(name: string, values: Record<string, unknown> = {}): Record
   }
 }
 
-/** Open a Test whose one Ping block stores a number outside its declared bounds. */
+/** Open a Test file edited by hand whose one Ping block stores a number outside its declared bounds. */
 async function openStored(
   page: Page,
   name: string,
   values: Record<string, unknown>,
 ): Promise<Locator> {
-  await page.request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => {})
-  created.push(await importValidateAndNavigate(page, pingFixture(name, values)))
+  created.push((await importExpectingErrors(page, pingFixture(name, values), { context: 'load' })).testId)
   return nodeAlert(page)
 }
 
@@ -116,9 +114,7 @@ async function expectBadgeMessage(page: Page, badge: Locator, message: string): 
   await expect(tooltip).toContainText(message)
 }
 
-// ---------------------------------------------------------------------------
 // Expected sheet content, verbatim from the shipped schema
-// ---------------------------------------------------------------------------
 
 type Control = 'edit' | 'select' | 'number' | 'checkbox'
 
@@ -171,9 +167,7 @@ const OUTPUTS: Record<string, { label: string; type: string }> = {
   reason: { label: 'Reason', type: 'String' },
 }
 
-// ---------------------------------------------------------------------------
 // Locators and small helpers
-// ---------------------------------------------------------------------------
 
 const created: string[] = []
 
@@ -445,8 +439,7 @@ test.describe('V-PLUGIN-PING-01: Ping block config sheet', () => {
     page,
   }) => {
     const modal = await openSheet(page, 'V-PLUGIN-PING-01 bounds')
-    // Save turns on once the sheet is dirty; from here on only the bound can turn it off again.
-    // FIELD-2: the first key typed over the gray default replaces it.
+    // FIELD-2: the first key typed over the gray default replaces it; then Save turns on.
     await numberInput(modal, 'count').click()
     await page.keyboard.type('4')
     await expect(saveButton(modal)).toBeEnabled()
@@ -496,11 +489,16 @@ test.describe('V-PLUGIN-PING-01: Ping block config sheet', () => {
 
   test('V-PLUGIN-PING-01 stored bounds: Minimum replies above Count', async ({ page }) => {
     // PING-18: a bound naming another row carries that rule's own message.
-    const badge = await openStored(page, 'V-PLUGIN-PING-01 stored min replies', {
-      count: 4,
-      pass_when: 'min_replies',
-      min_replies: 10,
+    const values = { count: 4, pass_when: 'min_replies', min_replies: 10 }
+    // Save refuses Minimum replies above Count; a Test file edited by hand can still hold it.
+    const refused = await page.request.post(`${BACKEND_URL}/tests`, {
+      data: { ...pingFixture('V-PLUGIN-PING-01 stored min replies', values), name: `zz-b29-ping-refused-${Date.now()}` },
     })
+    expect(refused.status(), 'Save refuses Minimum replies above Count').toBe(422)
+    expect(JSON.stringify(await refused.json())).toContain(
+      "Setting 'min_replies' of block 'ping' must be at most the value of setting 'count' (4), got 10",
+    )
+    const badge = await openStored(page, 'V-PLUGIN-PING-01 stored min replies', values)
     await expectBadgeMessage(page, badge, MIN_REPLIES_MESSAGE)
 
     const modal = await openConfig(page, NODE_ID)
