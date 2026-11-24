@@ -1,14 +1,5 @@
 /* @refresh reset */
-/**
- * Router Configuration - REQ-5.2.1.2 Client-side routing with navigation history
- *
- * Main router configuration with route definitions, lazy loading,
- * authentication guards, and error handling.
- *
- * Note: @refresh reset directive above tells Vite to do full page reloads
- * instead of Fast Refresh, since this file exports both components and
- * non-component functions (routeConfig, createAppRouter).
- */
+/** REQ-5.2.1.2 client-side routing; @refresh reset because the file mixes components and functions. */
 
 import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
@@ -19,9 +10,7 @@ import { NotFoundPage } from './not-found'
 import { MainLayout } from './layouts/main-layout'
 import { ProtectedRoute } from './layouts/protected-route'
 
-// ============================================================================
 // Lazy-loaded containers (code-split into separate chunks)
-// ============================================================================
 
 /* v8 ignore next 3 - COV-BRANCH-157 */
 const LoginContainer = lazy(() =>
@@ -121,21 +110,17 @@ const ArtifactDrillPage = lazy(() =>
   }))
 )
 
-// ============================================================================
 // Loading fallback
-// ============================================================================
 
 function PageLoadingFallback() {
   return (
     <div className="flex h-full items-center justify-center">
-      <div role="status" className="text-muted-foreground">Loading…</div>
+      <output className="text-muted-foreground">Loading…</output>
     </div>
   )
 }
 
-// ============================================================================
 // Suspense wrapper for lazy components
-// ============================================================================
 
 function SuspenseWrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
@@ -161,9 +146,7 @@ function publicLazy(LazyComponent: React.LazyExoticComponent<React.ComponentType
   )
 }
 
-/**
- * Route configuration array
- */
+/** Route configuration array */
 export const routeConfig: RouteObject[] = [
   {
     path: '/',
@@ -186,11 +169,7 @@ export const routeConfig: RouteObject[] = [
         element: protectedLazy(TestsListContainer),
       },
       {
-        // Legacy /tests/new URL: redirect to a blank workbench. The
-        // `newTest=true` query param asks the lifecycle hook to reset
-        // the workflow store and clear any persisted draft so the user
-        // lands on a genuinely blank canvas; the hook strips the param
-        // after consuming it.
+        // newTest=true makes the lifecycle hook reset the store and clear the draft.
         path: 'tests/new',
         element: <Navigate to="/workbench?newTest=true" replace />,
       },
@@ -314,9 +293,7 @@ export const routeConfig: RouteObject[] = [
   },
 ]
 
-/**
- * Create the application router
- */
+/** Create the application router */
 export function createAppRouter() {
   return createBrowserRouter(routeConfig)
 }
@@ -324,17 +301,13 @@ export function createAppRouter() {
 // Singleton router instance for AppRouterProvider
 let appRouterInstance: ReturnType<typeof createBrowserRouter> | null = null
 
-/**
- * Get the singleton router instance
- */
+/** Get the singleton router instance */
 function getAppRouter() {
   appRouterInstance ??= createBrowserRouter(routeConfig)
   return appRouterInstance
 }
 
-/**
- * Router provider component
- */
+/** Router provider component */
 export function AppRouterProvider(): ReactNode {
   const router = getAppRouter()
   return <RouterProvider router={router} />

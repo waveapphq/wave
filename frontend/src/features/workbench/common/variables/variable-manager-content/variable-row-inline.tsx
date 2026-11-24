@@ -1,15 +1,4 @@
-/**
- * Inline Variable Row
- *
- * Per-variable row in the Variable Manager panel. Two-line grid:
- * line 1 holds the variable name (left) and the four-icon action cluster
- * (right) - eye, expand, edit, delete in that order. Line 2 holds the
- * type-colored value text (left) and the flag + type badges (right), with
- * the type badge always rightmost.
- *
- * REQ-3.1.3.11: Variable watching UI panel
- * REQ-3.2.2.18: Live variable values display
- */
+/** One two-line Variable Manager row (REQ-3.1.3.11, REQ-3.2.2.18). */
 
 import { useEffect, useRef } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
@@ -39,9 +28,7 @@ import { INLINE_VARIABLE_ROW_HEIGHT, MAX_VALUE_LENGTH } from './types'
 // Fixed height so the virtualized slot pitch and the plain list lay rows out identically.
 const ROW_STYLE: CSSProperties = { height: INLINE_VARIABLE_ROW_HEIGHT }
 
-// ===========================================================================
 // Types
-// ===========================================================================
 
 export interface InlineVariableRowProps {
   variable: Variable
@@ -54,36 +41,21 @@ export interface InlineVariableRowProps {
   readOnly: boolean
   /** A read-only row whose Current value can still be set keeps its pencil (REQ-3.1.2.10). */
   currentOnly?: boolean
-  /**
-   * True when the panel has runtime data to show (executing, holding stale
-   * values from a prior run, or in readOnly snapshot mode). Idle mode
-   * (`false`) disables the eye toggle since both views would render the
-   * same definition. Defaults to `true` so the row component stays usable
-   * in isolation without the parent threading a flag through.
-   */
+  /** The panel has runtime data to show; false disables the eye toggle. */
   runtimeAvailable?: boolean
   isOutputBound?: boolean
   isWorkflowReferenced?: boolean
   isExpressionReferenced?: boolean
   recentlyChanged?: boolean
-  /** True while the session is mirrored live: a recentlyChanged row gets a
-   *  temporary violet bar + pulse (the watcher/inspect bar stays otherwise). */
+  /** The session is mirrored live: a recently changed row gets the violet pulse. */
   isMirroring?: boolean
-  /**
-   * Function-scope row classification. When set to 'input' the row carries
-   * an IN badge; when 'output' it carries the existing OUT badge with the
-   * "Declared output parameter" tooltip. Defaults to undefined for normal
-   * (test-local) variables.
-   */
+  /** Function-scope kind: 'input' shows the IN badge, 'output' the OUT badge. */
   kind?: 'input' | 'output' | 'local'
-  /** A secret whose value is still unsaved (new / edited): expand is enabled and
-   *  the value is inspectable until the test is saved. */
+  /** A secret with an unsaved value stays inspectable until the test is saved. */
   secretUnlocked?: boolean
-  /** System test-variables reveal is on: the value column shows the plaintext
-   *  runtime value instead of the mask. */
+  /** Test-variables reveal is on: the value column shows the plaintext. */
   revealSecret?: boolean
-  /** System test-variables reveal is on: a saved secret becomes inspectable
-   *  (expand enabled) so its watcher can show the revealed value. */
+  /** Test-variables reveal is on: a saved secret becomes inspectable. */
   revealInspection?: boolean
   /** True while this row's inspect modal is open (renders the indigo indicator). */
   isInspected?: boolean
@@ -93,9 +65,7 @@ export interface InlineVariableRowProps {
   onKeyDown?: (e: ReactKeyboardEvent) => void
 }
 
-// ===========================================================================
 // Display helpers
-// ===========================================================================
 
 const NOT_EVALUATED_PLACEHOLDER = '<not evaluated yet>'
 
@@ -122,9 +92,7 @@ function getExpressionRowValue(
   if (hasRuntimeValue) {
     return shownValue(runtimeValue, (value) => formatValue(value, variable.type, false))
   }
-  // Idle mode (no runtime data anywhere): show the expression text - the
-  // "<not evaluated yet>" placeholder only makes sense during a live run
-  // when the expression has not yet produced a value.
+  // With no runtime data anywhere, the expression text shows instead of the placeholder.
   if (!runtimeAvailable) return shownValue(variable.value, valueToText)
   return { isNull: false, text: NOT_EVALUATED_PLACEHOLDER }
 }
@@ -140,8 +108,7 @@ function getRowValue(
   // Declared with no value and nothing written at run time yet: it holds null.
   if (isNullValue(variable.value) && !hasRuntimeValue) return NULL_ROW_VALUE
 
-  // A secret shows its runtime value, else its definition: masked unless the
-  // test-variables reveal is on, and empty when it holds nothing.
+  // A secret shows its runtime value, else its definition, masked unless revealed.
   if (variable.isSecret) {
     const shown = hasRuntimeValue ? runtimeValue : variable.value
     return shownValue(shown, (value) => formatValue(value, variable.type, !revealSecret))
@@ -226,10 +193,7 @@ function getExpandPresentation(
   secretUnlocked: boolean,
   revealInspection: boolean,
 ): ExpandPresentation {
-  // A secret is inspectable only while its value is unsaved (new / edited) OR the
-  // system test-variables reveal is on: otherwise a saved secret's value is
-  // masked and expand locks.
-  // A secret holding nothing hides nothing; its inspector sets its Current value (REQ-3.1.2.10).
+  // An empty secret hides nothing; its inspector sets its Current value (REQ-3.1.2.10).
   if (hidesSecretValue(variable) && !secretUnlocked && !revealInspection) {
     return {
       disabled: true,
@@ -244,9 +208,7 @@ function getExpandPresentation(
   }
 }
 
-// ===========================================================================
 // Action button (shared shell for the eye / expand / edit / delete cluster)
-// ===========================================================================
 
 interface RowActionButtonProps {
   testId: string
@@ -293,10 +255,7 @@ function RowActionButton({
   )
 }
 
-// Row left-edge cue classes. While mirroring, a modified row gets a temporary
-// violet bar + pulse; the watcher/inspect indigo bar shows otherwise (yielding
-// the edge to the violet cue while it is active). Off-mirror, a modified row
-// keeps the ordinary yellow highlight.
+// Left-edge cue: violet pulse while mirroring, else the indigo inspect bar or yellow highlight.
 function rowCueClasses(
   recentlyChanged: boolean,
   isMirroring: boolean,
@@ -313,9 +272,7 @@ function rowCueClasses(
   return `${highlight} ${inspected} ${mirrorCue}`
 }
 
-// ===========================================================================
 // Component
-// ===========================================================================
 
 export function InlineVariableRow({
   variable,
@@ -360,7 +317,7 @@ export function InlineVariableRow({
 
   const rowCueClass = rowCueClasses(!!recentlyChanged, !!isMirroring, !!isInspected)
 
-  const rowRef = useRef<HTMLDivElement>(null)
+  const rowRef = useRef<HTMLFieldSetElement>(null)
 
   useEffect(() => {
     const el = rowRef.current
@@ -376,8 +333,7 @@ export function InlineVariableRow({
     }
   }, [onKeyDown])
 
-  // The value column resolves a revealed secret deterministically (runtime value),
-  // so the runtime/definition eye stays disabled for every secret.
+  // A secret's value column is fixed, so its runtime and definition eye stays disabled.
   const eyeDisabled = isSecret || !runtimeAvailable
   const eyeAriaLabel = getEyeAriaLabel(name, !!isSecret, runtimeAvailable, revealSecret)
   const eyeTooltip = getEyeTooltip(!!isSecret, runtimeAvailable, viewMode, revealSecret)
@@ -396,12 +352,11 @@ export function InlineVariableRow({
   const deleteAriaLabel = deleteLocked ? `Locked: delete ${name}` : `Delete ${name}`
 
   return (
-    <div
+    <fieldset
       ref={rowRef}
       data-testid={`variable-row-${id}`}
-      className={`group flex flex-col gap-1 px-3 py-2 hover:bg-muted/50 border-b border-border/50 transition-colors overflow-hidden ${rowCueClass}`}
+      className={`group flex min-w-0 flex-col gap-1 px-3 py-2 hover:bg-muted/50 border-b border-border/50 transition-colors overflow-hidden ${rowCueClass}`}
       style={ROW_STYLE}
-      role="group"
       aria-label={`Variable ${name}`}
     >
       {/* Row 1: Name + 4-icon action cluster */}
@@ -461,9 +416,7 @@ export function InlineVariableRow({
         </div>
       </div>
 
-      {/* Row 2: Value (left) + flag + type badges (right). Flag order is
-            Unused first (visual warning), then OUT, {x}, SECRET; the type
-            badge is always rightmost. */}
+      {/* Row 2: value, then Unused, OUT, {x}, SECRET and the type badge rightmost */}
       <div className="flex items-center gap-1.5 min-w-0">
         <span
           data-testid={`variable-value-${id}`}
@@ -545,6 +498,6 @@ export function InlineVariableRow({
           {type}
         </span>
       </div>
-    </div>
+    </fieldset>
   )
 }

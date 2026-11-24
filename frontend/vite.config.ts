@@ -1,18 +1,12 @@
 /// <reference types="vitest" />
 import { defineConfig, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'fs'
-import { availableParallelism, freemem } from 'os'
+import path from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { availableParallelism, freemem } from 'node:os'
 import { handleProxyError, type ProxyErrorTarget } from './vite-proxy'
 
-/**
- * When the BE upstream is unreachable, http-proxy-middleware's default
- * error handler writes a plain "Internal Server Error" body. That bleeds
- * into our toasts. Override it with a clean JSON envelope (matching the
- * BE's error shape) and a status the FE recognizes as a BE-outage signal
- * so the connection-monitor trips and the offline banner appears.
- */
+/** An unreachable backend answers with the JSON error envelope the offline banner recognizes. */
 function backendProxy(
   target: string,
   extra: Partial<ProxyOptions> = {},
@@ -56,17 +50,12 @@ for (const { src, dest } of wasmFiles) {
   }
 }
 
-// Backend target for both dev (`server.proxy`) and preview
-// (`preview.proxy`). Override with WAVE_BE_URL when developing against
-// a non-default backend (e.g. a second backend on port 8001).
+// Backend for the dev and preview proxies; WAVE_BE_URL points at another backend.
 const BACKEND_URL =
   process.env.WAVE_BE_URL || process.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const BACKEND_WS_URL = BACKEND_URL.replace(/^http/, 'ws')
 
-// Local vitest worker cap: see the maxWorkers comment in the test block.
-// Each fork holds a jsdom and its coverage instrumentation, so free memory
-// bounds the pool as tightly as cores do; 1 GiB per fork leaves room for the
-// lint and type-check processes that run beside it.
+// Each fork holds a jsdom and its coverage, so free memory bounds the pool like cores do.
 const WORKER_MEMORY_BYTES = 1024 ** 3
 const LOCAL_TEST_WORKERS = Math.max(
   2,
@@ -89,17 +78,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    // All FE -> BE traffic is routed through this proxy so the browser
-    // only ever opens connections to localhost:3000 (its own origin).
-    // That keeps everything inside one Network Isolation Key pool, which
-    // can't be poisoned by BE bounces (Chrome's per-NIK pool for cross-
-    // origin FE -> BE calls would otherwise accumulate stale state
-    // that only browser-process exit can clear).
-    //
-    // The catch-all `/api` rule strips the `/api` prefix on the way
-    // through. BE routes that include `/api` in their own path
-    // (/api/backup, /api/v1/...) arrive here as /api/api/<rest>, the
-    // rewrite drops one /api, BE sees its real path.
+    // Same-origin proxy keeps Chrome's connection pool clean across backend restarts.
     proxy: {
       '/api': backendProxy(BACKEND_URL, {
         rewrite: (p) => p.replace(/^\/api/, ''),
@@ -109,9 +88,7 @@ export default defineConfig({
   },
   preview: {
     port: 3001,
-    // Proxy targets are env-driven so one built bundle can be served by
-    // multiple preview instances each talking to its own backend. E2E CI
-    // spawns N backends on different ports and N previews pointed at them.
+    // Env-driven targets let one bundle serve several previews, each with its own backend.
     proxy: {
       '/api': backendProxy(BACKEND_URL, {
         rewrite: (p) => p.replace(/^\/api/, ''),
@@ -140,19 +117,15 @@ export default defineConfig({
             '@radix-ui/react-slot',
             '@radix-ui/react-tooltip',
           ],
-          // CodeMirror 6 core + language modes + their Lezer parsers. All
-          // get pulled in by the workbench editor stack (JSON/XML/YAML);
-          // keeping them in one vendor chunk caches across releases and
-          // stops the workbench route chunk from ballooning to ~800 kB.
-          // XYFlow + resizable-panels: large canvas/layout libs, stable.
+          // XYFlow and resizable-panels: large, stable canvas and layout libraries.
           'vendor-flow': [
             '@xyflow/react',
             '@xyflow/system',
             'react-resizable-panels',
           ],
-          // Tree-sitter runtime: WASM-driven parser shipped for expression
-          // validation. Its JS shim is sizable and stable across releases.
+          // Tree-sitter runtime for expression validation: sizable and stable.
           'vendor-tree-sitter': ['web-tree-sitter'],
+          // CodeMirror and its Lezer parsers, kept out of the workbench route chunk.
           'vendor-codemirror': [
             'codemirror',
             '@codemirror/autocomplete',
@@ -183,22 +156,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './tests/setup.ts',
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
-    // Pin host timezone for deterministic timestamp-format tests. America/Los_Angeles
-    // gives PDT in summer / PST in winter - both stable abbreviations across Node ICU
-    // versions. Tests that need a specific season pick their date accordingly.
+    // A pinned timezone with stable PDT and PST abbreviations across Node ICU versions.
     env: {
       TZ: 'America/Los_Angeles',
     },
-    // Default vitest timeout is 5000ms which is too tight for complex userEvent
-    // interactions (multi-character typing, Radix Select/Combobox flows) running
-    // in forked processes inside CI containers with limited CPU. GitHub Actions
-    // runners are CPU-starved compared to our local containerized CI, so the
-    // same interactions routinely exceed 10s there while finishing well under
-    // it locally - bump the default only when GITHUB_ACTIONS is set so local
-    // runs still catch genuinely slow tests.
+    // GitHub Actions runners are CPU-starved; locally the shorter limit still catches slow tests.
     testTimeout: process.env.GITHUB_ACTIONS === 'true' ? 30000 : 10000,
-    // Use forks pool for full process isolation between test files
-    // This prevents race conditions when tests reset global singletons (tree-sitter)
+    // Forks isolate test files that reset global singletons such as tree-sitter.
     pool: 'forks',
     poolOptions: {
       forks: {
@@ -206,33 +170,15 @@ export default defineConfig({
         isolate: true,
       },
     },
-    // Cap workers at 16 on dev/container CI. Measured sweet spot on 32 cores:
-    // above 16 workers CPU contention slows jsdom creation and per-test
-    // execution more than extra parallelism helps (31w=155s vs 16w=141s).
-    // Remaining cores are available for concurrent BE CI / Playwright runs.
-    //
-    // GitHub Actions `ubuntu-latest` runners have only 4 cores. Pinning 16
-    // forked Node processes there is 4x oversubscription - each fork pays a
-    // multi-second cold-start (jsdom, tree-sitter WASM, setup.ts) and the
-    // slowest async tests (lazy <Suspense> chunks, route renders, complex
-    // modals) burn most of their 30s timeout budget waiting for CPU before
-    // the first assertion. Drop the cap to 4 there to match the runner.
-    //
-    // Smaller dev hosts hit the same oversubscription (lint + tsc run in
-    // parallel with vitest in the CI container), so the local cap derives
-    // from the actual cores and free memory, never below 2. Without the
-    // memory bound the forks and the lint process are OOM-killed, which
-    // surfaces as unrelated tests timing out at random.
+    // Match the 4-core GitHub runner; locally, cores and free memory set the cap.
     maxWorkers: process.env.GITHUB_ACTIONS === 'true' ? 4 : LOCAL_TEST_WORKERS,
     minWorkers: process.env.GITHUB_ACTIONS === 'true' ? 2 : LOCAL_TEST_WORKERS,
-    // Filter known Radix UI warnings that occur in test environment
-    // See: https://github.com/radix-ui/primitives/issues/1952
+    // Known Radix UI test warning: https://github.com/radix-ui/primitives/issues/1952
     onConsoleLog(log) {
       if (log.includes('DialogContent') && log.includes('DialogTitle')) {
         return false // Suppress this log
       }
-      // Suppress React lazy loading warnings that occur during tests with
-      // proper waitFor handling - these are informational, not errors
+      // React lazy loading notices under waitFor are informational.
       if (log.includes('A suspended resource finished loading inside a test')) {
         return false
       }
@@ -241,10 +187,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: [
-        // maxCols is the overall table width; the uncovered-lines column gets
-        // whatever is left. A very wide value keeps that column from
-        // truncating to `...16-317,342,405` in CI logs where the whole point
-        // is to see which lines to fix.
+        // A wide table keeps the uncovered lines column from truncating in CI logs.
         ['text', { maxCols: 400 }],
         'html',
         'json',

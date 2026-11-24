@@ -1,23 +1,10 @@
-"""Tests for REQ-5.2.3.5: Request/response logging middleware for audit trail.
-
-This test module verifies:
-- Middleware layer capturing all incoming requests and outgoing responses
-- Correlation ID generation for request tracing
-- Integration with application logging system
-- Request logging (method, path, headers, body, timestamp, client info)
-- Response logging (status code, headers, body, duration, metrics)
-- Sensitive data handling (authentication headers, passwords, PII redaction)
-- Performance considerations (size limits)
-- Filtering and configuration (endpoint-specific rules)
-- Audit trail capabilities (compliance tracking, user action logging)
-- Correlation and tracing (unique correlation IDs, propagation to downstream services)
-- Security and privacy (access control, log integrity, encryption at rest)
-"""
+"""Tests for REQ-5.2.3.5: request and response logging middleware for the audit trail."""
 
 import base64
 import logging
 import re
-from collections.abc import Callable
+import sys
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -27,6 +14,22 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
 from wavecore.api.middleware import add_request_response_logging_middleware
+
+
+class _BrokenBodyIterator:
+    """Body stream whose first read raises, then ends, as a failed generator does."""
+
+    def __init__(self) -> None:
+        self._failed = False
+
+    def __aiter__(self) -> "_BrokenBodyIterator":
+        return self
+
+    async def __anext__(self) -> bytes:
+        if self._failed:
+            raise StopAsyncIteration
+        self._failed = True
+        raise Exception("body iterator failed")
 
 
 class TestLoggingMiddlewareIntegration:
@@ -135,8 +138,7 @@ class TestRequestLogging:
             response = client.get("/test")
 
         assert response.status_code == 200
-        # Unified format logs: GET /test → 200 (Xms) - no client info
-        # Just verify the request was logged
+        # The unified format logs GET /test → 200 (Xms) with no client info.
         assert any("/test" in record.message for record in caplog.records)
 
     @pytest.mark.asyncio
@@ -489,8 +491,7 @@ class TestResponseLogging:
             response = client.get("/test")
 
         assert response.status_code == 200
-        # Unified format logs: GET /path → status (duration)
-        # Verify response was logged with status and duration
+        # The unified format logs GET /path → status (duration).
         assert any("200" in record.message and "ms" in record.message for record in caplog.records)
 
 
@@ -663,8 +664,7 @@ class TestSensitiveDataHandling:
             response = client.post("/users", json={"name": "Alice", "email": "alice@example.com"})
 
         assert response.status_code == 200
-        # Depending on PII configuration, email might be redacted
-        # This test documents the expected behavior
+        # Depending on PII configuration, email might be redacted.
 
 
 class TestPerformanceConsiderations:
@@ -694,8 +694,7 @@ class TestPerformanceConsiderations:
         # Request should complete quickly (< 1 second even with logging)
         assert duration < 1.0
 
-        # Test 2: Verify logging happens asynchronously (logger.info/debug called, not blocking)
-        # Mock the logger to verify it's called asynchronously
+        # Logging is called without blocking the request.
         with patch("wavecore.api.middleware.middleware_module.logger") as mock_logger:
             mock_logger.info = MagicMock()
             mock_logger.debug = MagicMock()
@@ -703,8 +702,7 @@ class TestPerformanceConsiderations:
             response = client.get("/test")
             assert response.status_code == 200
 
-            # Logger should have been called (proving logging happened)
-            # But request completed without waiting for log I/O
+            # The logger was called, but the request did not wait for log I/O.
             assert mock_logger.info.called or mock_logger.debug.called
 
     @pytest.mark.asyncio
@@ -742,8 +740,7 @@ class TestPerformanceConsiderations:
         async def test_endpoint() -> dict[str, str]:
             return {"status": "ok"}
 
-        # Patch _log_request on the class so it raises unconditionally, triggering
-        # the except block at dispatch lines 716-718.
+        # Patch _log_request on the class so it raises unconditionally.
         with patch.object(
             RequestResponseLoggingMiddleware,
             "_log_request",
@@ -781,12 +778,7 @@ class TestPerformanceConsiderations:
             async def call_next_with_broken_body(req: Request) -> Response:
                 real_response = await call_next(req)
 
-                async def broken_iterator() -> Any:
-                    raise Exception("body iterator failed")
-                    # Make mypy happy - yield is unreachable but needed for async generator type
-                    yield b""  # pragma: no cover
-
-                real_response.body_iterator = broken_iterator()  # type: ignore[assignment]
+                real_response.body_iterator = _BrokenBodyIterator()
                 return real_response
 
             return await original_dispatch(self, request, call_next_with_broken_body)
@@ -830,8 +822,7 @@ class TestPerformanceConsiderations:
                 _truncated = True
                 break
 
-        # Either truncation happened or body wasn't logged at all (both are valid)
-        # But the full 10KB payload should NOT appear in logs
+        # Truncated or not logged at all, the full 10KB payload must not appear.
         full_payload = "x" * 10000
         for record in caplog.records:
             assert len(record.message) < len(
@@ -918,8 +909,7 @@ class TestFilteringAndConfiguration:
             )
 
         assert response.status_code == 200
-        # Request body should NOT be logged when disabled
-        # Should not find 'alice' or the request body content in logs
+        # The request body is not logged when disabled.
         assert not any("alice" in record.message for record in caplog.records)
 
     @pytest.mark.asyncio
@@ -1180,9 +1170,7 @@ class TestUnifiedLogFormat:
 
         assert response.status_code == 200
 
-        # Unified format uses simple message without ISO timestamp in message body
-        # The log record has timestamp via Python logging, but message is clean
-        # Verify unified format: GET /path → status (duration)
+        # The timestamp is on the log record; the message is GET /path → status (duration).
         assert any(
             "GET" in r.message and "→" in r.message and "200" in r.message for r in caplog.records
         )
@@ -1556,8 +1544,7 @@ class TestLoggingMiddlewareHelperFunctions:
         """Test that endpoint filter excludes health check endpoints."""
         from wavecore.api.middleware import _should_log_endpoint
 
-        # Health checks might be excluded from verbose logging
-        # This behavior is configurable
+        # Health check logging is configurable.
         assert _should_log_endpoint("/health") in [True, False]  # Depends on config
 
     def test_filter_sensitive_body_handles_non_dict_types(self) -> None:
@@ -1675,8 +1662,7 @@ class TestLoggingMiddlewareHelperFunctions:
         with caplog.at_level(logging.DEBUG):
             _response = client.get("/continue")
 
-        # 1xx response should be logged at DEBUG level
-        # Note: TestClient may not handle 1xx properly, but we test the logging
+        # A 1xx response is logged at DEBUG; TestClient may not handle 1xx properly.
         debug_logs = [r for r in caplog.records if r.levelno == logging.DEBUG]
         # At least some DEBUG logs should exist (headers logged at DEBUG)
         assert len(debug_logs) >= 0  # Test passes regardless since 1xx is unusual
@@ -1864,3 +1850,122 @@ class TestRequestLineValues:
             for r in caplog.records
             if r.name == _MIDDLEWARE_LOGGER and r.levelno == logging.INFO
         ] == [f"[{rid}] GET {logged} → 200 (250.00ms)"]
+
+
+def _plain_get_request() -> Request:
+    """Build a GET request scope that the middleware logs."""
+    return Request(
+        {
+            "type": "http",
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "http",
+            "path": "/plain-response",
+            "raw_path": b"/plain-response",
+            "query_string": b"",
+            "headers": [(b"host", b"testserver")],
+            "client": ("127.0.0.1", 50000),
+            "server": ("testserver", 80),
+        }
+    )
+
+
+async def _unused_app(scope: Any, receive: Any, send: Any) -> None:
+    """ASGI app the middleware wraps; dispatch is called directly, so it never runs."""
+    raise AssertionError("the wrapped app is not called in these tests")
+
+
+def _free_monitoring_tool_id() -> int:
+    """Return a sys.monitoring tool id no other tool (coverage, a debugger) holds."""
+    for tool_id in range(6):
+        if sys.monitoring.get_tool(tool_id) is None:
+            return tool_id
+    raise RuntimeError("no free sys.monitoring tool id")
+
+
+def _logged_body(log_response: MagicMock) -> Any:
+    """Return the response_body that dispatch passed to _log_response."""
+    args, kwargs = log_response.call_args
+    return kwargs["response_body"] if "response_body" in kwargs else args[4]
+
+
+class TestResponseBodyCaptureWithoutStream:
+    """Body capture skips a response that has no body stream."""
+
+    async def test_a_plain_response_returns_as_the_same_object_with_no_body(self) -> None:
+        """A plain Starlette Response comes back as itself and is logged with no body."""
+        from wavecore.api.middleware import RequestResponseLoggingMiddleware
+
+        middleware = RequestResponseLoggingMiddleware(_unused_app)
+        plain = Response(content=b'{"plain": true}', media_type="application/json")
+        assert not hasattr(plain, "body_iterator")
+
+        async def call_next(_request: Request) -> Response:
+            return plain
+
+        with patch.object(RequestResponseLoggingMiddleware, "_log_response") as log_response:
+            returned = await middleware.dispatch(_plain_get_request(), call_next)
+
+        assert returned is plain
+        log_response.assert_called_once()
+        assert log_response.call_args.args[1] is plain
+        assert _logged_body(log_response) is None
+
+    async def test_a_plain_response_is_skipped_without_raising_inside_dispatch(self) -> None:
+        """Skipping the capture raises no exception inside dispatch."""
+        from wavecore.api.middleware import RequestResponseLoggingMiddleware
+
+        middleware = RequestResponseLoggingMiddleware(_unused_app)
+        plain = Response(content=b'{"plain": true}', media_type="application/json")
+
+        async def call_next(_request: Request) -> Response:
+            return plain
+
+        raised: list[str] = []
+        code = RequestResponseLoggingMiddleware.dispatch.__code__
+        events = sys.monitoring.events
+        tool_id = _free_monitoring_tool_id()
+        sys.monitoring.use_tool_id(tool_id, "wave-test-dispatch-raises")
+        try:
+            sys.monitoring.register_callback(
+                tool_id,
+                events.RAISE,
+                lambda raised_in, _offset, exc: (
+                    raised.append(type(exc).__name__) if raised_in is code else None
+                ),
+            )
+            sys.monitoring.set_events(tool_id, events.RAISE)
+            returned = await middleware.dispatch(_plain_get_request(), call_next)
+        finally:
+            sys.monitoring.set_events(tool_id, 0)
+            sys.monitoring.register_callback(tool_id, events.RAISE, None)
+            sys.monitoring.free_tool_id(tool_id)
+
+        assert returned is plain
+        assert raised == []
+
+    async def test_a_streamed_response_is_captured_and_rebuilt(self) -> None:
+        """A response with a body stream is read, logged with its body and rebuilt."""
+        from starlette.responses import StreamingResponse
+
+        from wavecore.api.middleware import RequestResponseLoggingMiddleware
+
+        middleware = RequestResponseLoggingMiddleware(_unused_app)
+
+        async def chunks() -> AsyncIterator[bytes | str]:
+            yield b'{"streamed": '
+            yield "true}"
+
+        streamed = StreamingResponse(chunks(), status_code=201, media_type="application/json")
+
+        async def call_next(_request: Request) -> Response:
+            return streamed
+
+        with patch.object(RequestResponseLoggingMiddleware, "_log_response") as log_response:
+            returned = await middleware.dispatch(_plain_get_request(), call_next)
+
+        assert returned is not streamed
+        assert returned.body == b'{"streamed": true}'
+        assert returned.status_code == 201
+        assert returned.media_type == "application/json"
+        assert _logged_body(log_response) == b'{"streamed": true}'

@@ -1532,16 +1532,20 @@ def _log_validation_result(result: dict[str, Any], context: str, test_name: str)
                 e.get("code", "?"),
                 # CodeQL exclusion: CQL-LOG-001
                 e.get("node_id") or e.get("node_label") or "-",
+                # CodeQL exclusion: CQL-LOG-001
                 e.get("message", ""),
             )
         for w in warnings:
             logger.debug(
                 "  WARN   %-25s node=%-12s %s",
                 w.get("code", "?"),
+                # CodeQL exclusion: CQL-LOG-001
                 w.get("node_id") or w.get("node_label") or "-",
+                # CodeQL exclusion: CQL-LOG-001
                 w.get("message", ""),
             )
     else:
+        # CodeQL exclusion: CQL-LOG-001
         logger.debug("Validation [%s] test=%s: clean", context, test_name)
 
 
@@ -4109,6 +4113,7 @@ def _fix_undeclared_variable(
             code,
             # CodeQL exclusion: CQL-LOG-001
             var_name,
+            # CodeQL exclusion: CQL-LOG-001
             inferred_types,
         )
         _remove_conflicting_bindings(found)

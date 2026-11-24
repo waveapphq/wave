@@ -12,11 +12,10 @@ const LIB_NO_PAGES =
   'lib/ must not import a page module. Pages are React components; move the shared value down into lib/ instead.';
 const LIB_NO_JSX = 'lib/ must not contain JSX. Move the markup into components/.';
 
-const COMPONENTS_SPECIFIER = '/(^|\\/)components(\\/|$)/';
-const PAGE_SPECIFIER = '/(^|\\/)([^/]*-)?page(\\/|$)/';
+const COMPONENTS_SPECIFIER = String.raw`/(^|\/)components(\/|$)/`;
+const PAGE_SPECIFIER = String.raw`/(^|\/)([^/]*-)?page(\/|$)/`;
 
-// no-restricted-imports only sees static imports and re-exports, so the
-// dynamic and type-position forms of the same import need AST selectors.
+// no-restricted-imports sees only static imports, so dynamic and type imports need selectors.
 function nonStaticImportsOf(specifier) {
   return [
     `ImportExpression > Literal[value=${specifier}]`,
@@ -31,12 +30,57 @@ const UNSAFE_VOID =
 // Navigation, viewport moves and preload imports have no failure to report; the chains handle theirs.
 const SAFE_VOID_ARGUMENTS = [
   '[argument.type="ImportExpression"]',
-  '[argument.callee.name=/^(navigate|setCenter|setViewport|fitView|fitBounds|\\w+FitView)$/]',
+  String.raw`[argument.callee.name=/^(navigate|setCenter|setViewport|fitView|fitBounds|\w+FitView)$/]`,
   '[argument.callee.property.name=/^(setCenter|setViewport|fitView|fitBounds)$/]',
   '[argument.callee.property.name="catch"]',
   '[argument.callee.property.name="then"][argument.arguments.1]',
 ];
-const UNSAFE_VOID_SELECTOR = `UnaryExpression[operator="void"]${SAFE_VOID_ARGUMENTS.map((form) => `:not(${form})`).join('')}`;
+const SAFE_VOID_EXCLUSIONS = SAFE_VOID_ARGUMENTS.map((form) => `:not(${form})`).join('');
+const UNSAFE_VOID_SELECTOR = `UnaryExpression[operator="void"]${SAFE_VOID_EXCLUSIONS}`;
+
+const OWN_FEATURE = { featureName: '{{ from.captured.featureName }}' };
+
+const APP_LAYER_ALLOW = ['shared', 'feature', 'feature-api', 'app'].map((type) => ({ to: { type } }));
+
+// Cross-feature imports a feature may make: its feature modules first, then feature APIs.
+const CROSS_FEATURE_IMPORTS = [
+  // Test pages embed the canvas, filter by suite and start runs.
+  { from: 'tests', features: ['workbench', 'suites'], apis: ['workbench', 'suites', 'executions'] },
+  // Suite filters read Test data; the Run dialog starts runs.
+  { from: 'suites', features: ['tests'], apis: ['tests', 'executions'] },
+  // Regressions compose suites and start runs from the Run dialog.
+  { from: 'regressions', features: ['suites'], apis: ['suites', 'executions'] },
+  // Report rows are finished executions and reuse their user facet.
+  { from: 'reports', features: [], apis: ['executions'] },
+  // The suite detail breadcrumb shows the parent regression name.
+  { from: 'suites', features: [], apis: ['regressions'] },
+  // Profiles reuse the workbench value cell and "Edit value" sheet.
+  { from: 'profiles', features: ['workbench'], apis: ['workbench'] },
+  // Suite, Regression and System variables reuse the workbench value cell.
+  { from: 'suites', features: ['workbench'], apis: [] },
+  { from: 'regressions', features: ['workbench'], apis: [] },
+  { from: 'settings', features: ['workbench'], apis: [] },
+  // Function canvas helpers use the drill stack in the workbench workflow store.
+  { from: 'functions', features: ['workbench'], apis: ['workbench'] },
+  // The workbench imports the API types of the data it works on.
+  {
+    from: 'workbench',
+    features: ['tests', 'suites', 'profiles', 'settings', 'functions'],
+    apis: ['tests', 'suites', 'profiles', 'settings', 'executions', 'regressions', 'functions'],
+  },
+  // Execution detail reuses the workbench console and the suite and regression run dialog hooks.
+  { from: 'executions', features: ['workbench', 'suites', 'regressions'], apis: [] },
+];
+
+function featureImportRule({ from, features, apis }) {
+  return {
+    from: { type: 'feature', captured: { featureName: from } },
+    allow: [
+      ...features.map((featureName) => ({ to: { type: 'feature', captured: { featureName } } })),
+      ...apis.map((featureName) => ({ to: { type: 'feature-api', captured: { featureName } } })),
+    ],
+  };
+}
 
 export default [
   js.configs.recommended,
@@ -63,12 +107,7 @@ export default [
       'no-unused-vars': 'off',
     },
   },
-  // ============================================================================
-  // Unhandled-promise enforcement. The two promise rules need the type checker,
-  // so this block is the only one that turns on the type-aware parser. A promise
-  // nobody awaits swallows its rejection, which is why every failure must be
-  // awaited by a caller that reports it or carry its own reporting catch.
-  // ============================================================================
+  // Unhandled promises: the only block with the type-aware parser.
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     languageOptions: {
@@ -87,11 +126,7 @@ export default [
       'no-restricted-syntax': ['error', { selector: UNSAFE_VOID_SELECTOR, message: UNSAFE_VOID }],
     },
   },
-  // ============================================================================
-  // lib/ purity: lib/ holds pure data and logic, so it contains no JSX and
-  // imports neither React nor any React component module. The dependency runs
-  // one way: components/ -> lib/, never the reverse.
-  // ============================================================================
+  // lib/ holds pure data and logic: no JSX, React or component imports.
   {
     files: ['src/**/lib/**/*.ts', 'src/**/lib/**/*.tsx'],
     rules: {
@@ -116,9 +151,7 @@ export default [
       ],
     },
   },
-  // ============================================================================
-  // Boundary enforcement: feature isolation + API layer direction
-  // ============================================================================
+  // Boundary enforcement: feature isolation and API layer direction.
   {
     plugins: { boundaries },
     settings: {
@@ -143,9 +176,7 @@ export default [
             'src/types/**/*',
           ],
         },
-        // feature-api is a separate element type so we can restrict what it imports.
-        // API modules define types and fetch data - they must never import from
-        // components, containers, hooks, or stores within their feature.
+        // A separate element type, so API modules never import their feature's UI or stores.
         {
           mode: 'full',
           type: 'feature-api',
@@ -182,8 +213,7 @@ export default [
               from: { type: 'shared' },
               allow: [{ to: { type: 'shared' } }],
             },
-            // Shared hooks import from feature APIs for cross-cutting concerns:
-            // - use-environments.ts imports from settings/api/environments
+            // Shared hooks may read the tests and settings feature APIs.
             {
               from: { type: 'shared' },
               allow: [
@@ -191,14 +221,12 @@ export default [
                 { to: { type: 'feature-api', captured: { featureName: 'settings' } } },
               ],
             },
-            // feature-api can only import from shared and its own feature's api.
-            // This prevents the inverted dependency: api/ must never reach into
-            // components/, container/, hooks/, or stores/.
+            // feature-api imports only shared code and its own feature's API.
             {
               from: { type: 'feature-api' },
               allow: [
                 { to: { type: 'shared' } },
-                { to: { type: 'feature-api', captured: { featureName: '{{ from.captured.featureName }}' } } },
+                { to: { type: 'feature-api', captured: OWN_FEATURE } },
               ],
             },
             // feature (non-api) can import from shared, own feature, and own feature-api
@@ -206,159 +234,13 @@ export default [
               from: { type: 'feature' },
               allow: [
                 { to: { type: 'shared' } },
-                { to: { type: 'feature', captured: { featureName: '{{ from.captured.featureName }}' } } },
-                { to: { type: 'feature-api', captured: { featureName: '{{ from.captured.featureName }}' } } },
+                { to: { type: 'feature', captured: OWN_FEATURE } },
+                { to: { type: 'feature-api', captured: OWN_FEATURE } },
               ],
             },
-            // Tests feature embeds the workbench canvas for test create/edit pages,
-            // imports suite names for the suite filter dropdown, and triggers
-            // tracked executions via the executions API from the run dialog.
-            {
-              from: { type: 'feature', captured: { featureName: 'tests' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'workbench' } } },
-                { to: { type: 'feature', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'workbench' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'executions' } } },
-              ],
-            },
-            // Suites feature imports suite names from tests for filter dropdowns
-            // and starts tracked executions from the Run dialog via the
-            // executions API (mirrors the tests feature's use of executions).
-            {
-              from: { type: 'feature', captured: { featureName: 'suites' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'tests' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'tests' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'executions' } } },
-              ],
-            },
-            // Regressions feature composes suites, so the regression detail
-            // page needs to read the suite catalog (name/tag lookups for the
-            // suite picker modal and column filters). Mirrors suites -> tests.
-            // Also starts tracked executions from the Run dialog.
-            {
-              from: { type: 'feature', captured: { featureName: 'regressions' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'executions' } } },
-              ],
-            },
-            // Reports rows are finished executions, so the reports list
-            // reuses the executions user facet (triggered_by values).
-            {
-              from: { type: 'feature', captured: { featureName: 'reports' } },
-              allow: [
-                { to: { type: 'feature-api', captured: { featureName: 'executions' } } },
-              ],
-            },
-            // Suites feature reads regression names for the detail header
-            // breadcrumb (suite-detail-page must render `<reg> / <suite>`
-            // when the user arrived via a regression URL).
-            {
-              from: { type: 'feature', captured: { featureName: 'suites' } },
-              allow: [
-                { to: { type: 'feature-api', captured: { featureName: 'regressions' } } },
-              ],
-            },
-            // Profiles feature reuses the workbench's shared variable value cell
-            // + "Edit value" sheet (VariableValueCell / ValueEditorSheet) for
-            // profile parameter value editing.
-            {
-              from: { type: 'feature', captured: { featureName: 'profiles' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'workbench' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'workbench' } } },
-              ],
-            },
-            // Entity-scope variable editing (Suite / Regression / System
-            // variables) reuses the workbench's shared value cell
-            // (EntityVariableValueCell -> VariableValueCell + the "Edit value"
-            // sheet), injected into the shared VariableEditor via renderValueCell -
-            // the same cross-feature reuse profiles uses above.
-            {
-              from: { type: 'feature', captured: { featureName: 'suites' } },
-              allow: [{ to: { type: 'feature', captured: { featureName: 'workbench' } } }],
-            },
-            {
-              from: { type: 'feature', captured: { featureName: 'regressions' } },
-              allow: [{ to: { type: 'feature', captured: { featureName: 'workbench' } } }],
-            },
-            {
-              from: { type: 'feature', captured: { featureName: 'settings' } },
-              allow: [{ to: { type: 'feature', captured: { featureName: 'workbench' } } }],
-            },
-            // Functions/canvas helpers (use-drill-handler, use-function-scope,
-            // inner-workflow, function-scope-vars) live under
-            // features/functions/ because they encapsulate Function-entity
-            // canvas behavior, but the drill stack itself is per-Test state
-            // owned by the workbench's workflow store. The helpers therefore
-            // depend on `features/workbench/stores/workflow-store`.
-            {
-              from: { type: 'feature', captured: { featureName: 'functions' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'workbench' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'workbench' } } },
-              ],
-            },
-            // Workbench imports API types from features whose data it operates on:
-            // tests (workflow CRUD), suites (suite selector), profiles (profile
-            // binding), settings (global variables for test lifecycle),
-            // executions (parent status short-circuit when following the next
-            // child session of a sequential suite/regression run),
-            // regressions (breadcrumb-context fetches the parent regression
-            // name when the workbench is opened with `?regressionId=...`),
-            // and functions (Function nodes + library modal on the canvas).
-            {
-              from: { type: 'feature', captured: { featureName: 'workbench' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'tests' } } },
-                { to: { type: 'feature', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature', captured: { featureName: 'profiles' } } },
-                { to: { type: 'feature', captured: { featureName: 'settings' } } },
-                { to: { type: 'feature', captured: { featureName: 'functions' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'tests' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'profiles' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'settings' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'executions' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'regressions' } } },
-                { to: { type: 'feature-api', captured: { featureName: 'functions' } } },
-              ],
-            },
-            // Executions detail reuses the Workbench ConsolePanel - the
-            // execution_id doubles as the workbench session_id by design.
-            // The execution-toolbar's Re-run flow also reuses the run-dialog
-            // hooks from suites and regressions so Re-run surfaces the same
-            // subset panel, duplicate badges, and pre-populated selection.
-            {
-              from: { type: 'feature', captured: { featureName: 'executions' } },
-              allow: [
-                { to: { type: 'feature', captured: { featureName: 'workbench' } } },
-                { to: { type: 'feature', captured: { featureName: 'suites' } } },
-                { to: { type: 'feature', captured: { featureName: 'regressions' } } },
-              ],
-            },
-            {
-              from: { type: 'app' },
-              allow: [
-                { to: { type: 'shared' } },
-                { to: { type: 'feature' } },
-                { to: { type: 'feature-api' } },
-                { to: { type: 'app' } },
-              ],
-            },
-            {
-              from: { type: 'root' },
-              allow: [
-                { to: { type: 'shared' } },
-                { to: { type: 'feature' } },
-                { to: { type: 'feature-api' } },
-                { to: { type: 'app' } },
-              ],
-            },
+            ...CROSS_FEATURE_IMPORTS.map(featureImportRule),
+            { from: { type: 'app' }, allow: APP_LAYER_ALLOW },
+            { from: { type: 'root' }, allow: APP_LAYER_ALLOW },
           ],
         },
       ],

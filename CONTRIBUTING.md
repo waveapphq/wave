@@ -99,7 +99,7 @@ The backend and frontend scripts each scan their code with SonarQube, on the hos
 
 - `sonar-scanner`, on your `PATH`.
 - `SONAR_TOKEN`, set to a token of your SonarQube Cloud account. The account needs scan rights on the two projects. A maintainer grants them together with collaborator access.
-- A checked-out branch. SonarQube Cloud analyzes a local scan as your current branch.
+- A checked-out branch. SonarQube Cloud analyzes a local scan as your current branch, and compares a fix/ or feature/ branch with its release branch.
 
 A script stops before its tests when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server.
 
@@ -120,6 +120,8 @@ A maintainer dismisses a false alarm on GitHub. With `CODEQL_GITHUB_TOKEN` set t
 Every check that WAVE skips is listed in public with its reason in [tests/exclusions/README.md](tests/exclusions/README.md): code left out of coverage, SonarQube Cloud false positives and dismissed CodeQL alerts.
 
 Fix the code first. When your change needs an exclusion, add its entry to the right list and its ID in a comment at the spot, in the same pull request, and say why in the pull request description. A maintainer reviews the reason, then marks the issue or dismisses the alert in SonarQube Cloud or CodeQL.
+
+Two required checks, SonarQube exclusions and CodeQL exclusions, fail when a mark or a dismissal does not match its entry. Each failure line says what to add or change. Run them locally after the CI scripts with `python3 scripts/check-exclusions.py --sonarqube` and `python3 scripts/check-exclusions.py --codeql`.
 
 ### Run a part of the tests
 
@@ -264,7 +266,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
    All three must pass on your machine, SonarQube included, before you ask for review. There is one exception: a suite that also fails on the release branch.
 
-   If your change makes a suite fail, fix the code in your branch. Change a test only as the code rules in [CLAUDE.md](CLAUDE.md) allow. Never change the CI files to make a suite pass. These are the CI scripts `scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`; the settings of the text checks in `typos.toml`; the SonarQube scripts `scripts/sonar-*.sh` and settings `backend/sonar-project.properties` and `frontend/sonar-project.properties`; and the GitHub workflows in `.github/workflows/` with `.github/CODEOWNERS`. A maintainer rejects a pull request that changes these files, unless fixing them is the purpose of its issue.
+   If your change makes a suite fail, fix the code in your branch. Change a test only as the code rules in [CLAUDE.md](CLAUDE.md) allow. Never change the CI files to make a suite pass. These are the CI scripts `scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`; the exclusion check `scripts/check-exclusions.py`; the settings of the text checks in `typos.toml`; the SonarQube scripts `scripts/sonar-*.sh` and settings `backend/sonar-project.properties` and `frontend/sonar-project.properties`; and the GitHub workflows in `.github/workflows/` with `.github/CODEOWNERS`. A maintainer rejects a pull request that changes these files, unless fixing them is the purpose of its issue.
 
    A maintainer keeps all three suites passing on `master` and on each release branch. If a suite also fails on the release branch, do not fix it in your branch. Open an issue for it, and link that issue in the description of your pull request. A maintainer fixes it before any other work.
 
@@ -282,7 +284,7 @@ A check blocks the merge of each pull request until it ticks "No docs change nee
 
 A pull request that changes a CI file needs the approval of the code owner that `.github/CODEOWNERS` names.
 
-GitHub runs the backend and frontend checks, the SonarQube analysis and CodeQL code scanning on each pull request. It never runs the Playwright suite.
+GitHub runs the backend and frontend checks, the SonarQube analysis, CodeQL code scanning and the two exclusion checks on each pull request. It never runs the Playwright suite.
 
 Only a maintainer merges, even when every check on a pull request is green. The maintainer reviews the pull request, then merges it into its release branch and deletes the branch.
 

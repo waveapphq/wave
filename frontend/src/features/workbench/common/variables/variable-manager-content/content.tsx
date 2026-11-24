@@ -1,15 +1,4 @@
-/**
- * Variable Manager Content
- *
- * Main content of the Variable Manager panel: header (uppercase
- * title + "+ Add" button), toolbar (filter + sort dropdown), and a flat
- * row list. The entire list is the monitoring surface and runtime values stream into
- * every row.
- *
- * REQ-3.1.3.11: Variable watching UI panel
- * REQ-3.1.3.12: Auto-refresh watched variables on change
- * REQ-3.2.2.18: Live variable values display
- */
+/** Variable Manager panel content with live values in every row (REQ-3.1.3.11, REQ-3.1.3.12, REQ-3.2.2.18). */
 
 import { useState, useMemo, useCallback, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import {
@@ -135,9 +124,7 @@ function readPersistedSort(): SortKey {
   return 'name-asc'
 }
 
-// ===========================================================================
 // Helpers (module scope to avoid re-creation on each parent render)
-// ===========================================================================
 
 interface ScopedGroupProps {
   title: string
@@ -146,11 +133,7 @@ interface ScopedGroupProps {
   children: React.ReactNode
 }
 
-/**
- * Collapsible PARAMETERS / VARIABLES group used by the in-Function layout.
- * Uses the project's shadcn Collapsible; header is a button so screen
- * readers and keyboard users can toggle.
- */
+/** Collapsible PARAMETERS or VARIABLES group of the in-Function layout. */
 function ScopedGroup({ title, testIdSlug, defaultOpen = true, children }: Readonly<ScopedGroupProps>) {
   const [open, setOpen] = useState<boolean>(defaultOpen)
   return (
@@ -176,10 +159,7 @@ interface SubSeparatorProps {
   label: string
 }
 
-/**
- * INPUTS / OUTPUTS sub-divider rendered inside the PARAMETERS group. Plain
- * uppercase label + thin hairline filling the remaining width.
- */
+/** INPUTS or OUTPUTS sub-divider inside the PARAMETERS group. */
 function SubSeparator({ label }: Readonly<SubSeparatorProps>) {
   return (
     <div
@@ -194,9 +174,7 @@ function SubSeparator({ label }: Readonly<SubSeparatorProps>) {
   )
 }
 
-// ===========================================================================
 // Component
-// ===========================================================================
 
 export function VariableManagerContent({
   variables,
@@ -264,8 +242,7 @@ export function VariableManagerContent({
 
   const rowViewMode = useRowViewMode(runtimeValues, sessionId)
 
-  // The test-variables reveal governs this whole surface: the panel value column
-  // and the watchers reveal a test's secret variable values together.
+  // One test-variables reveal governs the value column and the watchers together.
   const revealTestVariables = useMaskingSettingsStore((s) => s.testVariables)
   const maskingLoaded = useMaskingSettingsStore((s) => s.hydrated)
 
@@ -313,8 +290,7 @@ export function VariableManagerContent({
     }
   }, [openInspectorKeys, variablesByKey, shownPath, closeInspector, unsavedSecretIds, revealTestVariables, revealKnown])
 
-  // Scope filtering happens BEFORE text filtering so the search box only
-  // searches what's visible to the user in the current Function scope.
+  // Scope filtering comes first, so the search box searches only the current Function scope.
   const scopedVariables = useMemo(() => {
     if (!scope) return displayVariables
     return filterVariablesForScope(displayVariables, scope)
@@ -348,10 +324,7 @@ export function VariableManagerContent({
     [],
   )
 
-  // Partition the sorted, filtered, scoped variable list into inputs /
-  // outputs / locals for the in-Function layout. Outside a Function this is
-  // unused and we render the flat list as today. Hooks declared BEFORE the
-  // isLoading early-return so the call order stays stable.
+  // In-Function partition; declared before the isLoading return so hook order stays stable.
   const declaredInputSet = useMemo(
     () => new Set(scope?.declaredInputNames ?? []),
     [scope?.declaredInputNames],
@@ -525,8 +498,7 @@ export function VariableManagerContent({
     return viewNode === undefined ? entry.edit.scope : [viewNode, ...entry.edit.scope]
   }
 
-  // A plain row owns its arrow keys; inside the virtualized list the list owns them,
-  // so the two never disagree about which row the user is on.
+  // A plain row owns its arrow keys; inside the virtualized list the list owns them.
   const buildRowProps = (v: Variable, ownArrowKeys = true) => {
     const viewMode = rowViewMode.getMode(v.id)
     const key = scopedVariableKey(v.name, shownPath)
@@ -653,9 +625,7 @@ export function VariableManagerContent({
       </div>
 
       {/* Body */}
-      {/* Empty-state message only outside a Function. Inside a Function the
-          PARAMETERS / VARIABLES sections render even when empty so the user
-          sees the scoped namespace and can use +Add to populate it. */}
+      {/* Inside a Function the empty sections render instead of this message */}
       {showEmptyState && !insideFunction && (
         <div className="py-8 text-center text-sm text-muted-foreground">
           {readOnly
@@ -665,9 +635,9 @@ export function VariableManagerContent({
       )}
 
       {!showEmptyState && showNoMatch && (
-        <div role="status" className="py-8 text-center text-sm text-muted-foreground">
+        <output className="block py-8 text-center text-sm text-muted-foreground">
           No variables match filter
-        </div>
+        </output>
       )}
 
       {!showEmptyState && !showNoMatch && !insideFunction && (

@@ -140,3 +140,43 @@ jobs:
       - name: Type check
         working-directory: ./tests/e2e
         run: npm run type-check
+
+  sonarqube-exclusions:
+    name: SonarQube exclusions
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check SonarQube exclusions
+        run: python3 scripts/check-exclusions.py --sonarqube
+
+  codeql-exclusions:
+    name: CodeQL exclusions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check CodeQL exclusions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/check-exclusions.py --codeql
