@@ -884,9 +884,10 @@ class TestCodeQLChecks:
         assert result.stdout[0].startswith("CodeQL exclusions: 2 entries, ")
         assert result.stdout[0].endswith(" and 3 ID comments match on refs/heads/master.")
 
-    def test_a_listed_dismissed_alert_with_no_comment_above_its_line(
+    def test_a_listed_dismissed_alert_with_no_comment_above_its_line_is_no_failure(
         self, repo: Repo, services: FakeServices, home: Path
     ) -> None:
+        # Per D8: comments match entries by ID only, never by the alert's line.
         write_codeql_tree(repo)
         repo.commit()
         moved = [
@@ -898,19 +899,30 @@ class TestCodeQLChecks:
 
         result = run_codeql(repo, services, home)
 
-        assert_output(
-            result,
-            1,
-            [
-                f"{LOGS_FILE}:3: alert 2 has no CodeQL exclusion comment for {CQL_A}"
-                " on the line above. Add the comment."
-            ],
-            "CodeQL exclusions: 1 mismatch on refs/heads/master.",
-        )
+        assert_output(result, 0, [], CODEQL_ALL_MATCH)
 
-    def test_a_comment_above_naming_another_entry_does_not_count(
+    def test_dismissed_alerts_with_no_comment_above_any_of_their_lines_are_no_failure(
         self, repo: Repo, services: FakeServices, home: Path
     ) -> None:
+        # Per D8: every listed alert points at a line with no CQL comment above it.
+        write_codeql_tree(repo)
+        repo.commit()
+        services.alerts = {
+            MASTER_REF: [
+                codeql_alert(1, "dismissed", LOG_RULE, LOGS_FILE, 1),
+                codeql_alert(2, "dismissed", LOG_RULE, LOGS_FILE, 4),
+                codeql_alert(5, "dismissed", XSS_RULE, PARSE_FILE, 1),
+            ]
+        }
+
+        result = run_codeql(repo, services, home)
+
+        assert_output(result, 0, [], CODEQL_ALL_MATCH)
+
+    def test_a_comment_above_naming_another_entry_is_no_failure(
+        self, repo: Repo, services: FakeServices, home: Path
+    ) -> None:
+        # Per D8: CQL_A is still carried by one comment, so its alert 2 needs no comment of its own.
         write_codeql_tree(repo)
         repo.write(
             LOGS_FILE,
@@ -929,12 +941,102 @@ class TestCodeQLChecks:
 
         result = run_codeql(repo, services, home)
 
+        assert_output(result, 0, [], CODEQL_ALL_MATCH)
+
+    def test_a_dismissed_alert_in_a_file_the_tree_lacks_is_no_failure(
+        self, repo: Repo, services: FakeServices, home: Path
+    ) -> None:
+        # Per D8: the alert's location is never read from the work tree.
+        write_codeql_tree(repo)
+        repo.commit()
+        services.alerts = {
+            MASTER_REF: [
+                codeql_alert(1, "dismissed", LOG_RULE, LOGS_FILE, 5),
+                codeql_alert(2, "dismissed", LOG_RULE, "backend/wavecore/removed.py", 40),
+                codeql_alert(5, "dismissed", XSS_RULE, PARSE_FILE, 2),
+            ]
+        }
+
+        result = run_codeql(repo, services, home)
+
+        assert_output(result, 0, [], CODEQL_ALL_MATCH)
+
+    @pytest.mark.parametrize("context", CONTEXTS, ids=[c.name for c in CONTEXTS])
+    def test_a_dismissed_alert_whose_instance_is_fixed_at_a_stale_line_is_no_failure(
+        self, repo: Repo, services: FakeServices, home: Path, tmp_path: Path, context: Context
+    ) -> None:
+        # Per D8: a dismissed alert whose most recent instance on the ref is fixed, at a line
+        # number the code no longer has, matches by its number in the entry alone.
+        write_codeql_tree(repo)
+        repo.commit()
+        place(repo, context)
+        stale = codeql_alert(2, "dismissed", LOG_RULE, LOGS_FILE, 120)
+        stale["most_recent_instance"]["state"] = "fixed"
+        services.alerts = {
+            context.codeql_ref: [
+                codeql_alert(1, "dismissed", LOG_RULE, LOGS_FILE, 5),
+                stale,
+                codeql_alert(5, "dismissed", XSS_RULE, PARSE_FILE, 2),
+            ]
+        }
+        if context.codeql_sha is not None:
+            services.analyses_for(context.codeql_ref, context.codeql_sha)
+
+        result = run_script(repo, context_env(context, tmp_path, home, services), "--codeql")
+
+        assert_output(
+            result,
+            0,
+            [],
+            "CodeQL exclusions: 2 entries, 3 alerts and 3 ID comments match on"
+            f" {context.codeql_ref}.",
+        )
+
+    def test_a_stale_alert_with_an_unlisted_dismissed_alert_gives_only_its_line(
+        self, repo: Repo, services: FakeServices, home: Path
+    ) -> None:
+        # Per D8a: the other checks still fail alone when a listed alert has no comment above.
+        write_codeql_tree(repo)
+        repo.commit()
+        services.alerts = {
+            MASTER_REF: [
+                codeql_alert(1, "dismissed", LOG_RULE, LOGS_FILE, 5),
+                codeql_alert(2, "dismissed", LOG_RULE, LOGS_FILE, 3),
+                codeql_alert(5, "dismissed", XSS_RULE, PARSE_FILE, 2),
+                codeql_alert(9, "dismissed", "py/path-injection", LOGS_FILE, 3),
+            ]
+        }
+
+        result = run_codeql(repo, services, home)
+
         assert_output(
             result,
             1,
             [
-                f"{LOGS_FILE}:7: alert 2 has no CodeQL exclusion comment for {CQL_A}"
-                " on the line above. Add the comment."
+                "Alert 9 (py/path-injection) is dismissed but no entry lists it."
+                " Add it to an entry in tests/exclusions/codeql.md, or reopen the alert."
+            ],
+            "CodeQL exclusions: 1 mismatch on refs/heads/master.",
+        )
+
+    def test_an_entry_with_a_dismissed_alert_no_code_carries_gives_only_its_line(
+        self, repo: Repo, services: FakeServices, home: Path
+    ) -> None:
+        # Per D8d: an entry with no ID comment fails once, by its ID, not by its alert's line.
+        write_codeql_tree(repo, [(CQL_A, "1 to 2"), (CQL_B, "5"), (CQL_C, "8")])
+        repo.commit()
+        services.alerts = {
+            MASTER_REF: [*base_alerts(), codeql_alert(8, "dismissed", LOG_RULE, LOGS_FILE, 3)]
+        }
+
+        result = run_codeql(repo, services, home)
+
+        assert_output(
+            result,
+            1,
+            [
+                f"{CQL_C}: no code carries this ID. Add the comment above the flagged line,"
+                " or remove the entry from tests/exclusions/codeql.md."
             ],
             "CodeQL exclusions: 1 mismatch on refs/heads/master.",
         )
@@ -1432,96 +1534,3 @@ class TestErrors:
 
         assert_exit_2(result, USAGE)
         assert services.requests == []
-
-
-# The clone's own flagged lines: the dismissed CQL-LOG-001 alerts in the Test service
-
-SERVICE_FILE = "backend/wavecore/api/services/tests/service.py"
-CLONE_ROOT = Path(__file__).resolve().parents[3]
-CQL_LOG = cql_id("LOG-001")
-
-# Each dismissed alert of the pull request ref: its number, the line before which the flagged
-# line follows, and the flagged line itself. Anchored on content, since comments shift lines.
-SERVICE_ALERTS = [
-    (10, '"  ERROR  %-25s node=%-12s %s",', 'e.get("message", ""),'),
-    (11, '"  WARN   %-25s node=%-12s %s",', 'w.get("node_id") or w.get("node_label") or "-",'),
-    (12, '"  WARN   %-25s node=%-12s %s",', 'w.get("message", ""),'),
-    (
-        13,
-        '"  WARN   %-25s node=%-12s %s",',
-        'logger.debug("Validation [%s] test=%s: clean", context, test_name)',
-    ),
-    (
-        274,
-        "\"  FIX %-25s type conflict var='%s' types=%s, removing refs\",",
-        "inferred_types,",
-    ),
-]
-
-
-def flagged_line(lines: list[str], anchor: str, text: str) -> int:
-    """The 1-based number of the first line equal to text after the one anchor line."""
-    stripped = [line.strip() for line in lines]
-    assert stripped.count(anchor) == 1, anchor
-    start = stripped.index(anchor)
-    return stripped.index(text, start + 1) + 1
-
-
-def write_service_tree(repo: Repo, numbers: list[int]) -> list[dict[str, Any]]:
-    """Copy the clone's Test service, list the alerts under CQL-LOG-001, return them dismissed."""
-    text = (CLONE_ROOT / SERVICE_FILE).read_text(encoding="utf-8")
-    lines = text.splitlines()
-    repo.write(SERVICE_FILE, lines)
-    repo.write(CODEQL_LIST, codeql_list([(CQL_LOG, ", ".join(str(n) for n in numbers))]))
-    repo.write(SONAR_LIST, sonar_list([]))
-    return [
-        codeql_alert(n, "dismissed", LOG_RULE, SERVICE_FILE, flagged_line(lines, anchor, flagged))
-        for n, anchor, flagged in SERVICE_ALERTS
-        if n in numbers
-    ]
-
-
-def service_comment_count() -> int:
-    """The CQL-LOG-001 ID comments the clone's Test service carries."""
-    lines = (CLONE_ROOT / SERVICE_FILE).read_text(encoding="utf-8").splitlines()
-    return sum(1 for line in lines if line.strip() == f"# CodeQL exclusion: {CQL_LOG}")
-
-
-class TestCloneFlaggedLines:
-    """Every dismissed CQL-LOG-001 alert in the Test service has its ID comment above."""
-
-    @pytest.mark.parametrize("number", [n for n, _, _ in SERVICE_ALERTS])
-    def test_each_flagged_line_has_its_comment_above(
-        self, repo: Repo, services: FakeServices, home: Path, number: int
-    ) -> None:
-        alerts = write_service_tree(repo, [number])
-        repo.commit()
-        services.alerts = {MASTER_REF: alerts}
-
-        result = run_codeql(repo, services, home)
-
-        assert_output(
-            result,
-            0,
-            [],
-            f"CodeQL exclusions: 1 entry, 1 alert and {service_comment_count()} ID comments"
-            " match on refs/heads/master.",
-        )
-
-    def test_all_flagged_lines_match_together(
-        self, repo: Repo, services: FakeServices, home: Path
-    ) -> None:
-        numbers = [n for n, _, _ in SERVICE_ALERTS]
-        alerts = write_service_tree(repo, numbers)
-        repo.commit()
-        services.alerts = {MASTER_REF: alerts}
-
-        result = run_codeql(repo, services, home)
-
-        assert_output(
-            result,
-            0,
-            [],
-            f"CodeQL exclusions: 1 entry, 5 alerts and {service_comment_count()} ID comments"
-            " match on refs/heads/master.",
-        )
