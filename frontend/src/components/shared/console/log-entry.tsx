@@ -1,13 +1,4 @@
-/**
- * LogEntry Component - REQ-3.7.2.5, REQ-3.7.2.6
- *
- * Renders individual log rows with level-based coloring, timestamps,
- * source, and messages.
- * - Log entry structure: timestamp, level, message, source
- * - Row coloring by level (entire row, regardless of visible columns)
- * - Source column truncation with tooltip
- * - Monospace font for log content
- */
+/** LogEntry: one console row colored by level (REQ-3.7.2.5, REQ-3.7.2.6). */
 
 import { memo } from 'react'
 import type { LogEntry as LogEntryType, DisplaySettings } from '@/types/console'
@@ -16,9 +7,7 @@ import { formatTimestamp } from '@/lib/timestamp-format'
 import { useTimezoneStore } from '@/stores/timezone-store'
 import { ConditionalTooltip } from '@/components/ui/tooltip'
 
-// ============================================================================
 // Types
-// ============================================================================
 
 export interface LogEntryProps {
   entry: LogEntryType
@@ -30,17 +19,7 @@ export interface LogEntryProps {
   'aria-setsize'?: number
 }
 
-/**
- * Format a log entry for clipboard copy.
- * Uses consistent format regardless of display settings:
- * - timestamp (if visible): HH:MM:SS.mmm + zone suffix
- * - level (if visible): padded to 5 chars
- * - source (if visible): full source in [brackets], as the server sent it
- * - message: always included
- *
- * The timestamp honors the user's current Time Zone preference - copying
- * matches what the user sees on screen.
- */
+/** Format a log entry for clipboard copy with the visible columns and the user's time zone. */
 export function formatEntryForCopy(entry: LogEntryType, displaySettings: DisplaySettings): string {
   const parts: string[] = []
 
@@ -62,9 +41,7 @@ export function formatEntryForCopy(entry: LogEntryType, displaySettings: Display
   return parts.join(' ')
 }
 
-// ============================================================================
 // Constants
-// ============================================================================
 
 const DEFAULT_SOURCE_WIDTH = 20
 const MIN_SOURCE_WIDTH = 10
@@ -83,35 +60,24 @@ const LEVEL_CLASS_MAP: Record<LogLevel, string> = {
   FATAL: 'log-level-fatal',
 }
 
-// Variant classes override level-based coloring for special messages.
-// The *-banner variants delimit parent-scope boundaries (regression and
-// suite start/completed) from ordinary test logs by applying a distinct
-// color and a subtle row accent.
+// Variant classes override level coloring; banners mark regression and suite boundaries.
 const VARIANT_CLASS_MAP: Record<string, string> = {
   success: 'log-variant-success',
   error: 'log-variant-error',
   warning: 'log-variant-warning',
-  // Paused lines render in amber, aliased to the warning palette
-  // (matches CANVAS-85's amber + the existing warning log-variant color).
+  // Paused lines use the warning amber (CANVAS-87).
   paused: 'log-variant-paused log-variant-warning',
   'regression-banner': 'log-variant-regression-banner',
   'suite-banner': 'log-variant-suite-banner',
 }
 
-// Column widths in characters - MUST match TIMESTAMP_CHARS and LEVEL_CHARS in console-content.tsx
-// 12ch base (HH:MM:SS.mmm) + 1ch space + up to 5ch zone token (e.g. "GMT-7"); short tokens like
-// "PDT" or "UTC" leave 2 trailing chars of padding which is fine in the monospace column.
+// Must match the timestamp and level spacer widths in content.tsx; 18ch fits a GMT-7 zone token.
 const TIMESTAMP_WIDTH_CH = 18
 const LEVEL_WIDTH_CH = 5 // DEBUG/INFO/WARN/ERROR/FATAL padded to 5
 
-// ============================================================================
 // Helpers
-// ============================================================================
 
-/**
- * Format source with fixed column width.
- * Truncate with ellipsis if longer than width, right-align if shorter.
- */
+/** Fit source to the column: truncate with an ellipsis or right-align. */
 function formatSource(source: string, width: number): string {
   if (source.length > width) {
     return source.slice(0, width - 1) + '…'
@@ -120,9 +86,7 @@ function formatSource(source: string, width: number): string {
   return source.padStart(width, ' ')
 }
 
-// ============================================================================
 // Component
-// ============================================================================
 
 export const LogEntry = memo(function LogEntry({
   entry,
@@ -161,7 +125,7 @@ export const LogEntry = memo(function LogEntry({
   const verticalPadding = height ? Math.max(0, Math.round((height - textLineHeight) / 2)) : 0
 
   return (
-    <div
+    <article
       data-testid={`log-entry-${entry.id}`}
       data-copy-text={copyText}
       className={`font-mono ${colorClass} px-2 flex items-start`}
@@ -172,7 +136,6 @@ export const LogEntry = memo(function LogEntry({
         paddingTop: `${verticalPadding}px`,
         paddingBottom: `${verticalPadding}px`,
       }}
-      role="article"
       aria-label={ariaLabel}
       aria-posinset={ariaPosinset}
       aria-setsize={ariaSetsize}
@@ -225,7 +188,7 @@ export const LogEntry = memo(function LogEntry({
       >
         {entry.message}
       </span>
-    </div>
+    </article>
   )
 })
 

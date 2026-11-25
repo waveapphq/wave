@@ -41,3 +41,7 @@ Each entry in the SonarQube Cloud, CodeQL and backend coverage lists names one o
 ## Find a place
 
 Search the code for the ID, for example `git grep -n "BCOV-ABSTRACT-001"`. Each hit is one place that the entry covers.
+
+## Checks
+
+Two required checks on each pull request compare these lists with SonarQube Cloud and GitHub code scanning. `scripts/check-exclusions.py --sonarqube` fails when an SQ entry has no ID comment, an ID comment has no entry, a commented line is not marked false positive, or a false positive mark has no ID comment. `scripts/check-exclusions.py --codeql` fails when a dismissed CodeQL alert has no CQL entry, a listed alert is open, or a listed alert has no ID comment. Each failure says what to mark, dismiss or document. After a maintainer marks or dismisses, re-run the failed job.

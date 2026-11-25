@@ -1,25 +1,4 @@
-"""Middleware components for WAVE backend.
-
-This module implements:
-- REQ-5.2.3.4: Global error handling middleware with standardized error responses
-- REQ-5.2.3.5: Request/response logging middleware for audit trail
-
-Error Handling Middleware provides:
-- Intercepting all unhandled exceptions in the request pipeline
-- Mapping exceptions to appropriate HTTP status codes
-- Formatting errors in a standardized JSON schema
-- Preserving request context for error tracking and debugging
-- Integrating with logging for error audit trails
-- Handling production vs development mode for stack traces
-- Generating unique request IDs for correlation
-
-Request/Response Logging Middleware provides:
-- Comprehensive audit trail by capturing all HTTP traffic
-- Unified log format: one line per request with method, path, status and duration
-- Correlation ID generation for request tracing
-- Sensitive data filtering and masking
-- Performance considerations (size limits)
-"""
+"""Error handling (REQ-5.2.3.4) and request and response logging (REQ-5.2.3.5) middleware."""
 
 import contextvars
 import json
@@ -45,7 +24,6 @@ from wavecore.api.exceptions import (
 )
 from wavecore.core.logging.log_safe import log_safe
 
-# Constant for the generic internal error message (used in multiple places)
 _ERR_INTERNAL = "An internal server error occurred"
 
 
@@ -66,10 +44,7 @@ request_correlation_id: contextvars.ContextVar[str | None] = contextvars.Context
 
 
 class ErrorDetail(BaseModel):
-    """Error detail model for standardized error responses.
-
-    Contains structured error information including error code, message, and optional details.
-    """
+    """Error detail model for standardized error responses."""
 
     code: str
     message: str
@@ -77,10 +52,7 @@ class ErrorDetail(BaseModel):
 
 
 class ResponseMeta(BaseModel):
-    """Response metadata model for all API responses.
-
-    Contains timestamp, API version, and request ID for correlation.
-    """
+    """Response metadata model for all API responses."""
 
     timestamp: str
     version: str
@@ -88,10 +60,7 @@ class ResponseMeta(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Standardized error response envelope.
-
-    All error responses follow this structure for consistent client handling.
-    """
+    """Standardized error response envelope."""
 
     success: bool = False
     error: ErrorDetail
@@ -99,47 +68,26 @@ class ErrorResponse(BaseModel):
 
 
 def _generate_request_id() -> str:
-    """Generate unique request ID for correlation.
-
-    Returns:
-        UUID string in standard format
-    """
+    """Generate unique request ID for correlation."""
     return str(uuid.uuid4())
 
 
 def _get_timestamp() -> str:
-    """Get current timestamp in ISO 8601 format with UTC timezone.
-
-    Returns:
-        ISO 8601 formatted timestamp string
-    """
+    """Get current timestamp in ISO 8601 format with UTC timezone."""
     return datetime.now(UTC).isoformat()
 
 
 def _is_production_mode() -> bool:
-    """Check if running in production mode.
-
-    Returns:
-        True if in production mode, False otherwise
-    """
+    """Check if running in production mode."""
     config = get_config()
     return not config.server.debug
 
 
 def _sanitize_error_message(message: str, production: bool) -> str:
-    """Sanitize error message for production safety.
-
-    Args:
-        message: Original error message
-        production: Whether running in production mode
-
-    Returns:
-        Sanitized error message
-    """
+    """Sanitize error message for production safety."""
     if not production:
         return message
 
-    # In production, use generic messages for internal errors
     if "internal" in message.lower() or "server" in message.lower():
         return _ERR_INTERNAL
 
@@ -147,14 +95,7 @@ def _sanitize_error_message(message: str, production: bool) -> str:
 
 
 def _format_validation_errors(exc: RequestValidationError) -> dict[str, Any]:
-    """Format validation errors from FastAPI/Pydantic.
-
-    Args:
-        exc: Request validation error
-
-    Returns:
-        Formatted validation error details
-    """
+    """Format validation errors from FastAPI/Pydantic."""
     errors = []
     for error in exc.errors():
         field_path = " -> ".join(str(loc) for loc in error["loc"])
@@ -169,42 +110,21 @@ def _format_validation_errors(exc: RequestValidationError) -> dict[str, Any]:
 
 
 def _get_stack_trace(exc: Exception, production: bool) -> list[str] | None:
-    """Get stack trace for exception.
-
-    Args:
-        exc: Exception to get stack trace from
-        production: Whether running in production mode
-
-    Returns:
-        Stack trace as list of strings, or None in production
-    """
+    """Get stack trace for exception."""
     if production:
         return None
 
-    # In development, include full stack trace
     tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
     return tb_lines
 
 
 def _create_error_response(
-    _status_code: int,
     error_code: str,
     message: str,
     details: dict[str, Any] | None = None,
     request_id: str | None = None,
 ) -> ErrorResponse:
-    """Create standardized error response.
-
-    Args:
-        _status_code: HTTP status code (unused, kept for call-site consistency)
-        error_code: Error classification code
-        message: Human-readable error message
-        details: Optional additional error context
-        request_id: Optional request ID for correlation
-
-    Returns:
-        Standardized error response
-    """
+    """Create standardized error response."""
     return ErrorResponse(
         success=False,
         error=ErrorDetail(
@@ -238,19 +158,7 @@ def _build_dev_details(
     production: bool,
     base_details: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """Build error details dict, preserving business details in all modes.
-
-    Business details (e.g. collision info) from ``base_details`` are always
-    included.  Stack traces are added only in development mode.
-
-    Args:
-        exc: The caught exception
-        production: Whether running in production mode
-        base_details: Optional pre-populated details dict
-
-    Returns:
-        Details dict (possibly with stack_trace in dev), or None if empty
-    """
+    """Build error details dict, preserving business details in all modes."""
     details = dict(base_details) if base_details else {}
     if not production:
         stack_trace = _get_stack_trace(exc, production)
@@ -266,20 +174,8 @@ def _error_json_response(
     request_id: str,
     details: dict[str, Any] | None = None,
 ) -> JSONResponse:
-    """Create a JSONResponse wrapping a standardized ErrorResponse.
-
-    Args:
-        status_code: HTTP status code
-        error_code: WAVE error classification code
-        message: Human-readable error message
-        request_id: Correlation request ID
-        details: Optional additional error context
-
-    Returns:
-        JSONResponse with the error payload
-    """
+    """Create a JSONResponse wrapping a standardized ErrorResponse."""
     error_response = _create_error_response(
-        _status_code=status_code,
         error_code=error_code,
         message=message,
         details=details,
@@ -291,16 +187,7 @@ def _error_json_response(
 def _handle_validation_error(
     exc: RequestValidationError, request_id: str, path: str
 ) -> JSONResponse:
-    """Handle FastAPI request validation errors.
-
-    Args:
-        exc: The validation error
-        request_id: Correlation request ID
-        path: Request endpoint path
-
-    Returns:
-        Standardized JSON error response
-    """
+    """Handle FastAPI request validation errors."""
     logger.warning(
         f"Validation error for request {request_id}: {exc}",
         extra={"request_id": request_id, "endpoint": path},
@@ -317,17 +204,7 @@ def _handle_validation_error(
 def _handle_wave_exception(
     exc: WaveException, request_id: str, path: str, production: bool
 ) -> JSONResponse:
-    """Handle custom WAVE exceptions.
-
-    Args:
-        exc: The WAVE exception
-        request_id: Correlation request ID
-        path: Request endpoint path
-        production: Whether running in production mode
-
-    Returns:
-        Standardized JSON error response
-    """
+    """Handle custom WAVE exceptions."""
     logger.error(
         f"WAVE exception for request {request_id}: {log_safe(exc)}",
         extra={"request_id": request_id, "endpoint": path, "error_code": exc.error_code},
@@ -350,18 +227,7 @@ def _handle_http_exception(
     production: bool,
     label: str,
 ) -> JSONResponse:
-    """Handle FastAPI or Starlette HTTP exceptions.
-
-    Args:
-        exc: The HTTP exception
-        request_id: Correlation request ID
-        path: Request endpoint path
-        production: Whether running in production mode
-        label: Log label describing the exception origin
-
-    Returns:
-        Standardized JSON error response
-    """
+    """Handle FastAPI or Starlette HTTP exceptions."""
     logger.warning(
         f"{label} for request {request_id}: {log_safe(exc.detail)}",
         extra={"request_id": request_id, "endpoint": path, "status_code": exc.status_code},
@@ -380,17 +246,7 @@ def _handle_http_exception(
 def _handle_unhandled_exception(
     exc: Exception, request_id: str, path: str, production: bool
 ) -> JSONResponse:
-    """Handle unexpected / unhandled exceptions.
-
-    Args:
-        exc: The unhandled exception
-        request_id: Correlation request ID
-        path: Request endpoint path
-        production: Whether running in production mode
-
-    Returns:
-        Standardized JSON error response (always 500)
-    """
+    """Handle unexpected / unhandled exceptions."""
     logger.error(
         f"Unhandled exception for request {request_id}: {log_safe(exc)}",
         extra={"request_id": request_id, "endpoint": path},
@@ -419,18 +275,7 @@ def _handle_unhandled_exception(
 async def error_handler_middleware(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
-    """Global error handling middleware.
-
-    Intercepts all exceptions in the request pipeline and transforms them into
-    standardized error responses.
-
-    Args:
-        request: Incoming request
-        call_next: Next middleware/handler in chain
-
-    Returns:
-        Response (either successful or error response)
-    """
+    """Global error handling middleware."""
     # One id per request: the logging middleware's when it ran first.
     request_id: str = getattr(request.state, "correlation_id", None) or _generate_request_id()
     request.state.request_id = request_id
@@ -460,23 +305,16 @@ async def error_handler_middleware(
 
 
 def add_error_handling_middleware(app: FastAPI) -> None:
-    """Add global error handling middleware to FastAPI application.
-
-    Args:
-        app: FastAPI application instance
-    """
+    """Add global error handling middleware to FastAPI application."""
     app.middleware("http")(error_handler_middleware)
 
 
-# ============================================================================
 # REQ-5.2.3.5: Request/Response Logging Middleware
-# ============================================================================
 
 # Only a JSON body is ever rendered into the log, so only that one is read into memory.
 _LOGGED_MEDIA_TYPE = "application/json"
 _UNNAMED_MEDIA_TYPE = "unknown"
 
-# Global configuration for logging middleware
 _logging_config: dict[str, Any] = {
     "log_request_body": True,
     "log_response_body": True,
@@ -498,23 +336,12 @@ _logging_config: dict[str, Any] = {
 
 
 def _generate_correlation_id() -> str:
-    """Generate unique correlation ID for request tracing.
-
-    Returns:
-        UUID string in standard format
-    """
+    """Generate unique correlation ID for request tracing."""
     return str(uuid.uuid4())
 
 
 def _filter_sensitive_headers(headers: dict[str, str]) -> dict[str, str]:
-    """Filter sensitive data from headers.
-
-    Args:
-        headers: Request or response headers
-
-    Returns:
-        Filtered headers with sensitive data masked
-    """
+    """Filter sensitive data from headers."""
     filtered = {}
     sensitive_keys = ["authorization", "cookie", "set-cookie", "x-api-key"]
 
@@ -528,14 +355,7 @@ def _filter_sensitive_headers(headers: dict[str, str]) -> dict[str, str]:
 
 
 def _filter_sensitive_body(body: Any) -> Any:
-    """Filter sensitive data from request/response body.
-
-    Args:
-        body: Request or response body (dict, list, or other)
-
-    Returns:
-        Filtered body with sensitive data masked
-    """
+    """Filter sensitive data from request/response body."""
     if isinstance(body, list):
         return [_filter_sensitive_body(item) for item in body]
     if not isinstance(body, dict):
@@ -553,21 +373,12 @@ def _filter_sensitive_body(body: Any) -> Any:
 
 
 def _truncate_body(body: Any, max_size: int) -> Any:
-    """Truncate body to enforce size limits.
-
-    Args:
-        body: Request or response body
-        max_size: Maximum allowed size in bytes
-
-    Returns:
-        Truncated body if exceeds max_size, original otherwise
-    """
+    """Truncate body to enforce size limits."""
     body_str = json.dumps(body) if isinstance(body, dict | list) else str(body)
 
     if len(body_str) <= max_size:
         return body
 
-    # Truncate and add marker
     truncated_str = body_str[:max_size] + "...[TRUNCATED]"
     return {"_truncated": True, "data": truncated_str}
 
@@ -587,14 +398,7 @@ def _request_body_is_logged(request: Request) -> bool:
 
 
 def _should_log_endpoint(path: str) -> bool:
-    """Determine if endpoint should be logged based on configuration.
-
-    Args:
-        path: Request path
-
-    Returns:
-        True if endpoint should be logged, False otherwise
-    """
+    """Determine if endpoint should be logged based on configuration."""
     exclude_paths: list[str] = _logging_config.get("exclude_paths", [])
     return path not in exclude_paths
 
@@ -607,12 +411,7 @@ _LOG_LEVEL_DISPATCH: dict[str, Callable[..., None]] = {
 
 
 def _log_at_level(level: str, message: str) -> None:
-    """Emit a log message at the given named level.
-
-    Args:
-        level: One of DEBUG, INFO, WARN, or ERROR (fallback)
-        message: The message to log
-    """
+    """Emit a log message at the given named level."""
     _LOG_LEVEL_DISPATCH.get(level, logger.error)(message)
 
 
@@ -622,16 +421,7 @@ def _log_body_bytes(
     body: bytes | None,
     config_key: str,
 ) -> None:
-    """Log a JSON body (request or response) at DEBUG level.
-
-    Handles filtering, truncation, and non-JSON fallback.
-
-    Args:
-        rid: Short correlation ID prefix
-        label: "req" or "res"
-        body: Raw body bytes, or None
-        config_key: Logging config key controlling whether to log
-    """
+    """Log a JSON body (request or response) at DEBUG level."""
     if not body or not _logging_config.get(config_key, True):
         return
 
@@ -646,25 +436,12 @@ def _log_body_bytes(
 
 
 class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware for comprehensive request/response logging.
-
-    Captures all HTTP traffic for audit trail, operational visibility,
-    and security monitoring.
-    """
+    """Middleware for comprehensive request/response logging."""
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        """Process request and log details.
-
-        Args:
-            request: Incoming request
-            call_next: Next middleware/handler in chain
-
-        Returns:
-            Response from handler
-        """
-        # Check if endpoint should be excluded
+        """Process request and log details."""
         if not _should_log_endpoint(request.url.path):
             return await call_next(request)
 
@@ -675,62 +452,56 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         request.state.correlation_id = correlation_id
         request_correlation_id.set(correlation_id)
 
-        # Capture request start time
         start_time = time.time()
 
-        # Log request details
         try:
-            await self._log_request(request, correlation_id)
+            await self._log_request(request)
         except Exception:
             # Logging failures should not crash requests - silently continue
             pass
 
-        # Process request
         response = await call_next(request)
 
-        # Calculate duration
         duration_ms = (time.time() - start_time) * 1000
 
-        # Capture response body for logging (requires consuming the stream)
         response_body: bytes | None = None
         if _logging_config.get("log_response_body", True):
-            try:
-                body_chunks = []
-                assert isinstance(response, _StreamedResponse)
-                async for chunk in response.body_iterator:
-                    body_chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
-                response_body = b"".join(body_chunks)
-                # Rebuild the response with the captured body
-                response = Response(
-                    content=response_body,
-                    status_code=response.status_code,
-                    headers=dict(response.headers),
-                    media_type=response.media_type,
-                )
-            except Exception:
-                # Body capture failure should not crash requests
-                pass
+            response, response_body = await self._capture_response_body(response)
 
-        # Log response details
         try:
             self._log_response(request, response, correlation_id, duration_ms, response_body)
         except Exception:
             # Logging failures should not crash requests - silently continue
             pass
 
-        # Add correlation ID to response headers
         response.headers["X-Request-ID"] = correlation_id
         response.headers["X-Correlation-ID"] = correlation_id
 
         return response
 
-    async def _log_request(self, request: Request, _correlation_id: str) -> None:
-        """Capture request body for later logging (body must be read before handler).
+    @staticmethod
+    async def _capture_response_body(response: Response) -> tuple[Response, bytes | None]:
+        """Consume a streamed body and return the rebuilt response with the captured bytes."""
+        response_body: bytes | None = None
+        try:
+            if isinstance(response, _StreamedResponse):
+                body_chunks = []
+                async for chunk in response.body_iterator:
+                    body_chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
+                response_body = b"".join(body_chunks)
+                response = Response(
+                    content=response_body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
+        except Exception:
+            # Body capture failure should not crash requests
+            pass
+        return response, response_body
 
-        Args:
-            request: Incoming request
-            _correlation_id: Request correlation ID (unused, kept for interface consistency)
-        """
+    async def _log_request(self, request: Request) -> None:
+        """Capture request body for later logging (body must be read before handler)."""
         request.state.request_body = None
         if not _request_body_is_logged(request):
             return
@@ -748,18 +519,7 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         duration_ms: float,
         response_body: bytes | None = None,
     ) -> None:
-        """Log complete request/response cycle in unified format.
-
-        All logging for a request is grouped here with a short correlation ID
-        prefix so related lines can be traced together.
-
-        Args:
-            request: Original request
-            response: Response object
-            correlation_id: Request correlation ID
-            duration_ms: Request duration in milliseconds
-            response_body: Captured response body bytes (if available)
-        """
+        """Log complete request/response cycle in unified format."""
         from wavecore.core.logging.formatter import format_http_request, get_http_log_level
 
         rid = correlation_id[:8]
@@ -786,13 +546,7 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _log_headers(rid: str, request: Request, response: Response) -> None:
-        """Log filtered request and response headers at DEBUG level.
-
-        Args:
-            rid: Short correlation ID prefix
-            request: The HTTP request
-            response: The HTTP response
-        """
+        """Log filtered request and response headers at DEBUG level."""
         if _logging_config.get("log_request_headers", True):
             filtered = _filter_sensitive_headers(dict(request.headers))
             logger.debug(f"[{rid}]   req headers: {json.dumps(filtered)}")
@@ -803,12 +557,7 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _log_request_body(rid: str, request: Request) -> None:
-        """Log the captured request body at DEBUG level.
-
-        Args:
-            rid: Short correlation ID prefix
-            request: The HTTP request (body stored on request.state)
-        """
+        """Log the captured request body at DEBUG level."""
         if not _logging_config.get("log_request_body", True):
             return
         if request.method in ("GET", "HEAD", "OPTIONS"):
@@ -843,19 +592,7 @@ def add_request_response_logging_middleware(
     exclude_paths: list[str] | None = None,
     sensitive_field_patterns: list[str] | None = None,
 ) -> None:
-    """Add request/response logging middleware to FastAPI application.
-
-    Args:
-        app: FastAPI application instance
-        log_request_body: Whether to log request body
-        log_response_body: Whether to log response body
-        log_request_headers: Whether to log request headers
-        log_response_headers: Whether to log response headers
-        max_body_size: Maximum body size to log (bytes)
-        exclude_paths: List of paths to exclude from logging
-        sensitive_field_patterns: List of field name patterns to mask
-    """
-    # Update global configuration
+    """Add request/response logging middleware to FastAPI application."""
     _logging_config.update(
         {
             "log_request_body": log_request_body,
@@ -878,14 +615,9 @@ def add_request_response_logging_middleware(
         }
     )
 
-    # Add middleware
     app.add_middleware(RequestResponseLoggingMiddleware)
 
 
 def update_logging_config(**kwargs: Any) -> None:
-    """Update logging configuration at runtime.
-
-    Args:
-        **kwargs: Configuration keys and values to update
-    """
+    """Update logging configuration at runtime."""
     _logging_config.update(kwargs)
