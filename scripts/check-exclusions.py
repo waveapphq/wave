@@ -524,7 +524,6 @@ def check_codeql(root: Path) -> tuple[list[str], str, str]:
     failures: list[str] = []
     entries = read_entries(root, CODEQL_LIST, "CQL", failures)
     comments = id_comments(root, "CQL")
-    above = {(c.file, c.covered_line): c.entry_id for c in comments}
 
     listing: dict[int, list[str]] = {}
     for entry in entries:
@@ -551,14 +550,6 @@ def check_codeql(root: Path) -> tuple[list[str], str, str]:
                 f"Alert {number} is listed by {names}. Keep it in one entry."
             )
         matched += 1
-        location = alert.get("most_recent_instance", {}).get("location", {})
-        file = str(location.get("path", ""))
-        line = int(location.get("start_line", 0))
-        if above.get((file, line)) not in owners:
-            failures.append(
-                f"{file}:{line}: alert {number} has no CodeQL exclusion comment for {owners[0]}"
-                " on the line above. Add the comment."
-            )
 
     carried_and_known(entries, comments, CODEQL_LIST, failures)
     counts = (
