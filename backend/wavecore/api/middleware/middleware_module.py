@@ -24,7 +24,6 @@ from wavecore.api.exceptions import (
 )
 from wavecore.core.logging.log_safe import log_safe
 
-# Constant for the generic internal error message (used in multiple places)
 _ERR_INTERNAL = "An internal server error occurred"
 
 
@@ -89,7 +88,6 @@ def _sanitize_error_message(message: str, production: bool) -> str:
     if not production:
         return message
 
-    # In production, use generic messages for internal errors
     if "internal" in message.lower() or "server" in message.lower():
         return _ERR_INTERNAL
 
@@ -116,13 +114,11 @@ def _get_stack_trace(exc: Exception, production: bool) -> list[str] | None:
     if production:
         return None
 
-    # In development, include full stack trace
     tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
     return tb_lines
 
 
 def _create_error_response(
-    _status_code: int,
     error_code: str,
     message: str,
     details: dict[str, Any] | None = None,
@@ -180,7 +176,6 @@ def _error_json_response(
 ) -> JSONResponse:
     """Create a JSONResponse wrapping a standardized ErrorResponse."""
     error_response = _create_error_response(
-        _status_code=status_code,
         error_code=error_code,
         message=message,
         details=details,
@@ -320,7 +315,6 @@ def add_error_handling_middleware(app: FastAPI) -> None:
 _LOGGED_MEDIA_TYPE = "application/json"
 _UNNAMED_MEDIA_TYPE = "unknown"
 
-# Global configuration for logging middleware
 _logging_config: dict[str, Any] = {
     "log_request_body": True,
     "log_response_body": True,
@@ -385,7 +379,6 @@ def _truncate_body(body: Any, max_size: int) -> Any:
     if len(body_str) <= max_size:
         return body
 
-    # Truncate and add marker
     truncated_str = body_str[:max_size] + "...[TRUNCATED]"
     return {"_truncated": True, "data": truncated_str}
 
@@ -449,7 +442,6 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process request and log details."""
-        # Check if endpoint should be excluded
         if not _should_log_endpoint(request.url.path):
             return await call_next(request)
 
@@ -460,56 +452,55 @@ class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
         request.state.correlation_id = correlation_id
         request_correlation_id.set(correlation_id)
 
-        # Capture request start time
         start_time = time.time()
 
-        # Log request details
         try:
-            await self._log_request(request, correlation_id)
+            await self._log_request(request)
         except Exception:
             # Logging failures should not crash requests - silently continue
             pass
 
-        # Process request
         response = await call_next(request)
 
-        # Calculate duration
         duration_ms = (time.time() - start_time) * 1000
 
-        # Capture response body for logging (requires consuming the stream)
         response_body: bytes | None = None
         if _logging_config.get("log_response_body", True):
-            try:
-                if isinstance(response, _StreamedResponse):
-                    body_chunks = []
-                    async for chunk in response.body_iterator:
-                        body_chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
-                    response_body = b"".join(body_chunks)
-                    # Rebuild the response with the captured body
-                    response = Response(
-                        content=response_body,
-                        status_code=response.status_code,
-                        headers=dict(response.headers),
-                        media_type=response.media_type,
-                    )
-            except Exception:
-                # Body capture failure should not crash requests
-                pass
+            response, response_body = await self._capture_response_body(response)
 
-        # Log response details
         try:
             self._log_response(request, response, correlation_id, duration_ms, response_body)
         except Exception:
             # Logging failures should not crash requests - silently continue
             pass
 
-        # Add correlation ID to response headers
         response.headers["X-Request-ID"] = correlation_id
         response.headers["X-Correlation-ID"] = correlation_id
 
         return response
 
-    async def _log_request(self, request: Request, _correlation_id: str) -> None:
+    @staticmethod
+    async def _capture_response_body(response: Response) -> tuple[Response, bytes | None]:
+        """Consume a streamed body and return the rebuilt response with the captured bytes."""
+        response_body: bytes | None = None
+        try:
+            if isinstance(response, _StreamedResponse):
+                body_chunks = []
+                async for chunk in response.body_iterator:
+                    body_chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
+                response_body = b"".join(body_chunks)
+                response = Response(
+                    content=response_body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
+        except Exception:
+            # Body capture failure should not crash requests
+            pass
+        return response, response_body
+
+    async def _log_request(self, request: Request) -> None:
         """Capture request body for later logging (body must be read before handler)."""
         request.state.request_body = None
         if not _request_body_is_logged(request):
@@ -602,7 +593,6 @@ def add_request_response_logging_middleware(
     sensitive_field_patterns: list[str] | None = None,
 ) -> None:
     """Add request/response logging middleware to FastAPI application."""
-    # Update global configuration
     _logging_config.update(
         {
             "log_request_body": log_request_body,
@@ -625,7 +615,6 @@ def add_request_response_logging_middleware(
         }
     )
 
-    # Add middleware
     app.add_middleware(RequestResponseLoggingMiddleware)
 
 

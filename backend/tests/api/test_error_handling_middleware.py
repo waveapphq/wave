@@ -758,7 +758,6 @@ class TestHelperFunctionsAndExceptionCoverage:
     def test_create_error_response_with_all_parameters(self) -> None:
         """Test creating error response with all parameters."""
         response = _create_error_response(
-            _status_code=400,
             error_code="TEST_ERROR",
             message="Test message",
             details={"field": "value"},
@@ -777,7 +776,6 @@ class TestHelperFunctionsAndExceptionCoverage:
     def test_create_error_response_generates_request_id(self) -> None:
         """Test creating error response generates request ID if not provided."""
         response = _create_error_response(
-            _status_code=500,
             error_code="INTERNAL_ERROR",
             message="Error",
         )

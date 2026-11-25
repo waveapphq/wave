@@ -45,9 +45,10 @@ The spec imports its own Test under a unique name through `POST /tests` in
   `[INFO] native-landmarks-alpha=alpha-set`, `[WARN] native-landmarks-count=7`
   and `[INFO] native-landmarks-wide=wide-set`; the rows show `alpha-set`, `7`
   and `wide-set`
-- **Console entries:** each is an `article` with no `role` attribute, found by
-  role article and name `<level>: <message>`, as wide as its list slot, with
-  height round(font size x 2.2) and line height round(font size x 1.5) within 1px
+- **Console entries:** each is an `article` with no `role` attribute, as wide
+  as its list slot within 1px; the three Log Block entries are found by role
+  article and name `<level>: <message>`, with height round(font size x 2.2) and
+  line height round(font size x 1.5) within 1px
 - **Tracked run:** outcome passed
 - **Views:** edit view before and after the run, after a reload, and the
   read-only history page of the tracked run

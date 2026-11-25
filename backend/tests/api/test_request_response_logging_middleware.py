@@ -1612,9 +1612,7 @@ class TestLoggingMiddlewareHelperFunctions:
         # Create a custom mock that raises exception only during logging, not during FastAPI parsing
         original_log_request = RequestResponseLoggingMiddleware._log_request
 
-        async def mock_log_request_with_exception(
-            self: Any, request: Request, correlation_id: str
-        ) -> None:
+        async def mock_log_request_with_exception(self: Any, request: Request) -> None:
             # Patch request.body() to raise exception only during logging
             _original_body = request.body
 
@@ -1622,7 +1620,7 @@ class TestLoggingMiddlewareHelperFunctions:
                 raise Exception("Body read failed")
 
             with patch.object(request, "body", mock_body):
-                await original_log_request(self, request, correlation_id)
+                await original_log_request(self, request)
 
         with patch.object(
             RequestResponseLoggingMiddleware, "_log_request", mock_log_request_with_exception

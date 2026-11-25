@@ -22,8 +22,9 @@
  *    values alpha-set, 7 and wide-set.
  * 5. Every console entry is an article with the implicit role article, its
  *    name "<level>: <message>", and no explicit role attribute.
- * 6. A console entry's box, within 1 pixel, is as wide as its list slot,
- *    round(font size x 2.2) high, line height round(font size x 1.5).
+ * 6. Every console entry's box, within 1 pixel, is as wide as its list slot;
+ *    the three Log Block entries are round(font size x 2.2) high with line
+ *    height round(font size x 1.5).
  * 7. Criteria 1 to 3 hold after the run, after a reload, and on the
  *    read-only history page of a tracked run of the same Test (started through
  *    POST /executions, outcome passed; a Workbench run has no history page);
