@@ -39,6 +39,7 @@ def no_unclosed_resource(
 ) -> Iterator[None]:
     """Fail a test that leaves a socket, transport or stream writer unclosed (NETCAT-6)."""
     yield
+    gc.collect(1)  # the event loop is closed by now, so what it dropped is reported here
     assert [str(w.message) for w in recwarn if issubclass(w.category, ResourceWarning)] == []
 
 
@@ -88,12 +89,13 @@ async def _serve(kind: str, listener: Listener, reader: Any, writer: Any) -> Non
 async def listen() -> AsyncIterator[Callable[..., Awaitable[Listener]]]:
     """Start by kind: tcp-echo|banner|answer|silent, udp-echo|silent, or "udp" with replies."""
     loop, closers = asyncio.get_running_loop(), list[Callable[[], object]]()
+    servers: list[asyncio.Server] = []
 
     async def start(kind: str, replies: Replies | None = None) -> Listener:
         listener = Listener()
         if not kind.startswith("udp"):
             server = await asyncio.start_server(partial(_serve, kind, listener), "127.0.0.1", 0)
-            closers.append(server.close)
+            servers.append(server)
             listener.port = server.sockets[0].getsockname()[1]
             return listener
         sock = socket.socket(type=socket.SOCK_DGRAM)
@@ -111,8 +113,13 @@ async def listen() -> AsyncIterator[Callable[..., Awaitable[Listener]]]:
         return listener
 
     yield start
-    for close in closers:
+    for close in [*closers, *(server.close for server in servers)]:
         close()
+    # A far end still closing its side finishes before the loop closes; one left open is a leak.
+    with suppress(TimeoutError):
+        async with asyncio.timeout(1):
+            for server in servers:
+                await server.wait_closed()
 
 
 def free_port() -> int:
