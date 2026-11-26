@@ -82,10 +82,6 @@ addopts = [
     # Disable cache to avoid MemoryError when serializing 2000+ test node IDs
     "-p", "no:cacheprovider"
 ]
-# Filter known benign warnings from Python 3.12 asyncio subprocess cleanup
-filterwarnings = [
-    "ignore:Exception ignored in.*BaseSubprocessTransport:pytest.PytestUnraisableExceptionWarning"
-]
 
 [tool.coverage.run]
 data_file = ".coverage/.coverage"

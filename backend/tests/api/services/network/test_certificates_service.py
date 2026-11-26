@@ -226,8 +226,9 @@ NON_POSITIVE_SERIAL = (
 
 def _bundle() -> list[x509.Certificate]:
     # certifi ships a root with a non-positive serial, and cryptography warns about it.
+    pem = Path(certifi.where()).read_bytes()
     with pytest.warns(CryptographyDeprecationWarning, match=NON_POSITIVE_SERIAL):
-        return x509.load_pem_x509_certificates(Path(certifi.where()).read_bytes())
+        return x509.load_pem_x509_certificates(pem)
 
 
 def _load_error(block: str) -> str:

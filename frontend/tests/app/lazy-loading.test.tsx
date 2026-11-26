@@ -212,7 +212,7 @@ describe('Route-Based Lazy Loading', () => {
 
       // First navigation
       await act(async () => {
-        router.navigate('/lazy')
+        await router.navigate('/lazy')
         await Promise.resolve()
       })
       expect(screen.getByText('Tracked Component')).toBeInTheDocument()
@@ -220,14 +220,14 @@ describe('Route-Based Lazy Loading', () => {
 
       // Navigate away
       await act(async () => {
-        router.navigate('/')
+        await router.navigate('/')
         await Promise.resolve()
       })
       expect(screen.getByText('Home')).toBeInTheDocument()
 
       // Navigate back - should use cached component
       await act(async () => {
-        router.navigate('/lazy')
+        await router.navigate('/lazy')
         await Promise.resolve()
       })
       expect(screen.getByText('Tracked Component')).toBeInTheDocument()
@@ -790,7 +790,7 @@ describe('Route-Based Lazy Loading', () => {
 
       // Navigate to record pattern
       await act(async () => {
-        router.navigate('/tests')
+        await router.navigate('/tests')
         await Promise.resolve()
       })
 
@@ -949,8 +949,8 @@ describe('Route-Based Lazy Loading', () => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
 
       // Navigate to tests
-      act(() => {
-        router.navigate('/tests')
+      await act(async () => {
+        await router.navigate('/tests')
       })
 
       // Should show loading
@@ -1012,8 +1012,8 @@ describe('Route-Based Lazy Loading', () => {
       render(<RouterProvider router={router} />)
 
       // Navigate to slow page
-      act(() => {
-        router.navigate('/slow')
+      await act(async () => {
+        await router.navigate('/slow')
       })
 
       // Layout should remain visible during loading

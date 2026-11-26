@@ -5,9 +5,9 @@
  * navigation actions, and history state preservation.
  */
 
-import { afterEach, describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import { routeConfig } from '../../src/app/router'
 
 // The list pages toast through useToast; the history tests do not look at toasts.
@@ -47,28 +47,52 @@ vi.mock('@/features/tests/api/crud', async (importOriginal) => pendingReads(awai
 
 type MemoryRouter = ReturnType<typeof createMemoryRouter>
 
-/** Render the routes inside act, so the first lazy route resolves where React expects it. */
-async function renderRoutes(router: MemoryRouter): Promise<void> {
-  await act(async () => {
-    render(<RouterProvider router={router} />)
-  })
+/** Shows the location of the last committed render, which a lazy route holds back until it loads. */
+function CommittedLocation() {
+  const { pathname, search, hash } = useLocation()
+  return (
+    <>
+      <output data-testid="committed-location">{pathname + search + hash}</output>
+      <Outlet />
+    </>
+  )
 }
 
-// Every lazy route a test navigated to finishes loading before the test ends, inside
-// waitFor, so React reports no suspended resource finishing outside act.
-afterEach(async () => {
+// A pathless layout route around the app routes: it matches no path of its own.
+const historyRoutes = [{ element: <CommittedLocation />, children: routeConfig }]
+
+/** Wait inside waitFor, never outside act, until the screen shows the router's location loaded. */
+async function routeSettled(router: MemoryRouter): Promise<void> {
+  const { pathname, search, hash } = router.state.location
   await waitFor(
     () => {
+      expect(screen.getByTestId('committed-location').textContent).toBe(pathname + search + hash)
       expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
     },
     { timeout: 20000 }
   )
-})
+}
+
+/** Render the routes inside act, then wait until the first lazy route has loaded. */
+async function renderRoutes(router: MemoryRouter): Promise<void> {
+  await act(async () => {
+    render(<RouterProvider router={router} />)
+  })
+  await routeSettled(router)
+}
+
+/** Run the navigations inside act, then wait until the lazy route they reach has loaded. */
+async function navigateSettled(router: MemoryRouter, navigations: () => Promise<unknown>): Promise<void> {
+  await act(async () => {
+    await navigations()
+  })
+  await routeSettled(router)
+}
 
 describe('Browser History Integration', () => {
   describe('History Navigation', () => {
     it('back button returns to previous route', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests'],
         initialIndex: 1,
       })
@@ -81,9 +105,7 @@ describe('Browser History Integration', () => {
       })
 
       // Go back
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/dashboard')
@@ -91,7 +113,7 @@ describe('Browser History Integration', () => {
     })
 
     it('forward button returns to next route after going back', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests', '/suites'],
         initialIndex: 2,
       })
@@ -99,31 +121,25 @@ describe('Browser History Integration', () => {
       await renderRoutes(router)
 
       // Go back twice
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
       })
 
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/dashboard')
       })
 
       // Go forward
-      act(() => {
-        router.navigate(1)
-      })
+      await navigateSettled(router, () => router.navigate(1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
       })
     })
 
     it('multiple back navigations work correctly', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests', '/suites', '/regressions'],
         initialIndex: 3,
       })
@@ -132,39 +148,31 @@ describe('Browser History Integration', () => {
 
       expect(router.state.location.pathname).toBe('/regressions')
 
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/suites')
       })
 
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
       })
 
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/dashboard')
       })
     })
 
     it('history state is preserved during navigation', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
       // Navigate with state
-      act(() => {
-        router.navigate('/tests', { state: { filter: 'active', page: 2 } })
-      })
+      await navigateSettled(router, () => router.navigate('/tests', { state: { filter: 'active', page: 2 } }))
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
@@ -172,17 +180,13 @@ describe('Browser History Integration', () => {
       })
 
       // Navigate away
-      act(() => {
-        router.navigate('/suites')
-      })
+      await navigateSettled(router, () => router.navigate('/suites'))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/suites')
       })
 
       // Go back - state should be preserved
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
         expect(router.state.location.state).toEqual({ filter: 'active', page: 2 })
@@ -190,16 +194,14 @@ describe('Browser History Integration', () => {
     })
 
     it('query parameters are preserved in history', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
       // Navigate with query params
-      act(() => {
-        router.navigate('/tests?status=failed&page=3')
-      })
+      await navigateSettled(router, () => router.navigate('/tests?status=failed&page=3'))
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
@@ -207,10 +209,12 @@ describe('Browser History Integration', () => {
       })
 
       // Navigate away and back
-      act(() => {
-        router.navigate('/suites')
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () =>
+        Promise.all([
+          router.navigate('/suites'),
+          router.navigate(-1),
+        ])
+      )
 
       await waitFor(() => {
         expect(router.state.location.search).toBe('?status=failed&page=3')
@@ -218,25 +222,25 @@ describe('Browser History Integration', () => {
     })
 
     it('hash fragments are preserved in history', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
-      act(() => {
-        router.navigate('/tests/test-123#section-results')
-      })
+      await navigateSettled(router, () => router.navigate('/tests/test-123#section-results'))
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests/test-123')
         expect(router.state.location.hash).toBe('#section-results')
       })
 
-      act(() => {
-        router.navigate('/suites')
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () =>
+        Promise.all([
+          router.navigate('/suites'),
+          router.navigate(-1),
+        ])
+      )
 
       await waitFor(() => {
         expect(router.state.location.hash).toBe('#section-results')
@@ -246,15 +250,13 @@ describe('Browser History Integration', () => {
 
   describe('History Action Types', () => {
     it('regular navigation creates PUSH action', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
-      act(() => {
-        router.navigate('/tests')
-      })
+      await navigateSettled(router, () => router.navigate('/tests'))
 
       await waitFor(() => {
         expect(router.state.historyAction).toBe('PUSH')
@@ -262,15 +264,13 @@ describe('Browser History Integration', () => {
     })
 
     it('replace navigation creates REPLACE action', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
-      act(() => {
-        router.navigate('/tests', { replace: true })
-      })
+      await navigateSettled(router, () => router.navigate('/tests', { replace: true }))
 
       await waitFor(() => {
         expect(router.state.historyAction).toBe('REPLACE')
@@ -278,16 +278,14 @@ describe('Browser History Integration', () => {
     })
 
     it('back navigation creates POP action', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests'],
         initialIndex: 1,
       })
 
       await renderRoutes(router)
 
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
 
       await waitFor(() => {
         expect(router.state.historyAction).toBe('POP')
@@ -295,18 +293,20 @@ describe('Browser History Integration', () => {
     })
 
     it('forward navigation creates POP action', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests'],
         initialIndex: 0,
       })
 
       await renderRoutes(router)
 
-      act(() => {
-        router.navigate('/tests')
-        router.navigate(-1)
-        router.navigate(1)
-      })
+      await navigateSettled(router, () =>
+        Promise.all([
+          router.navigate('/tests'),
+          router.navigate(-1),
+          router.navigate(1),
+        ])
+      )
 
       await waitFor(() => {
         expect(router.state.historyAction).toBe('POP')
@@ -316,7 +316,7 @@ describe('Browser History Integration', () => {
 
   describe('Browser URL Updates', () => {
     it('URL reflects current route', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/tests'],
       })
 
@@ -324,9 +324,7 @@ describe('Browser History Integration', () => {
 
       expect(router.state.location.pathname).toBe('/tests')
 
-      act(() => {
-        router.navigate('/suites/suite-123')
-      })
+      await navigateSettled(router, () => router.navigate('/suites/suite-123'))
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/suites/suite-123')
@@ -334,7 +332,7 @@ describe('Browser History Integration', () => {
     })
 
     it('URL includes query parameters', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/tests?status=active'],
       })
 
@@ -344,7 +342,7 @@ describe('Browser History Integration', () => {
     })
 
     it('URL includes hash fragments', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/tests/test-1#execution-log'],
       })
 
@@ -356,7 +354,7 @@ describe('Browser History Integration', () => {
 
   describe('Programmatic History Management', () => {
     it('can navigate to specific history index', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests', '/suites', '/regressions'],
         initialIndex: 3,
       })
@@ -364,9 +362,7 @@ describe('Browser History Integration', () => {
       await renderRoutes(router)
 
       // Go back 2 steps
-      act(() => {
-        router.navigate(-2)
-      })
+      await navigateSettled(router, () => router.navigate(-2))
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
@@ -374,32 +370,26 @@ describe('Browser History Integration', () => {
     })
 
     it('replace does not add history entry', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
       // Push first
-      act(() => {
-        router.navigate('/tests')
-      })
+      await navigateSettled(router, () => router.navigate('/tests'))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/tests')
       })
 
       // Replace
-      act(() => {
-        router.navigate('/suites', { replace: true })
-      })
+      await navigateSettled(router, () => router.navigate('/suites', { replace: true }))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/suites')
       })
 
       // Go back - should go to dashboard, not tests
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/dashboard')
       })
@@ -408,16 +398,14 @@ describe('Browser History Integration', () => {
 
   describe('History State Edge Cases', () => {
     it('handles navigation at history start (cannot go back)', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
       // Try to go back at the start
-      act(() => {
-        router.navigate(-1)
-      })
+      await navigateSettled(router, () => router.navigate(-1))
 
       // Should still be on dashboard
       await waitFor(() => {
@@ -426,7 +414,7 @@ describe('Browser History Integration', () => {
     })
 
     it('handles navigation at history end (cannot go forward)', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard', '/tests'],
         initialIndex: 1,
       })
@@ -434,9 +422,7 @@ describe('Browser History Integration', () => {
       await renderRoutes(router)
 
       // Try to go forward at the end
-      act(() => {
-        router.navigate(1)
-      })
+      await navigateSettled(router, () => router.navigate(1))
 
       // Should still be on tests
       await waitFor(() => {
@@ -445,19 +431,21 @@ describe('Browser History Integration', () => {
     })
 
     it('handles rapid navigation correctly', async () => {
-      const router = createMemoryRouter(routeConfig, {
+      const router = createMemoryRouter(historyRoutes, {
         initialEntries: ['/dashboard'],
       })
 
       await renderRoutes(router)
 
       // Rapid navigation
-      act(() => {
-        router.navigate('/tests')
-        router.navigate('/suites')
-        router.navigate('/regressions')
-        router.navigate('/executions')
-      })
+      await navigateSettled(router, () =>
+        Promise.all([
+          router.navigate('/tests'),
+          router.navigate('/suites'),
+          router.navigate('/regressions'),
+          router.navigate('/executions'),
+        ])
+      )
 
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/executions')

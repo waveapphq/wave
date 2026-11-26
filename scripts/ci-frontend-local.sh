@@ -58,8 +58,7 @@ echo "Image: $IMAGE_NAME (dependencies pre-installed)"
 echo "════════════════════════════════════════════"
 echo ""
 
-# The clone is mounted here, so this uses the node_modules from npm ci on the host
-# --userns=keep-id maps the host user to ciuser in container for proper permissions
+# keep-id lets the container user read and write the host's mounted node_modules
 CONTAINER_START=$(date +%s)
 podman run --rm \
   --userns=keep-id \
@@ -68,8 +67,7 @@ podman run --rm \
   -w /workspace/frontend \
   "$IMAGE_NAME" \
   bash -c '
-# Capture stderr to detect warnings that vitest does not fail on
-# --bail stops on first test failure for fast feedback
+# Capture stderr to catch warnings vitest does not fail on
 STDERR_FILE=$(mktemp)
 echo "✅ Running tests with coverage..."
 TESTS_START=$(date +%s)
@@ -83,10 +81,8 @@ if [ $TEST_EXIT -ne 0 ]; then
   exit 1
 fi
 
-# Unexpected stderr fails CI; npm notices, Node experimental warnings and React Flow act() notices are benign.
-FILTERED_STDERR=$(grep -v -E "^(npm WARN|npm notice|ExperimentalWarning)|FlowRenderer|not wrapped in act|fire events that update state|assert on the output|testing the behavior the user|react.dev/link/wrap-tests-with-act|stderr \|" "$STDERR_FILE" 2>/dev/null || true)
-# Remove empty lines left after filtering
-FILTERED_STDERR=$(echo "$FILTERED_STDERR" | grep -v -E "^\s*$" 2>/dev/null || true)
+# Any stderr fails CI; only vitest "stderr |" label lines, "npm notice" lines and blank lines are dropped.
+FILTERED_STDERR=$(grep -v -E "^(stderr \||npm notice)|^\s*$" "$STDERR_FILE" 2>/dev/null || true)
 rm -f "$STDERR_FILE"
 
 if [ -n "$FILTERED_STDERR" ]; then
@@ -96,7 +92,7 @@ if [ -n "$FILTERED_STDERR" ]; then
   echo "$FILTERED_STDERR"
   echo "────────────────────────────────────────────"
   echo "CI fails on stderr to catch React warnings, hydration errors, etc."
-  echo "Fix the warnings above or add to the filter if benign."
+  echo "Fix the warnings above."
   exit 1
 fi
 
