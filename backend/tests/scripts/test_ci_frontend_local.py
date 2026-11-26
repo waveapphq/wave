@@ -131,8 +131,10 @@ class TestTestsAndCoverageOnly:
         assert stubs.calls("scripts/check-text.sh") == []
         assert stubs.calls("scripts/check-orphaned-files.sh") == []
         for call in node_calls(stubs):
-            assert "lint" not in call.args and "eslint" not in call.line, call.line
-            assert "type-check" not in call.args and "tsc" not in call.args, call.line
+            assert "lint" not in call.args, call.line
+            assert "eslint" not in call.line, call.line
+            assert "type-check" not in call.args, call.line
+            assert "tsc" not in call.args, call.line
             assert "build" not in call.args, call.line
 
     def test_the_tests_run_once_with_coverage(

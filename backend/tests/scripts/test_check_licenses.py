@@ -566,10 +566,13 @@ class TestApprovedList:
         for item in packages:
             assert set(item) <= {"ecosystem", "name", "license", "reason", "bundled"}, item
             assert item["ecosystem"] in ("pypi", "npm", "wheel"), item
-            assert item["name"] and item["license"], item
-            assert item["reason"].strip() and "\n" not in item["reason"], item
+            assert item["name"], item
+            assert item["license"], item
+            assert item["reason"].strip(), item
+            assert "\n" not in item["reason"], item
             bundled = item.get("bundled", [])
-            assert isinstance(bundled, list) and all(isinstance(b, str) for b in bundled), item
+            assert isinstance(bundled, list), item
+            assert all(isinstance(b, str) for b in bundled), item
 
     def test_entries_are_sorted_by_ecosystem_then_name(
         self, packages: list[dict[str, Any]]

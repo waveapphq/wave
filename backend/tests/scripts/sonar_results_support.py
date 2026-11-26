@@ -378,7 +378,7 @@ def gate_lines() -> list[str]:
 def no_code_note(project: Project, head: str) -> str:
     return (
         f"0 (no code changed: {head[:12]} adds or modifies no {project.kind} file"
-        f" under {project.folder}/ against {RELEASE})"
+        f" under {project.folder}/ that SonarQube counts as code against {RELEASE})"
     )
 
 
@@ -388,6 +388,67 @@ def not_proven(project: Project, head: str, count: int) -> str:
         f"NOT PROVEN: the scan analyzed 0 lines while {head[:12]} changed {count}"
         f" {project.kind} {noun}"
     )
+
+
+# Paths relative to the project folder that SonarQube counts as tests while sonar.tests is not
+# set: a directory named doc, docs, test, tests, mock or mocks or ending in test or tests, or a
+# file name that starts with test or contains "test." or "tests.". {s} is the project's code ending.
+TEST_FILE_VARIANTS = [
+    "doc/example{s}",
+    "docs/example{s}",
+    "test/example{s}",
+    "tests/example{s}",
+    "mock/example{s}",
+    "mocks/example{s}",
+    "lib/test/example{s}",
+    "lib/tests/deep/example{s}",
+    "lib/loadtest/example{s}",
+    "lib/unittests/example{s}",
+    "lib/mocks/example{s}",
+    "lib/test_example{s}",
+    "lib/testing{s}",
+    "lib/example.test{s}",
+    "lib/example.tests{s}",
+    "lib/example_test{s}",
+    "lib/conftest{s}",
+]
+TEST_FILE_IDS = [
+    "dir-doc",
+    "dir-docs",
+    "dir-test",
+    "dir-tests",
+    "dir-mock",
+    "dir-mocks",
+    "nested-dir-test",
+    "deep-in-dir-tests",
+    "dir-ending-test",
+    "dir-ending-tests",
+    "nested-dir-mocks",
+    "name-starts-test",
+    "name-starts-test-word",
+    "name-has-test-dot",
+    "name-has-tests-dot",
+    "name-ends-test",
+    "name-conftest",
+]
+
+# Paths relative to the project folder that look close to a test path but match no rule above.
+CODE_FILE_VARIANTS = [
+    "lib/attestation{s}",
+    "lib/latest_value{s}",
+    "lib/my_tests_util{s}",
+    "lib/documents/example{s}",
+    "lib/mockups/example{s}",
+    "lib/testkit/example{s}",
+    "lib/test_helpers/example{s}",
+    "lib/tests_data/example{s}",
+]
+
+
+def in_project(project: Project, rel: str) -> str:
+    """A path under the project folder with the project's code ending."""
+    suffix = Path(project.code_file).suffix
+    return f"{project.folder}/{rel.format(s=suffix)}"
 
 
 def usage(tree: Tree) -> str:
@@ -809,6 +870,84 @@ class SonarResultsCases:
         assert not got.matching(r"^NOT PROVEN: .*$")
         for path in FINDING_PATHS:
             assert fake.requests_to(path) == [], f"read {path} after the error"
+
+    # --- Files SonarQube counts as tests while sonar.tests is not set ---
+
+    @pytest.mark.parametrize("rel", TEST_FILE_VARIANTS, ids=TEST_FILE_IDS)
+    def test_0_lines_with_only_a_test_file_passes_with_the_no_code_note(
+        self,
+        tmp_path: Path,
+        tree: Tree,
+        fake: FakeSonarQube,
+        project: Project,
+        rel: str,
+    ) -> None:
+        tested = in_project(project, rel)
+        tree.branch()
+        head = tree.change(tested)
+        fake.measures["ncloc"] = "0"
+        got = run_results(tmp_path, tree, fake)
+        assert got.code == 0, "\n".join(got.lines)
+        assert lines_of_code(no_code_note(project, head)) in got.lines
+        assert got.lines[got.index("  Quality Gate:        ERROR") :][:3] == gate_lines()
+        assert not got.matching(r"^NOT PROVEN: .*$")
+        assert fake.requests_to(ISSUES_PATH)
+        assert fake.requests_to(HOTSPOTS_PATH)
+        assert dashboard(project, {"branch": FIX_BRANCH}) in got.lines
+
+    def test_0_lines_with_every_kind_of_test_file_in_one_commit_passes(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project
+    ) -> None:
+        got = self.check_counted(
+            tmp_path,
+            tree,
+            fake,
+            project,
+            counted=[],
+            ignored=[in_project(project, rel) for rel in TEST_FILE_VARIANTS],
+        )
+        assert not got.matching(r"^NOT PROVEN: .*$")
+        assert fake.requests_to(ISSUES_PATH)
+
+    def test_0_lines_with_test_and_code_files_lists_only_the_code_files(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project
+    ) -> None:
+        self.check_counted(
+            tmp_path,
+            tree,
+            fake,
+            project,
+            counted=[project.code_file],
+            ignored=[in_project(project, rel) for rel in TEST_FILE_VARIANTS],
+        )
+        for path in FINDING_PATHS:
+            assert fake.requests_to(path) == [], f"read {path} after NOT PROVEN"
+
+    def test_names_close_to_a_test_name_still_count_as_code(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project
+    ) -> None:
+        self.check_counted(
+            tmp_path,
+            tree,
+            fake,
+            project,
+            counted=[in_project(project, rel) for rel in CODE_FILE_VARIANTS],
+            ignored=[in_project(project, "lib/tests/helper{s}")],
+        )
+
+    def test_code_file_moved_into_a_tests_folder_passes_with_the_no_code_note(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project
+    ) -> None:
+        tree.branch()
+        moved = in_project(project, "tests/app{s}")
+        (tree.repo.root / moved).parent.mkdir(parents=True)
+        tree.repo.git("mv", project.code_file, moved)
+        head = tree.repo.commit()
+        fake.measures["ncloc"] = "0"
+        got = run_results(tmp_path, tree, fake)
+        assert got.code == 0, "\n".join(got.lines)
+        assert lines_of_code(no_code_note(project, head)) in got.lines
+        assert not got.matching(r"^NOT PROVEN: .*$")
 
     def check_counted(
         self,

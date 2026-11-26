@@ -29,7 +29,7 @@ class TestSonarResultsBackend(SonarResultsCases):
             tree,
             fake,
             project,
-            counted=["backend/wavecore/app.py", "backend/tests/test_new.py"],
+            counted=["backend/wavecore/app.py", "backend/scripts/new.py"],
             ignored=[],
         )
 

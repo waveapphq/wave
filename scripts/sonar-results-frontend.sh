@@ -6,8 +6,7 @@
 # Usage: sonar-results-frontend.sh [--fix] [--pr <number>]
 #   --fix          also print each finding's flow and, once per rule, why it is an issue and how to fix it
 #   --pr <number>  read that pull request's results and gate instead of the current branch's
-# Exit 3 (NOT PROVEN): a fix or feature branch's analysis counts 0 lines while HEAD adds or modifies
-# TypeScript or JavaScript files under frontend/ against its release branch; when HEAD changes none, 0 lines pass.
+# Exit 3 (NOT PROVEN): a branch scan counted 0 lines while HEAD changed code.
 set -euo pipefail
 
 USAGE="Usage: $0 [--fix] [--pr <number>]"
@@ -153,8 +152,16 @@ def fetch_duplication_detail(file_key):
     return api("/api/duplications/show", {"key": file_key})
 
 
+def counted_as_test(name):
+    """Mirrors the scanner's own test detection when sonar.tests is not set."""
+    *folders, file_name = name[len(PROJECT_FOLDER) + 1:].split("/")
+    if any(folder in ("doc", "docs", "mock", "mocks") or folder.endswith(("test", "tests")) for folder in folders):
+        return True
+    return file_name.startswith("test") or "test." in file_name or "tests." in file_name
+
+
 def zero_line_check(ncloc):
-    """At 0 lines on a fix or feature branch: HEAD, the code files it adds or modifies here against its release branch, and a Lines of Code note."""
+    """HEAD, its changed code files and a Lines of Code note for a 0-line branch scan."""
     if ncloc or not TARGET or PULL_REQUEST:
         return "", [], ""
 
@@ -168,13 +175,12 @@ def zero_line_check(ncloc):
     except (subprocess.CalledProcessError, OSError) as e:
         print(f"  ERROR comparing HEAD with origin/{TARGET}: {getattr(e, 'stderr', '').strip() or e}")
         sys.exit(1)
-    unseen = [name for name in names.split("\0") if name.endswith(CODE_SUFFIXES)]
-    note = "" if unseen else f" (no code changed: {head[:12]} adds or modifies no {CODE_KIND} file under {PROJECT_FOLDER}/ against {TARGET})"
+    unseen = [name for name in names.split("\0") if name.endswith(CODE_SUFFIXES) and not counted_as_test(name)]
+    note = "" if unseen else f" (no code changed: {head[:12]} adds or modifies no {CODE_KIND} file under {PROJECT_FOLDER}/ that SonarQube counts as code against {TARGET})"
     return head, unseen, note
 
 
 def print_gate():
-    """The quality gate of the branch or pull request read above, with each condition and its limit."""
     try:
         gate = api("/api/qualitygates/project_status", {"projectKey": PROJECT_KEY})["projectStatus"]
     except Exception as e:

@@ -50,7 +50,7 @@ class TestSonarResultsFrontend(SonarResultsCases):
             counted=[
                 "frontend/src/app.ts",
                 "frontend/src/view.tsx",
-                "frontend/tests/view.test.js",
+                "frontend/src/view.js",
                 "frontend/src/legacy.jsx",
                 "frontend/vite.config.mjs",
             ],
