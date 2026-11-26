@@ -275,9 +275,7 @@ describe('useTestRun.handleDebug', () => {
   })
 
   it('blocks the run and surfaces a toast when the validation API throws', async () => {
-    // Production code logs a console.error on validation failure; silence
-    // it here so CI's stderr-catch doesn't flag the deliberately-triggered
-    // rejection as a test failure.
+    // The validation failure is logged for developers.
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       const { validateTest } = await import('@/features/tests/api/validation')
@@ -297,6 +295,10 @@ describe('useTestRun.handleDebug', () => {
       expect(mockToast.error).toHaveBeenCalledWith(
         'Failed to validate test before running.',
         'Validation Error',
+      )
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Pre-run validation failed:',
+        expect.objectContaining({ message: 'backend down' })
       )
     } finally {
       consoleSpy.mockRestore()

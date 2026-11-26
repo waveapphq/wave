@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from tests.scripts.script_support import (
+    NODE_BODY,
     Call,
     Repo,
     Run,
@@ -48,6 +49,18 @@ def stubs(tmp_path: Path, repo: Repo) -> Stubs:
         tools.script(repo, rel, key=key)
     tools.sourced(repo, "scripts/sonar-env.sh")
     return tools
+
+
+# npm and npx that print the test run's stderr from STUB_STDERR before they answer as usual.
+NODE_WITH_STDERR = (
+    """
+if ("test:coverage" in ARGS or "vitest" in " ".join(ARGS)) and os.environ.get("STUB_STDERR"):
+    with open(os.environ["STUB_STDERR"], encoding="utf-8") as _stderr:
+        sys.stderr.write(_stderr.read())
+    sys.stderr.flush()
+"""
+    + NODE_BODY
+)
 
 
 def frontend_ci(repo: Repo, stubs: Stubs, tmp_path: Path, **extra: str) -> Run:
@@ -197,3 +210,143 @@ class TestLog:
         assert len(log_lines(result, log)) >= 2, result.lines
         assert named[0] < len(result.lines) // 2 < named[-1]
         assert log.is_file()
+
+
+ACT_UPDATE = [
+    "Warning: An update to ProfilesListContainer inside a test was not wrapped in act(...).",
+    "",
+    "When testing, code that causes React state updates should be wrapped into act(...):",
+    "",
+    "act(() => {",
+    "  /* fire events that update state */",
+    "});",
+    "/* assert on the output */",
+    "",
+    "This ensures that you're testing the behavior the user would see in the browser."
+    " Learn more at https://react.dev/link/wrap-tests-with-act",
+]
+
+SUSPENDED_RESOURCE = [
+    "A suspended resource finished loading inside a test, but the event was not wrapped in"
+    " act(...).",
+    "",
+    "When testing, code that resolves suspended data should be wrapped into act(...):",
+    "",
+    "act(() => {",
+    "  /* finish loading suspended data */",
+    "});",
+    "/* assert on the output */",
+    "",
+    "This ensures that you're testing the behavior the user would see in the browser."
+    " Learn more at https://react.dev/link/wrap-tests-with-act",
+]
+
+FLOW_RENDERER_ACT = ["An update to FlowRenderer inside a test was not wrapped in act(...)."]
+
+UNAWAITED_ACT = [
+    "A component suspended inside an `act` scope, but the `act` call was not awaited. When"
+    " testing React components that depend on asynchronous data, you must await the result:",
+]
+
+REACT_KEY_WARNING = ['Each child in a list should have a unique "key" prop.']
+
+NPM_WARN = ["npm WARN config production Use `--omit=dev` instead."]
+
+NODE_EXPERIMENTAL = [
+    "(node:41) ExperimentalWarning: SQLite is an experimental feature and might change at any"
+    " time",
+]
+
+VITEST_LABELS = [
+    "stderr | tests/app/history.test.tsx > Browser History Integration > back button",
+    "stderr | tests/app/history.test.tsx",
+]
+
+NPM_NOTICES = [
+    "npm notice run wave-frontend@1.0.0 test:coverage",
+    "npm notice New patch version of npm available! 12.2.0 -> 12.2.3",
+    "npm notice To update run: npm install -g npm@12.2.3",
+]
+
+
+@pytest.fixture
+def loud_stubs(stubs: Stubs) -> Stubs:
+    """The stub tools, with npm and npx printing the canned test stderr."""
+    stubs.tool("npm", NODE_WITH_STDERR)
+    stubs.tool("npx", NODE_WITH_STDERR)
+    return stubs
+
+
+def run_with_stderr(repo: Repo, stubs: Stubs, tmp_path: Path, lines: list[str]) -> Run:
+    canned = tmp_path / "vitest-stderr.txt"
+    canned.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+    return frontend_ci(repo, stubs, tmp_path, STUB_STDERR=str(canned))
+
+
+def listed_twice(result: Run, line: str) -> bool:
+    """Printed once by the test run and once more in the list of unexpected stderr."""
+    return result.lines.count(line) >= 2
+
+
+class TestStderrGate:
+    """Only vitest's `stderr |` label lines and npm's own `npm notice` lines may reach stderr."""
+
+    @pytest.mark.parametrize(
+        "lines",
+        [
+            ACT_UPDATE,
+            SUSPENDED_RESOURCE,
+            FLOW_RENDERER_ACT,
+            UNAWAITED_ACT,
+            REACT_KEY_WARNING,
+            NPM_WARN,
+            NODE_EXPERIMENTAL,
+        ],
+        ids=[
+            "act-state-update",
+            "suspended-resource",
+            "flow-renderer-act",
+            "suspended-in-unawaited-act",
+            "react-key-warning",
+            "npm-warn",
+            "node-experimental-warning",
+        ],
+    )
+    def test_a_warning_fails_the_run_and_is_listed(
+        self, repo: Repo, loud_stubs: Stubs, tmp_path: Path, lines: list[str]
+    ) -> None:
+        result = run_with_stderr(repo, loud_stubs, tmp_path, lines)
+
+        assert result.code == 1, result.lines
+        for line in [line for line in lines if line.strip()]:
+            assert listed_twice(result, line), (line, result.lines)
+
+    def test_a_warning_after_a_vitest_label_fails_the_run(
+        self, repo: Repo, loud_stubs: Stubs, tmp_path: Path
+    ) -> None:
+        result = run_with_stderr(
+            repo, loud_stubs, tmp_path, [VITEST_LABELS[0], *SUSPENDED_RESOURCE]
+        )
+
+        assert result.code == 1, result.lines
+        assert listed_twice(result, SUSPENDED_RESOURCE[0]), result.lines
+
+    def test_a_warning_among_npm_notices_fails_the_run(
+        self, repo: Repo, loud_stubs: Stubs, tmp_path: Path
+    ) -> None:
+        result = run_with_stderr(repo, loud_stubs, tmp_path, [*NPM_NOTICES, *ACT_UPDATE])
+
+        assert result.code == 1, result.lines
+        assert listed_twice(result, ACT_UPDATE[0]), result.lines
+
+    @pytest.mark.parametrize(
+        "lines",
+        [VITEST_LABELS, NPM_NOTICES, [*NPM_NOTICES, "", *VITEST_LABELS, "  "], []],
+        ids=["vitest-labels", "npm-notices", "both-with-blank-lines", "nothing"],
+    )
+    def test_only_labels_and_npm_notices_pass(
+        self, repo: Repo, loud_stubs: Stubs, tmp_path: Path, lines: list[str]
+    ) -> None:
+        result = run_with_stderr(repo, loud_stubs, tmp_path, lines)
+
+        assert result.code == 0, result.lines

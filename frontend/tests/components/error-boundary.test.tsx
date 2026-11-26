@@ -39,12 +39,16 @@
  */
 
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ErrorBoundary, ErrorFallback } from '@/components/ui/error-boundary'
 import { ToastProvider, ToastContainer } from '@/components/ui/toast'
+import { caughtErrorReport } from '../utils/caught-error-log'
+
+// React reports every error a boundary catches; each test that throws asserts the reports.
+let consoleError: MockInstance<typeof console.error>
 
 // Helper component that throws an error
 function ThrowError({ error }: { error: Error }): never {
@@ -64,9 +68,8 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe('ErrorBoundary Component', () => {
-  // Suppress console.error for error boundary tests
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -127,6 +130,9 @@ describe('ErrorBoundary Component', () => {
         </TestWrapper>
       )
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Test error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('catches errors thrown during render', () => {
@@ -142,6 +148,9 @@ describe('ErrorBoundary Component', () => {
         </TestWrapper>
       )
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Render error', 'ErrorBoundary', 'BrokenComponent'),
+      ])
     })
 
     it('displays error fallback UI on error', () => {
@@ -153,10 +162,12 @@ describe('ErrorBoundary Component', () => {
         </TestWrapper>
       )
       expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Test error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('logs error to console (for monitoring)', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const testError = new Error('Logged error')
 
       render(
@@ -167,7 +178,9 @@ describe('ErrorBoundary Component', () => {
         </TestWrapper>
       )
 
-      expect(consoleErrorSpy).toHaveBeenCalled()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Logged error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('captures component stack trace', () => {
@@ -189,6 +202,9 @@ describe('ErrorBoundary Component', () => {
       expect(errorInfo).toBeDefined()
       expect(errorInfo.componentStack).toBeDefined()
       expect(typeof errorInfo.componentStack).toBe('string')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Stack trace error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('component stack trace includes component hierarchy', () => {
@@ -205,6 +221,9 @@ describe('ErrorBoundary Component', () => {
       const [, errorInfo] = onError.mock.calls[0]
       // Stack should contain component names
       expect(errorInfo.componentStack).toContain('ThrowError')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Hierarchy error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('passes error info to fallbackRender for debugging', () => {
@@ -226,6 +245,9 @@ describe('ErrorBoundary Component', () => {
 
       expect(capturedErrorInfo).toBeDefined()
       expect(capturedErrorInfo?.componentStack).toBeDefined()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Debug error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -271,6 +293,9 @@ describe('ErrorBoundary Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Recovered Content')).toBeInTheDocument()
       })
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Recoverable error', 'ErrorBoundary', 'ConditionalThrow'),
+      ])
     })
 
     it('tracks retry attempts', async () => {
@@ -291,6 +316,12 @@ describe('ErrorBoundary Component', () => {
       await user.click(screen.getByRole('button', { name: /try again/i }))
 
       expect(onRetry).toHaveBeenCalledTimes(3)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('shows reload page option after multiple retry failures', async () => {
@@ -315,6 +346,11 @@ describe('ErrorBoundary Component', () => {
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /reload page/i })).toBeInTheDocument()
       })
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('detects when same error recurs immediately after reset', async () => {
@@ -341,6 +377,11 @@ describe('ErrorBoundary Component', () => {
 
       // Should report second occurrence
       expect(onSameErrorRecur).toHaveBeenCalledWith(persistentError, 2)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Same recurring error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Same recurring error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Same recurring error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('resets recurrence count when a different error occurs', async () => {
@@ -382,6 +423,11 @@ describe('ErrorBoundary Component', () => {
       // Should not call onSameErrorRecur for different error
       // The last call should still be count 1, not count 2
       expect(onSameErrorRecur).toHaveBeenCalledTimes(1)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('First error type', 'ErrorBoundary', 'ChangingErrorComponent'),
+        caughtErrorReport('First error type', 'ErrorBoundary', 'ChangingErrorComponent'),
+        caughtErrorReport('Different error type', 'ErrorBoundary', 'ChangingErrorComponent'),
+      ])
     })
 
     it('shows persistent error messaging after same error recurs multiple times', async () => {
@@ -403,6 +449,11 @@ describe('ErrorBoundary Component', () => {
       await waitFor(() => {
         expect(screen.getByText(/this error keeps occurring/i)).toBeInTheDocument()
       })
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Persistent error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('tracks error identity by message and type', async () => {
@@ -427,6 +478,10 @@ describe('ErrorBoundary Component', () => {
       expect(onSameErrorRecur).toHaveBeenCalled()
       const [error] = onSameErrorRecur.mock.calls[0]
       expect(error.message).toBe('Identical error message')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Identical error message', 'ErrorBoundary', 'SameMessageComponent'),
+        caughtErrorReport('Identical error message', 'ErrorBoundary', 'SameMessageComponent'),
+      ])
     })
   })
 
@@ -444,6 +499,9 @@ describe('ErrorBoundary Component', () => {
 
       expect(screen.getByTestId('custom-fallback')).toBeInTheDocument()
       expect(screen.getByText('Custom Error UI')).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Test error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('supports fallback render function with error info', () => {
@@ -463,6 +521,9 @@ describe('ErrorBoundary Component', () => {
 
       expect(screen.getByTestId('render-fallback')).toBeInTheDocument()
       expect(screen.getByText('Error: Detailed error')).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Detailed error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('passes resetErrorBoundary to fallback render function', async () => {
@@ -497,6 +558,9 @@ describe('ErrorBoundary Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Recovered')).toBeInTheDocument()
       })
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Recoverable', 'ErrorBoundary', 'RecoverableComponent'),
+      ])
     })
   })
 
@@ -517,6 +581,9 @@ describe('ErrorBoundary Component', () => {
       expect(screen.getByText('Outer Content')).toBeInTheDocument()
       // Inner boundary should show error
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Inner error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('error does not propagate to parent when caught by child boundary', () => {
@@ -536,6 +603,9 @@ describe('ErrorBoundary Component', () => {
 
       expect(innerOnError).toHaveBeenCalled()
       expect(outerOnError).not.toHaveBeenCalled()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Inner error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -551,6 +621,9 @@ describe('ErrorBoundary Component', () => {
 
       // Root level should show "Go to Dashboard" option
       expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Root error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('supports level="route" for route-level boundaries', () => {
@@ -564,6 +637,9 @@ describe('ErrorBoundary Component', () => {
 
       // Route level should show "Go to Dashboard" option
       expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Route error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('supports level="feature" for feature-level boundaries', () => {
@@ -577,6 +653,9 @@ describe('ErrorBoundary Component', () => {
 
       // Feature level should NOT show "Go to Dashboard" option
       expect(screen.queryByRole('link', { name: /go to dashboard/i })).not.toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Feature error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -591,6 +670,9 @@ describe('ErrorBoundary Component', () => {
       )
 
       expect(screen.getByRole('button', { name: /report problem/i })).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Reportable error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('calls onReportError when Report Problem is clicked', async () => {
@@ -609,6 +691,9 @@ describe('ErrorBoundary Component', () => {
       await user.click(screen.getByRole('button', { name: /report problem/i }))
 
       expect(onReportError).toHaveBeenCalledWith(testError)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Reported error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('does not show Report Problem when onReportError is not provided', () => {
@@ -621,6 +706,9 @@ describe('ErrorBoundary Component', () => {
       )
 
       expect(screen.queryByRole('button', { name: /report problem/i })).not.toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Unreported error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -642,6 +730,9 @@ describe('ErrorBoundary Component', () => {
       const toast = document.querySelector('[data-toast]')
       expect(toast).toBeInTheDocument()
       expect(toast).toHaveClass('toast-error')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Toast error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('toast includes error variant styling', () => {
@@ -657,6 +748,9 @@ describe('ErrorBoundary Component', () => {
       expect(toast).toBeInTheDocument()
       // Toast should use error variant styling via CSS class
       expect(toast).toHaveClass('toast-error')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Toast styled error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('toast message references the affected area', () => {
@@ -671,6 +765,9 @@ describe('ErrorBoundary Component', () => {
       const toast = document.querySelector('[data-toast]')
       expect(toast).toBeInTheDocument()
       expect(toast).toHaveTextContent('Component failed to load')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Referenced error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('does not show toast when showToast is false (default)', () => {
@@ -686,6 +783,9 @@ describe('ErrorBoundary Component', () => {
       const alerts = screen.getAllByRole('alert')
       expect(alerts).toHaveLength(1)
       expect(document.querySelector('[data-toast]')).not.toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('No toast error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('shows toast notification on retry error via componentDidCatch path', async () => {
@@ -713,6 +813,10 @@ describe('ErrorBoundary Component', () => {
       // Should have at least 2 toasts now (one from each error)
       const toasts = document.querySelectorAll('[data-toast]')
       expect(toasts.length).toBeGreaterThanOrEqual(2)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Retry toast error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Retry toast error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('shows default toast message when toastMessage prop is not provided in componentDidCatch', async () => {
@@ -739,6 +843,10 @@ describe('ErrorBoundary Component', () => {
         (toast) => toast.textContent?.includes('An error occurred in this section')
       )
       expect(hasDefaultMessage).toBe(true)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Default message error', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('Default message error', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -772,6 +880,10 @@ describe('ErrorBoundary Component', () => {
       // onSameErrorRecur should be called with count 1
       expect(onSameErrorRecur).toHaveBeenCalled()
       expect(onSameErrorRecur.mock.calls[0][0].message).toBe('Concurrent mode recurring error')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Concurrent mode recurring error', 'ErrorBoundary', 'AlwaysThrows'),
+        caughtErrorReport('Concurrent mode recurring error', 'ErrorBoundary', 'AlwaysThrows'),
+      ])
     })
   })
 })
@@ -1323,10 +1435,8 @@ describe('ErrorFallback Component', () => {
   })
 
   describe('Recovery Transition Animation', () => {
-    // Suppress React's error boundary logging for these tests
-    // (errors are expected and caught by ErrorBoundary)
     beforeEach(() => {
-      vi.spyOn(console, 'error').mockImplementation(() => {})
+      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     })
 
     afterEach(() => {
@@ -1360,6 +1470,9 @@ describe('ErrorFallback Component', () => {
       // During transition, fallback should have fade-out class
       // Note: This tests that the component supports the animation class
       expect(fallback).toHaveClass('animate-fade-out')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Recoverable', 'ErrorBoundary', 'RecoverableComponent'),
+      ])
     })
 
     it('recovery transition uses duration-150 (150ms per design system)', async () => {
@@ -1386,6 +1499,9 @@ describe('ErrorFallback Component', () => {
 
       // Recovery transition should use 150ms duration
       expect(fallback).toHaveClass('duration-150')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Recoverable', 'ErrorBoundary', 'RecoverableComponent'),
+      ])
     })
 
     it('recovered content applies fade-in animation', async () => {
@@ -1424,6 +1540,9 @@ describe('ErrorFallback Component', () => {
         const recovered = screen.getByTestId('recovered-content')
         expect(recovered).toBeInTheDocument()
       })
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Recoverable', 'ErrorBoundary', 'RecoverableComponent'),
+      ])
     })
 
     it('recovery transition uses ease-in for exit animation', async () => {
@@ -1450,6 +1569,9 @@ describe('ErrorFallback Component', () => {
 
       // Exit animation uses ease-in per design system
       expect(fallback).toHaveClass('ease-in')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Recoverable', 'ErrorBoundary', 'RecoverableComponent'),
+      ])
     })
   })
 
@@ -1669,7 +1791,7 @@ describe('ErrorFallback Component', () => {
 
 describe('ErrorBoundary with ErrorFallback Integration', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -1689,6 +1811,9 @@ describe('ErrorBoundary with ErrorFallback Integration', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Test error', 'ErrorBoundary', 'ThrowError'),
+      ])
   })
 
   it('passes error to ErrorFallback', () => {
@@ -1701,6 +1826,9 @@ describe('ErrorBoundary with ErrorFallback Integration', () => {
     )
 
     expect(screen.getByText('Specific error message')).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Specific error message', 'ErrorBoundary', 'ThrowError'),
+      ])
   })
 
   it('passes level prop to ErrorFallback', () => {
@@ -1713,6 +1841,9 @@ describe('ErrorBoundary with ErrorFallback Integration', () => {
     )
 
     expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Root error', 'ErrorBoundary', 'ThrowError'),
+      ])
   })
 })
 
@@ -1720,7 +1851,7 @@ describe('ErrorBoundary Branch Coverage', () => {
   // These tests cover specific branch conditions that are difficult to hit via normal rendering
 
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -1751,6 +1882,9 @@ describe('ErrorBoundary Branch Coverage', () => {
       )
 
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Error with null children context', 'ErrorBoundary', 'ChildlessWrapper'),
+      ])
     })
   })
 
@@ -1788,6 +1922,10 @@ describe('ErrorBoundary Branch Coverage', () => {
       )
 
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Error A', 'ErrorBoundary', 'ErrorA'),
+        caughtErrorReport('Error B', 'ErrorBoundary', 'ErrorB'),
+      ])
     })
   })
 
@@ -1812,6 +1950,10 @@ describe('ErrorBoundary Branch Coverage', () => {
 
       // Second error should also work without onError
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('No onError callback', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('No onError callback', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
 
     it('calls onError when provided and componentDidCatch runs after retry', async () => {
@@ -1837,6 +1979,10 @@ describe('ErrorBoundary Branch Coverage', () => {
 
       // onError should be called again via componentDidCatch
       expect(onError.mock.calls.length).toBeGreaterThan(initialCallCount)
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('onError callback test', 'ErrorBoundary', 'ThrowError'),
+        caughtErrorReport('onError callback test', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -1852,6 +1998,9 @@ describe('ErrorBoundary Branch Coverage', () => {
       )
 
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('State error present', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -1877,6 +2026,9 @@ describe('ErrorBoundary Branch Coverage', () => {
       // ErrorInfo should have a componentStack (either real or fallback)
       expect(capturedErrorInfo).toBeDefined()
       expect(typeof capturedErrorInfo?.componentStack).toBe('string')
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('No component stack', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 
@@ -1894,6 +2046,9 @@ describe('ErrorBoundary Branch Coverage', () => {
       )
 
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Error message tracking', 'ErrorBoundary', 'ThrowError'),
+      ])
     })
   })
 })

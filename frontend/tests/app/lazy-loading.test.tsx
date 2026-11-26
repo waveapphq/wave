@@ -5,7 +5,7 @@
  * route components are loaded on demand with proper loading states and error handling.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest'
 import { render, screen, waitFor, act, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, Outlet } from 'react-router-dom'
@@ -13,6 +13,16 @@ import { Suspense, lazy } from 'react'
 import { routeConfig } from '../../src/app/router'
 import { RouteLoadingFallback, RouteErrorBoundary } from '../../src/app/route-boundaries'
 import { preloadMockSpies, navigationPatternSpies } from '../setup'
+import { caughtErrorReport } from '../utils/caught-error-log'
+
+/** The RouteErrorBoundary's own log of the error it caught. */
+function routeErrorLog(message: string): unknown[] {
+  return [
+    'Route error:',
+    expect.objectContaining({ message }),
+    expect.objectContaining({ componentStack: expect.any(String) }),
+  ]
+}
 
 // Lazy-loaded route containers depend on useToast. These tests render routes
 // via RouterProvider directly, bypassing the App-level ToastProvider wiring.
@@ -363,9 +373,10 @@ describe('Route-Based Lazy Loading', () => {
   })
 
   describe('RouteErrorBoundary Component', () => {
-    // Suppress console.error for error boundary tests
+    // React and the boundary report each caught error; each test asserts the reports.
+    let consoleError: MockInstance<typeof console.error>
     beforeEach(() => {
-      vi.spyOn(console, 'error').mockImplementation(() => {})
+      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     })
 
     afterEach(() => {
@@ -380,6 +391,8 @@ describe('Route-Based Lazy Loading', () => {
       )
 
       expect(screen.getByText('Normal Content')).toBeInTheDocument()
+
+      expect(consoleError).not.toHaveBeenCalled()
     })
 
     it('catches and displays route loading errors', async () => {
@@ -413,6 +426,10 @@ describe('Route-Based Lazy Loading', () => {
       })
 
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Failed to load module', 'RouteErrorBoundary'),
+        routeErrorLog('Failed to load module'),
+      ])
     })
 
     it('provides retry functionality on error', async () => {
@@ -459,6 +476,10 @@ describe('Route-Based Lazy Loading', () => {
       await waitFor(() => {
         expect(screen.getByText('Success')).toBeInTheDocument()
       })
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Temporary failure', 'RouteErrorBoundary'),
+        routeErrorLog('Temporary failure'),
+      ])
     })
 
     it('clears a caught error when the route path changes', async () => {
@@ -486,6 +507,10 @@ describe('Route-Based Lazy Loading', () => {
         expect(screen.getByText('Dashboard Content')).toBeInTheDocument()
       })
       expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Name "m1" already exists in this scope', 'RouteErrorBoundary', 'Boom'),
+        routeErrorLog('Name "m1" already exists in this scope'),
+      ])
     })
 
     it('keeps the error visible while the route path is unchanged', () => {
@@ -508,6 +533,10 @@ describe('Route-Based Lazy Loading', () => {
       )
 
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('boom', 'RouteErrorBoundary', 'Boom'),
+        routeErrorLog('boom'),
+      ])
     })
 
     it('handles retry gracefully with non-element children', async () => {
@@ -565,6 +594,13 @@ describe('Route-Based Lazy Loading', () => {
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
       })
+      // The first load and the retry each fail and are each reported.
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Always fails', 'RouteErrorBoundary'),
+        routeErrorLog('Always fails'),
+        caughtErrorReport('Always fails', 'RouteErrorBoundary'),
+        routeErrorLog('Always fails'),
+      ])
     })
 
     it('shows helpful error message', async () => {
@@ -598,6 +634,10 @@ describe('Route-Based Lazy Loading', () => {
       })
 
       expect(screen.getByText(/failed to load/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Network error', 'RouteErrorBoundary'),
+        routeErrorLog('Network error'),
+      ])
     })
 
     it('provides link to go back to dashboard', async () => {
@@ -631,6 +671,10 @@ describe('Route-Based Lazy Loading', () => {
       })
 
       expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Failed to load', 'RouteErrorBoundary'),
+        routeErrorLog('Failed to load'),
+      ])
     })
   })
 
@@ -984,8 +1028,10 @@ describe('Route-Based Lazy Loading', () => {
   })
 
   describe('Network Error Recovery', () => {
+    // React and the boundary report each caught error; each test asserts the reports.
+    let consoleError: MockInstance<typeof console.error>
     beforeEach(() => {
-      vi.spyOn(console, 'error').mockImplementation(() => {})
+      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     })
 
     afterEach(() => {
@@ -1023,6 +1069,10 @@ describe('Route-Based Lazy Loading', () => {
       })
 
       expect(screen.getByText(/failed to load/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('ChunkLoadError: Loading chunk failed', 'RouteErrorBoundary'),
+        routeErrorLog('ChunkLoadError: Loading chunk failed'),
+      ])
     })
 
     it('suggests page refresh on persistent load failure', async () => {
@@ -1056,6 +1106,10 @@ describe('Route-Based Lazy Loading', () => {
       })
 
       expect(screen.getByText(/try refreshing/i)).toBeInTheDocument()
+      expect(consoleError.mock.calls).toEqual([
+        caughtErrorReport('Network error', 'RouteErrorBoundary'),
+        routeErrorLog('Network error'),
+      ])
     })
   })
 })

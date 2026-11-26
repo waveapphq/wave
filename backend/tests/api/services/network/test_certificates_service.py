@@ -9,7 +9,6 @@ import datetime
 import logging
 import os
 import re
-import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +19,7 @@ import pytest
 import yaml
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.utils import CryptographyDeprecationWarning
 from cryptography.x509.oid import NameOID
 
 from tests.plugins.http.tls_material import Credential, make_credential
@@ -217,10 +217,16 @@ def _deny_writes(monkeypatch: pytest.MonkeyPatch, path: Path, denied: list[Any])
     monkeypatch.setattr(os, "access", access)
 
 
+NON_POSITIVE_SERIAL = (
+    r"^Parsed a serial number which wasn't positive \(i\.e\., it was negative or zero\), which"
+    r" is disallowed by RFC 5280\. Loading this certificate will cause an exception in a future"
+    r" release of cryptography\.$"
+)
+
+
 def _bundle() -> list[x509.Certificate]:
-    # certifi ships a root with a non-positive serial that cryptography warns about.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    # certifi ships a root with a non-positive serial, and cryptography warns about it.
+    with pytest.warns(CryptographyDeprecationWarning, match=NON_POSITIVE_SERIAL):
         return x509.load_pem_x509_certificates(Path(certifi.where()).read_bytes())
 
 

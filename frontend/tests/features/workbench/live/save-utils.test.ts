@@ -733,6 +733,7 @@ describe('handleSaveError', () => {
       handleSaveError(err, toast)
 
       expect(toast.error).toHaveBeenCalledWith('Validation failed', 'Save Failed')
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Direct save failed:', err)
     })
   })
 })

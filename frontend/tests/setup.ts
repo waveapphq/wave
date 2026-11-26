@@ -76,27 +76,6 @@ beforeAll(async () => {
   await initializeTreeSitter()
 })
 
-// Handle React's concurrent mode error recovery exceptions
-// These are thrown in development mode when error boundaries recover from errors
-// NOTE: We don't mock console.error here because individual tests may spy on it
-// and need to see the actual calls
-
-// Suppress the unhandled exception that React throws during error recovery
-// This is caught at the process level since window.onerror doesn't catch it in Node
-if (typeof process !== 'undefined') {
-  process.on('uncaughtException', (error) => {
-    if (
-      error.message &&
-      error.message.includes('There was an error during concurrent rendering')
-    ) {
-      // Suppress this expected React 19 error recovery exception
-      return
-    }
-    // Re-throw other uncaught exceptions
-    throw error
-  })
-}
-
 // Mock auth store with configurable state
 // Tests can override authMockState before rendering
 export const authMockState = {

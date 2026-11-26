@@ -81,13 +81,9 @@ describe('Sidebar', () => {
 
   describe('useSidebar', () => {
     it('throws outside a SidebarProvider', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-
       expect(() => render(<SidebarState />)).toThrow(
         'useSidebar must be used within a SidebarProvider.'
       )
-
-      consoleError.mockRestore()
     })
   })
 

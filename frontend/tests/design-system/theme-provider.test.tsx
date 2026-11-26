@@ -473,16 +473,12 @@ describe('ThemeProvider', () => {
 
   describe('useTheme Hook', () => {
     it('throws error when used outside ThemeProvider', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       function TestComponent() {
         useTheme()
         return null
       }
 
       expect(() => render(<TestComponent />)).toThrow('useTheme must be used within a ThemeProvider')
-
-      consoleError.mockRestore()
     })
 
     it('provides themes array with available themes', () => {

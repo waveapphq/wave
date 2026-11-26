@@ -713,13 +713,9 @@ describe('ToastProvider', () => {
   })
 
   it('throws error when useToast is used outside provider', () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-
     expect(() => {
       render(<ToastTrigger />)
     }).toThrow('useToast must be used within a ToastProvider')
-
-    consoleError.mockRestore()
   })
 })
 

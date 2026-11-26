@@ -5,10 +5,65 @@
  * navigation actions, and history state preservation.
  */
 
-import { describe, it, expect } from 'vitest'
-import { render, waitFor, act } from '@testing-library/react'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { routeConfig } from '../../src/app/router'
+
+// The list pages toast through useToast; the history tests do not look at toasts.
+vi.mock('@/components/ui/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/ui/toast')>()),
+  useToast: () => ({
+    toasts: [],
+    toast: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    dismiss: vi.fn(),
+    dismissAll: vi.fn(),
+    maxToasts: 3,
+  }),
+}))
+
+// The history tests check the router only: every page read stays pending, so each page
+// shows its loading state and calls no backend.
+const { pendingReads } = vi.hoisted(() => ({
+  pendingReads: (mod: Record<string, unknown>) =>
+    Object.fromEntries(
+      Object.entries(mod).map(([name, value]) => [
+        name,
+        typeof value === 'function' && name.startsWith('fetch') ? vi.fn(() => new Promise(() => {})) : value,
+      ])
+    ),
+}))
+
+vi.mock('@/features/dashboard/api/dashboard', async (importOriginal) => pendingReads(await importOriginal()))
+vi.mock('@/features/settings/api/environments/crud', async (importOriginal) => pendingReads(await importOriginal()))
+vi.mock('@/features/regressions/api/crud', async (importOriginal) => pendingReads(await importOriginal()))
+vi.mock('@/features/executions/api/executions', async (importOriginal) => pendingReads(await importOriginal()))
+vi.mock('@/features/suites/api/crud', async (importOriginal) => pendingReads(await importOriginal()))
+vi.mock('@/features/tests/api/crud', async (importOriginal) => pendingReads(await importOriginal()))
+
+type MemoryRouter = ReturnType<typeof createMemoryRouter>
+
+/** Render the routes inside act, so the first lazy route resolves where React expects it. */
+async function renderRoutes(router: MemoryRouter): Promise<void> {
+  await act(async () => {
+    render(<RouterProvider router={router} />)
+  })
+}
+
+// Every lazy route a test navigated to finishes loading before the test ends, inside
+// waitFor, so React reports no suspended resource finishing outside act.
+afterEach(async () => {
+  await waitFor(
+    () => {
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    },
+    { timeout: 20000 }
+  )
+})
 
 describe('Browser History Integration', () => {
   describe('History Navigation', () => {
@@ -18,7 +73,7 @@ describe('Browser History Integration', () => {
         initialIndex: 1,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Verify we're on tests page
       await waitFor(() => {
@@ -41,7 +96,7 @@ describe('Browser History Integration', () => {
         initialIndex: 2,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Go back twice
       act(() => {
@@ -73,7 +128,7 @@ describe('Browser History Integration', () => {
         initialIndex: 3,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       expect(router.state.location.pathname).toBe('/regressions')
 
@@ -104,7 +159,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Navigate with state
       act(() => {
@@ -139,7 +194,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Navigate with query params
       act(() => {
@@ -167,7 +222,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       act(() => {
         router.navigate('/tests/test-123#section-results')
@@ -195,7 +250,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       act(() => {
         router.navigate('/tests')
@@ -211,7 +266,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       act(() => {
         router.navigate('/tests', { replace: true })
@@ -228,7 +283,7 @@ describe('Browser History Integration', () => {
         initialIndex: 1,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       act(() => {
         router.navigate(-1)
@@ -245,7 +300,7 @@ describe('Browser History Integration', () => {
         initialIndex: 0,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       act(() => {
         router.navigate('/tests')
@@ -265,7 +320,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/tests'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       expect(router.state.location.pathname).toBe('/tests')
 
@@ -283,7 +338,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/tests?status=active'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       expect(router.state.location.search).toBe('?status=active')
     })
@@ -293,7 +348,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/tests/test-1#execution-log'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       expect(router.state.location.hash).toBe('#execution-log')
     })
@@ -306,7 +361,7 @@ describe('Browser History Integration', () => {
         initialIndex: 3,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Go back 2 steps
       act(() => {
@@ -323,7 +378,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Push first
       act(() => {
@@ -357,7 +412,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Try to go back at the start
       act(() => {
@@ -376,7 +431,7 @@ describe('Browser History Integration', () => {
         initialIndex: 1,
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Try to go forward at the end
       act(() => {
@@ -394,7 +449,7 @@ describe('Browser History Integration', () => {
         initialEntries: ['/dashboard'],
       })
 
-      render(<RouterProvider router={router} />)
+      await renderRoutes(router)
 
       // Rapid navigation
       act(() => {

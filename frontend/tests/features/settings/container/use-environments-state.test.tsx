@@ -342,6 +342,10 @@ describe('useEnvironmentsState', () => {
 
       expect(await screen.findByText('Export Failed')).toBeInTheDocument()
       expect(screen.getByText('Export unavailable')).toBeInTheDocument()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Export failed:',
+        expect.objectContaining({ message: 'Export unavailable' })
+      )
       consoleSpy.mockRestore()
     })
 

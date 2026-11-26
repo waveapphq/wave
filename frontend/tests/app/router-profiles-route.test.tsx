@@ -1,6 +1,6 @@
 /** Profiles route through its lazy import, kept out of the other router tests (REQ-5.2.1.2). */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, waitFor, cleanup, configure } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { routeConfig } from '../../src/app/router'
@@ -62,10 +62,6 @@ vi.mock('@/features/profiles/api/import-export', () => ({
 vi.mock('@/features/settings/api/environments/crud', () => ({
   fetchEnvironmentNames: async () => [],
 }))
-
-beforeEach(() => {
-  vi.spyOn(console, 'error').mockImplementation(() => {})
-})
 
 afterEach(() => {
   cleanup()

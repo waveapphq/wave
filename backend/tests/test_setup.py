@@ -18,6 +18,12 @@ def test_each_test_runs_under_the_shipped_time_cap(pytestconfig: pytest.Config) 
     assert 0 < remaining_s <= SHIPPED_TEST_TIME_CAP_S
 
 
+def test_the_shipped_config_filters_no_warning(pytestconfig: pytest.Config) -> None:
+    """Every warning a test run raises reaches its summary; the config hides none."""
+    assert pytestconfig.getini("filterwarnings") == []
+    assert all(not arg.startswith("-W") for arg in pytestconfig.getini("addopts"))
+
+
 def test_python_version() -> None:
     """Verify Python version meets requirements (3.12+)."""
     assert sys.version_info >= (3, 12), "Python 3.12 or higher is required"

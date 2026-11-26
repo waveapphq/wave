@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import React from 'react'
@@ -162,6 +162,26 @@ vi.mock('@/features/tests/api/export-import', () => ({
 }))
 
 // ============================================================================
+// Lazy routes load inside act, so React reports no suspended resource
+// finishing outside it.
+// ============================================================================
+
+async function renderSettled(ui: React.ReactElement): Promise<ReturnType<typeof render>> {
+  let view: ReturnType<typeof render> | undefined
+  await act(async () => {
+    view = render(ui)
+  })
+  // A heavy lazy chunk can take longer than the default 5s on CPU-starved runners.
+  await waitFor(
+    () => {
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    },
+    { timeout: 20000 }
+  )
+  return view as ReturnType<typeof render>
+}
+
+// ============================================================================
 // App.tsx renders router, theme provider, error boundary, toast container
 // ============================================================================
 
@@ -170,7 +190,7 @@ describe('App.tsx Application Wiring', () => {
     it('wraps application with ThemeProvider', async () => {
       // Import App dynamically to test its structure
       const { default: App } = await import('../src/app/App')
-      render(<App />)
+      await renderSettled(<App />)
 
       // ThemeProvider should set data-theme attribute on document
       // Default theme is 'light'
@@ -181,7 +201,7 @@ describe('App.tsx Application Wiring', () => {
 
     it('applies theme from ThemeProvider to document', async () => {
       const { default: App } = await import('../src/app/App')
-      render(<App />)
+      await renderSettled(<App />)
 
       // Document should have theme attribute set
       expect(document.documentElement.hasAttribute('data-theme')).toBe(true)
@@ -191,7 +211,7 @@ describe('App.tsx Application Wiring', () => {
   describe('ToastProvider integration', () => {
     it('renders ToastContainer for notifications', async () => {
       const { default: App } = await import('../src/app/App')
-      render(<App />)
+      await renderSettled(<App />)
 
       // ToastContainer should be present (rendered by ToastProvider)
       await waitFor(() => {
@@ -203,7 +223,7 @@ describe('App.tsx Application Wiring', () => {
       const { default: App } = await import('../src/app/App')
       // App should provide ToastProvider context
       // This test verifies the wiring is correct
-      render(<App />)
+      await renderSettled(<App />)
 
       // If ToastProvider is wired correctly, ToastContainer will be present
       await waitFor(() => {
@@ -216,7 +236,7 @@ describe('App.tsx Application Wiring', () => {
   describe('ErrorBoundary integration', () => {
     it('wraps application content with ErrorBoundary', async () => {
       const { default: App } = await import('../src/app/App')
-      render(<App />)
+      await renderSettled(<App />)
 
       // Wait for lazy-loaded dashboard to render before checking error state
       await waitFor(() => {
@@ -238,7 +258,7 @@ describe('App.tsx Application Wiring', () => {
       // Import ErrorBoundary to test it catches errors
       const { ErrorBoundary } = await import('../src/components/ui/error-boundary')
 
-      // Suppress expected console.error from React when ErrorBoundary catches the error
+      // React reports the error the boundary caught
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       render(
@@ -251,7 +271,12 @@ describe('App.tsx Application Wiring', () => {
       expect(screen.getByRole('alert')).toBeInTheDocument()
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
-      // Restore console.error
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        '%o\n\n%s\n\n%s\n',
+        expect.objectContaining({ message: 'Test error' }),
+        'The above error occurred in the <ThrowingComponent> component.',
+        'React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.'
+      )
       consoleSpy.mockRestore()
     })
   })
@@ -259,7 +284,7 @@ describe('App.tsx Application Wiring', () => {
   describe('Router integration', () => {
     it('renders AppRouterProvider with all routes', async () => {
       const { default: App } = await import('../src/app/App')
-      render(<App />)
+      await renderSettled(<App />)
 
       // Router should redirect to /dashboard by default
       await waitFor(() => {
@@ -269,7 +294,7 @@ describe('App.tsx Application Wiring', () => {
 
     it('provides routing context for navigation', async () => {
       const { default: App } = await import('../src/app/App')
-      render(<App />)
+      await renderSettled(<App />)
 
       // Navigation should work - clicking nav links should change route
       await waitFor(() => {
@@ -287,7 +312,7 @@ describe('App.tsx Application Wiring', () => {
 describe('MainLayout uses SidebarProvider with AppSidebar', () => {
   it('renders shadcn Sidebar as the sidebar container', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     // shadcn sidebar uses data-sidebar="sidebar" attribute
     await waitFor(() => {
@@ -303,7 +328,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
       initialEntries: ['/regressions/reg-123'],
     })
 
-    render(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
+    await renderSettled(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
 
     // Wait for lazy-loaded page to render first
     await waitFor(() => {
@@ -317,7 +342,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
 
   it('includes SidebarHeader with app title/logo', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       // Header should display WAVE branding (multiple elements: sidebar + mobile header)
@@ -333,7 +358,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
       initialEntries: ['/regressions/reg-123'],
     })
 
-    render(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
+    await renderSettled(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
 
     // Wait for lazy-loaded page to render first
     await waitFor(() => {
@@ -347,7 +372,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
 
   it('includes SidebarFooter with controls', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       // Footer should contain theme toggle
@@ -361,7 +386,7 @@ describe('MainLayout uses SidebarProvider with AppSidebar', () => {
 
   it('supports collapse toggle in desktop mode', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     // Wait for lazy-loaded dashboard to render first
     await waitFor(() => {
@@ -399,7 +424,7 @@ describe('MainLayout uses SidebarInset wrapper', () => {
 
   it('wraps page content in SidebarInset (main element)', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       // SidebarInset renders a <main> element
@@ -410,7 +435,7 @@ describe('MainLayout uses SidebarInset wrapper', () => {
 
   it('SidebarInset auto-adjusts for sidebar width via peer selectors', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     // Wait for lazy-loaded dashboard to render first
     await waitFor(() => {
@@ -424,7 +449,7 @@ describe('MainLayout uses SidebarInset wrapper', () => {
 
   it('sidebar collapses and expands via state', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
 
@@ -450,7 +475,7 @@ describe('MainLayout uses SidebarInset wrapper', () => {
 
   it('renders page content (Outlet) inside SidebarInset', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       // Dashboard page should render inside main content area
@@ -472,7 +497,7 @@ describe('Sidebar navigation links', () => {
 
   it('renders navigation link for Dashboard', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -484,7 +509,7 @@ describe('Sidebar navigation links', () => {
 
   it('renders navigation link for Tests', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -496,7 +521,7 @@ describe('Sidebar navigation links', () => {
 
   it('renders navigation link for Suites', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -508,7 +533,7 @@ describe('Sidebar navigation links', () => {
 
   it('renders navigation link for Regressions', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -520,7 +545,7 @@ describe('Sidebar navigation links', () => {
 
   it('renders navigation link for Executions', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -532,7 +557,7 @@ describe('Sidebar navigation links', () => {
 
   it('renders navigation link for Settings', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -544,7 +569,7 @@ describe('Sidebar navigation links', () => {
 
   it('navigation links include icons', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = getSidebar()
@@ -556,7 +581,7 @@ describe('Sidebar navigation links', () => {
 
   it('highlights active route in navigation', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       // Dashboard should be active by default
@@ -592,7 +617,7 @@ describe('Sidebar navigation links', () => {
     }))
 
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
 
@@ -628,7 +653,7 @@ describe('Breadcrumb renders based on current route', () => {
       initialEntries: ['/tests/test-123'],
     })
 
-    render(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
+    await renderSettled(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
 
     await waitFor(() => {
       const breadcrumb = screen.getByRole('navigation', { name: /breadcrumb/i })
@@ -638,7 +663,7 @@ describe('Breadcrumb renders based on current route', () => {
 
   it('hides breadcrumb on dashboard route per wireframe', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     // Dashboard should render but breadcrumb should be hidden
     await waitFor(() => {
@@ -656,7 +681,7 @@ describe('Breadcrumb renders based on current route', () => {
       initialEntries: ['/tests'],
     })
 
-    render(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
+    await renderSettled(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
 
     await waitFor(() => {
       expect(screen.getByTestId('tests-page')).toBeInTheDocument()
@@ -679,7 +704,7 @@ describe('Breadcrumb renders based on current route', () => {
         initialEntries: [route.path],
       })
 
-      const { unmount } = render(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
+      const { unmount } = await renderSettled(<ToastProvider><RouterProvider router={router} /></ToastProvider>)
 
       // ExecutionsListContainer pulls in BOTH suites' and regressions'
       // run-dialog hooks, making its lazy chunk roughly 2x heavier than
@@ -727,7 +752,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('renders theme toggle button in sidebar footer', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const themeToggle = screen.getByRole('button', {
@@ -739,7 +764,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('theme toggle is located in sidebar footer area', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const sidebar = document.querySelector('[data-sidebar="sidebar"]')
@@ -755,7 +780,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('clicking theme toggle switches from light to dark', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
 
@@ -776,7 +801,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('clicking theme toggle again switches from dark to light', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
 
@@ -805,7 +830,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('theme toggle shows appropriate icon for current theme', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       const themeToggle = screen.getByRole('button', {
@@ -819,7 +844,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('theme preference persists to localStorage', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
 
@@ -839,7 +864,7 @@ describe('Theme toggle in sidebar footer', () => {
     localStorage.setItem('wave-theme', 'dark')
 
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
@@ -851,7 +876,7 @@ describe('Theme toggle in sidebar footer', () => {
     localStorage.setItem('wave-theme', 'dark')
 
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
@@ -870,7 +895,7 @@ describe('Theme toggle in sidebar footer', () => {
   // SHELL-8: the sidebar has no search field.
   it('offers no search field in the expanded sidebar', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       expect(screen.getByRole('main')).toBeInTheDocument()
@@ -883,7 +908,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('advertises no search shortcut in the sidebar', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       expect(screen.getByRole('main')).toBeInTheDocument()
@@ -895,7 +920,7 @@ describe('Theme toggle in sidebar footer', () => {
 
   it('offers no search button in the collapsed rail', async () => {
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
     await waitFor(() => {
@@ -916,7 +941,7 @@ describe('Theme toggle in sidebar footer', () => {
     localStorage.setItem('wave-theme', 'dark')
 
     const { default: App } = await import('../src/app/App')
-    render(<App />)
+    await renderSettled(<App />)
 
     const user = userEvent.setup()
 
@@ -982,7 +1007,7 @@ describe('SSH host key policy at app start (REQ-4.5.14)', () => {
     const { App, store, buildPaletteNode, fetchPolicy } = await loadAppModules()
     fetchPolicy.mockRejectedValueOnce(new Error('Host key policy store unreachable'))
 
-    render(<App />)
+    await renderSettled(<App />)
 
     await waitFor(() => {
       expect(store.getState().loadError).toBe('Host key policy store unreachable')

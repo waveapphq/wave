@@ -477,6 +477,10 @@ describe('useTestCrud - suite membership', () => {
 
     expect(mockToastError).toHaveBeenCalledWith('Service Unavailable', 'Add to Suite Failed')
     expect(deps.loadData).not.toHaveBeenCalled()
+    expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+      'Failed to add test to suite:',
+      expect.objectContaining({ message: 'Service Unavailable' })
+    )
   })
 
   it('reports a non-Error add rejection verbatim', async () => {
@@ -489,6 +493,7 @@ describe('useTestCrud - suite membership', () => {
     })
 
     expect(mockToastError).toHaveBeenCalledWith('weird', 'Add to Suite Failed')
+    expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Failed to add test to suite:', 'weird')
   })
 
   it('removes the test from the suite, then reloads', async () => {
@@ -515,6 +520,10 @@ describe('useTestCrud - suite membership', () => {
 
     expect(mockToastError).toHaveBeenCalledWith('Service Unavailable', 'Remove from Suite Failed')
     expect(deps.loadData).not.toHaveBeenCalled()
+    expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+      'Failed to remove test from suite:',
+      expect.objectContaining({ message: 'Service Unavailable' })
+    )
   })
 
   it('reports a non-Error remove rejection verbatim', async () => {
@@ -527,19 +536,13 @@ describe('useTestCrud - suite membership', () => {
     })
 
     expect(mockToastError).toHaveBeenCalledWith('weird', 'Remove from Suite Failed')
+    expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Failed to remove test from suite:', 'weird')
   })
 })
 
 describe('useTestCrud - handleBulkAddToSuite', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>
-
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.mocked(addTestToSuite).mockResolvedValue(undefined)
-  })
-
-  afterEach(() => {
-    consoleSpy.mockRestore()
   })
 
   it('does nothing when nothing is selected', async () => {
@@ -618,15 +621,8 @@ describe('useTestCrud - handleBulkAddToSuite', () => {
 })
 
 describe('useTestCrud - handleBulkRemoveFromSuite', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>
-
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.mocked(removeTestFromSuite).mockResolvedValue(undefined)
-  })
-
-  afterEach(() => {
-    consoleSpy.mockRestore()
   })
 
   it('does nothing when nothing is selected', async () => {

@@ -537,45 +537,41 @@ describe('ElementConfigModal Component', () => {
 
   describe('Dialog Interactions', () => {
     it('shows confirmation dialog when pressing Escape with unsaved changes', async () => {
-      // Suppress Radix Dialog animation warnings (FocusScope, Presence, DismissableLayer)
-      // that fire asynchronously when the confirmation AlertDialog opens.
-      // These are framework-internal state updates we cannot wrap in act().
-      const consoleError = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
-
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
 
       const { ElementConfigModal } = await import(
         '@/features/workbench/common/element-config'
       )
-      render(
-        <ElementConfigModal
-          isOpen={true}
-          onClose={handleClose}
-          element={mockElementData}
-          onSave={vi.fn()}
-        />
-      )
+      // The modal's lazy parts suspend on first render, so the render is awaited inside act.
+      await act(async () => {
+        render(
+          <ElementConfigModal
+            isOpen={true}
+            onClose={handleClose}
+            element={mockElementData}
+            onSave={vi.fn()}
+          />
+        )
+      })
 
       // Make a change to trigger hasChanges via the description field.
       const descriptionInput = screen.getByTestId('element-description-input')
       await user.type(descriptionInput, 'Changed Description')
 
-      // Press Escape - should show confirmation dialog, not close
-      await user.keyboard('{Escape}')
+      // Press Escape - should show confirmation dialog, not close. The dialog suspends while it
+      // opens, so the key press is awaited inside act until its focus trap and layers settle.
+      await act(async () => {
+        fireEvent.keyDown(descriptionInput, { key: 'Escape', code: 'Escape' })
+      })
 
       // Confirmation dialog should appear, onClose NOT called yet
-      // Use waitFor to let Radix Dialog animations settle (FocusScope, Presence)
+      const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' })
+      // The dialog has settled once its focus trap holds the focus.
       await waitFor(() => {
-        expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+        expect(confirm).toContainElement(document.activeElement as HTMLElement)
       })
       expect(handleClose).not.toHaveBeenCalled()
-
-      consoleError.mockRestore()
     })
 
     it('bypasses the unsaved-changes prompt in read-only mode', async () => {
@@ -583,11 +579,6 @@ describe('ElementConfigModal Component', () => {
       // cannot be unsaved mutations - the Escape key / close button
       // should call onClose directly. The modal's read-only short
       // circuit short-circuits the handleOpenChange bookkeeping.
-      const consoleError = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const { CanvasReadOnlyProvider } = await import(
         '@/features/workbench/common/canvas/read-only-context'
@@ -617,7 +608,6 @@ describe('ElementConfigModal Component', () => {
         expect(handleClose).toHaveBeenCalled()
       })
 
-      consoleError.mockRestore()
     })
   })
 
@@ -3810,11 +3800,6 @@ describe('ElementConfigModal Component', () => {
 
     it('detects unsaved changes when assertions differ from element state', async () => {
       // Suppress Radix animation warnings (same pattern as existing unsaved test)
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -3898,11 +3883,6 @@ describe('ElementConfigModal Component', () => {
 
     it('detects hasChanges when the Block stores no assertions list', async () => {
       // Suppress Radix animation warnings
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -3932,11 +3912,6 @@ describe('ElementConfigModal Component', () => {
 
     it('detects hasChanges when the Block stores no mode (Split by default)', async () => {
       // Suppress Radix animation warnings
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -4010,11 +3985,6 @@ describe('ElementConfigModal Component', () => {
     })
 
     it('detects hasChanges when fail_current_scope differs from element state', async () => {
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -4125,11 +4095,6 @@ describe('ElementConfigModal Component', () => {
 
     it('detects unsaved changes when branches differ from element state', async () => {
       // Suppress Radix animation warnings
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -4181,11 +4146,6 @@ describe('ElementConfigModal Component', () => {
 
     it('detects hasChanges when the Block stores no branches list', async () => {
       // Suppress Radix animation warnings
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -4280,11 +4240,6 @@ describe('ElementConfigModal Component', () => {
     })
 
     it('detects unsaved changes when conditions differ', async () => {
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -4309,11 +4264,6 @@ describe('ElementConfigModal Component', () => {
     })
 
     it('detects hasChanges when the Block stores no conditions list', async () => {
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
 
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
@@ -4429,11 +4379,6 @@ describe('ElementConfigModal Component', () => {
     })
 
     it('detects unsaved changes when only the mode differs from the stored one', async () => {
-      vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-        const msg = typeof args[0] === 'string' ? args[0] : ''
-        if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-        console.warn('[unexpected console.error]', ...args)
-      })
       const user = userEvent.setup({ delay: null })
       const handleClose = vi.fn()
       await renderWait(mockWaitElement, vi.fn(), handleClose)
@@ -4714,14 +4659,6 @@ describe('ElementConfigModal Component', () => {
 })
 
 describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
-  function suppressActWarnings() {
-    return vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-      const msg = typeof args[0] === 'string' ? args[0] : ''
-      if (msg.includes('not wrapped in act') || msg.includes('act` scope')) return
-      console.warn('[unexpected console.error]', ...args)
-    })
-  }
-
   it('renders as a non-blocking sheet with no Radix dialog shell', async () => {
     const { ElementConfigModal } = await import(
       '@/features/workbench/common/element-config'
@@ -4874,7 +4811,6 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
   })
 
   it('X routes through the unsaved-changes guard when dirty', async () => {
-    const consoleError = suppressActWarnings()
     const user = userEvent.setup({ delay: null })
     const handleClose = vi.fn()
     const { ElementConfigModal } = await import(
@@ -4900,11 +4836,9 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
     })
     expect(handleClose).not.toHaveBeenCalled()
 
-    consoleError.mockRestore()
   })
 
   it('defers Escape to an open nested dialog instead of closing the sheet', async () => {
-    const consoleError = suppressActWarnings()
     const user = userEvent.setup({ delay: null })
     const handleClose = vi.fn()
     const { ElementConfigModal } = await import(
@@ -4933,7 +4867,6 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(handleClose).not.toHaveBeenCalled()
 
-    consoleError.mockRestore()
   })
 
   // Scope read-only: sheets persist across drill; out-of-scope sheets
@@ -4975,7 +4908,6 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
   })
 
   it('keeps the unsaved guard when the sheet turned read-only with edits, without offering Save', async () => {
-    const consoleError = suppressActWarnings()
     const user = userEvent.setup({ delay: null })
     const handleClose = vi.fn()
     const { CanvasReadOnlyProvider } = await import(
@@ -5029,11 +4961,9 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
     await user.click(close)
     expect(handleClose).toHaveBeenCalledTimes(1)
 
-    consoleError.mockRestore()
   })
 
   it('saves the edited values from the unsaved-changes prompt', async () => {
-    const consoleError = suppressActWarnings()
     const user = userEvent.setup({ delay: null })
     const handleSave = vi.fn()
     const { ElementConfigModal } = await import(
@@ -5063,7 +4993,6 @@ describe('ElementConfigModal - DraggableSheet shell (CANVAS-227..230)', () => {
       expect.objectContaining({ id: mockElementData.id }),
     )
 
-    consoleError.mockRestore()
   })
 
   describe('Transform section gating', () => {
