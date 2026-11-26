@@ -1045,11 +1045,9 @@ describe('TestsListPage Integration', () => {
   }
 
   let originalFetch: typeof global.fetch
-  let fetchCallCount = 0
 
   beforeEach(() => {
     originalFetch = global.fetch
-    fetchCallCount = 0
   })
 
   afterEach(() => {
@@ -1060,7 +1058,6 @@ describe('TestsListPage Integration', () => {
     // Mock fetch to fail first time (for /tests), then succeed on retry
     let testsCallCount = 0
     global.fetch = vi.fn().mockImplementation((url: string) => {
-      fetchCallCount++
       if (url.includes('/tests')) {
         testsCallCount++
         if (testsCallCount === 1) {

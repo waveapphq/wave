@@ -1,6 +1,7 @@
 /** Functional Playwright config; run specs with ./scripts/e2e-targeted-local.sh functional/<suite>/<spec>.spec.ts */
 
 import { defineConfig, devices } from '@playwright/test'
+import os from 'os'
 import path from 'path'
 
 const projectRoot = path.resolve(__dirname, '../..')
@@ -59,7 +60,7 @@ export default defineConfig({
         ...Array.from({ length: N_STACKS }).flatMap((_, i) => {
           const fePort = FRONTEND_BASE_PORT + i
           const bePort = BACKEND_BASE_PORT + i
-          const dataDir = `/tmp/wave-e2e-stack-${i}`
+          const dataDir = path.join(os.tmpdir(), `wave-e2e-stack-${i}`)
           const configFile = `${dataDir}.config.yaml`
           // The data folder outlives the run, so its key is kept in a file beside it.
           const keyFile = `${dataDir}.secret-key`

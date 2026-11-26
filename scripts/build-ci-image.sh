@@ -13,7 +13,7 @@ echo "Image name: $IMAGE_NAME"
 echo "Project root: $PROJECT_ROOT"
 echo ""
 
-# Build from project root so we can COPY backend/ and frontend/ directories
+# Build from project root so we can COPY backend/ and scripts/
 cd "$PROJECT_ROOT"
 
 # CI runs mount the project root over /workspace, so the host's wheel cache is the one tests read

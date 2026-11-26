@@ -80,18 +80,9 @@ RUN /workspace/scripts/fetch-remote-wheels.sh
 RUN cd /workspace/backend && \
     poetry install --no-interaction --quiet --only main,dev
 
-# Copy frontend dependency files
-COPY --chown=ciuser:ciuser frontend/package.json frontend/package-lock.json /workspace/frontend/
-
-# Pre-install npm dependencies as ciuser
-RUN cd /workspace/frontend && \
-    npm ci --quiet && \
-    npm cache clean --force
-
 # Remove only the source code, keep pyproject.toml and poetry.lock for cache
 # This preserves the virtualenv association with /workspace/backend
-RUN cd /workspace/backend && rm -rf wavecore tests .coverage .mypy_cache .pytest_cache .ruff_cache htmlcov *.json && \
-    cd /workspace/frontend && rm -rf src public index.html vite.config.ts tsconfig*.json *.test.* node_modules
+RUN cd /workspace/backend && rm -rf wavecore tests .coverage .mypy_cache .pytest_cache .ruff_cache htmlcov *.json
 
 # Default command
 CMD ["/bin/bash"]

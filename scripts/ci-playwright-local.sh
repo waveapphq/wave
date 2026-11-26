@@ -1,35 +1,14 @@
 #!/bin/bash
-# Local Playwright CI validation - container-sharded edition.
+# Local Playwright CI: the suite across N podman containers, each with its own backend and one Playwright worker.
 #
-# Runs the entire Playwright suite (functional + visual dark) across N
-# isolated podman containers. Each container has:
-#   - Its own uvicorn + vite preview + HTTPS simulator (network-namespaced)
-#   - Its own memory cgroup (--memory limit)
-#   - Its own ephemeral DB directory
-#   - Optionally its own CPU cgroup slice (--cpuset-cpus) if the user
-#     slice has cpuset delegation enabled (most rootless Ubuntu setups
-#     don't - see CPU_PIN_AVAILABLE below)
-# and runs Playwright with `--shard=K/N --workers=1` so exactly one
-# Playwright worker ever talks to any given backend.
-#
-# This is the architecture that finally delivers both parallelism and
-# determinism: the earlier host-side N-stack layout flaked because
-# no-data workers and fixture workers shared backends (seed races) and
-# because N>1 put the 32-core host under scheduling contention. Per-shard
-# containers give each slice its own backend state and its own process
-# tree, which eliminates the seed races outright. CPU contention is
-# reduced by running more shards than the old stack count, so each
-# chromium still has plenty of scheduler headroom on a 32-core host.
+# Usage: ./scripts/ci-playwright-local.sh [<spec path relative to tests/e2e> ...]
 #
 # Override with env vars:
 #   WAVE_E2E_N_SHARDS           default: 8
+#   WAVE_CI_PROGRESS_SECONDS    default: 60, seconds between progress lines
 #   WAVE_E2E_CORES_PER_SHARD    default: nproc / N_SHARDS (only used when pinning)
 #   WAVE_E2E_MEM_PER_SHARD      default: 2g
-#   WAVE_E2E_SHOW_SHARD_TIMINGS default: 0 (hidden). Set to 1 to echo the
-#                               per-shard functional+visual timing block at
-#                               the end of the run; useful when diagnosing
-#                               a slow shard. The file is always written to
-#                               $ARTIFACTS_ROOT/shard-summaries.txt regardless.
+#   WAVE_E2E_SHOW_SHARD_TIMINGS default: 0; 1 also prints $ARTIFACTS_ROOT/shard-summaries.txt at the end
 
 set -e
 
@@ -37,27 +16,34 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 E2E_DIR="$PROJECT_ROOT/tests/e2e"
-LOG_FILE="/tmp/ci-playwright.log"
+OUTPUT_DIR="$PROJECT_ROOT/ci-output"
+LOG_FILE="$OUTPUT_DIR/ci-playwright.log"
 IMAGE_NAME="wave-e2e:latest"
+PROGRESS_SECONDS="${WAVE_CI_PROGRESS_SECONDS:-60}"
+
+# Spec paths relative to tests/e2e; the planner and the shards read them comma separated.
+GIVEN_SPECS=("$@")
+SPECS=()
+for spec in "$@"; do
+  SPECS+=("${spec#./}")
+done
+SPEC_LIST=$(IFS=,; echo "${SPECS[*]}")
+GIVEN_LIST=$(IFS=,; echo "${GIVEN_SPECS[*]}")
 
 # Container runtime tunables - sized for a 32-core host by default.
 TOTAL_CORES=$(nproc)
 WAVE_E2E_N_SHARDS="${WAVE_E2E_N_SHARDS:-8}"
-# Integer floor: each shard would get TOTAL_CORES / N_SHARDS cores if CPU
-# pinning is available. Ubuntu 22.04 rootless podman only delegates
-# memory+pids to user slices by default, so --cpuset-cpus errors with
-# "cgroup controller cpuset is not available" and we skip it unless the
-# user has enabled CPU delegation.
+if [ "${#SPECS[@]}" -gt 0 ] && [ "${#SPECS[@]}" -lt "$WAVE_E2E_N_SHARDS" ]; then
+  WAVE_E2E_N_SHARDS="${#SPECS[@]}"
+fi
+# Cores per shard, used only when CPU pinning is available.
 WAVE_E2E_CORES_PER_SHARD="${WAVE_E2E_CORES_PER_SHARD:-$((TOTAL_CORES / WAVE_E2E_N_SHARDS))}"
 if [ "$WAVE_E2E_CORES_PER_SHARD" -lt 1 ]; then
   WAVE_E2E_CORES_PER_SHARD=1
 fi
 WAVE_E2E_MEM_PER_SHARD="${WAVE_E2E_MEM_PER_SHARD:-2g}"
 
-# Detect whether cpuset/cpu cgroup controllers are delegated to this user.
-# If yes, we pin each container to a dedicated CPU slice; if no, the OS
-# scheduler balances chromium across all cores (process isolation alone
-# is still enough to clear the seed races that flaked host-mode N>1).
+# Pin each container to its own CPUs only when the cpuset controller is delegated to this user.
 USER_CG_CONTROLLERS=""
 if [ -r /sys/fs/cgroup/user.slice/user-"$(id -u)".slice/user@"$(id -u)".service/cgroup.controllers ]; then
   USER_CG_CONTROLLERS=$(cat /sys/fs/cgroup/user.slice/user-"$(id -u)".slice/user@"$(id -u)".service/cgroup.controllers 2>/dev/null || true)
@@ -68,14 +54,22 @@ case " $USER_CG_CONTROLLERS " in
 esac
 
 # Artifacts root - each shard gets a subdir to prevent collisions.
-ARTIFACTS_ROOT="/tmp/wave-e2e-artifacts"
+ARTIFACTS_ROOT="$OUTPUT_DIR/e2e-artifacts"
 rm -rf "$ARTIFACTS_ROOT"
 mkdir -p "$ARTIFACTS_ROOT"
 
 exec > >(tee "$LOG_FILE") 2>&1
 
-# Runs before the exit trap, so a failure here touches no containers.
-"$SCRIPT_DIR/check-branch-name.sh" || exit 1
+echo "Log: $LOG_FILE"
+
+# Runs before the exit trap, so a missing spec touches no containers or stack.
+for i in "${!SPECS[@]}"; do
+  if [ ! -f "$E2E_DIR/${SPECS[$i]}" ]; then
+    echo "Spec not found: ${GIVEN_SPECS[$i]}"
+    echo "Log: $LOG_FILE"
+    exit 2
+  fi
+done
 
 CI_START_EPOCH=$(date +%s)
 format_duration() {
@@ -90,7 +84,7 @@ format_duration() {
   fi
 }
 
-STEP_LOG="/tmp/ci-playwright-steps.log"
+STEP_LOG="$ARTIFACTS_ROOT/steps.log"
 : > "$STEP_LOG"
 time_step() {
   local label="$1"
@@ -103,9 +97,7 @@ time_step() {
   return $rc
 }
 
-# Make sure any still-running shard container is torn down on exit. Using
-# `podman ps -q --filter name=...` catches both running and exited copies
-# so a crash mid-run doesn't leak containers.
+# Removes running and exited shard containers, so a crash leaks none.
 cleanup_containers() {
   local ids
   ids=$(podman ps -aq --filter "name=wave-e2e-shard-" 2>/dev/null || true)
@@ -116,18 +108,23 @@ cleanup_containers() {
   fi
 }
 
-cleanup_build_dir() {
-  # Single shared bundle - the container-sharded layout no longer uses
-  # frontend/build-<i>. Clean those up too in case of a config revert.
-  rm -rf "$FRONTEND_DIR"/build-* 2>/dev/null || true
+PROGRESS_PID=""
+stop_progress() {
+  if [ -n "$PROGRESS_PID" ]; then
+    # The loop's sleep holds the log pipe open, so it stops too.
+    pkill -P "$PROGRESS_PID" 2>/dev/null || true
+    kill "$PROGRESS_PID" 2>/dev/null || true
+    wait "$PROGRESS_PID" 2>/dev/null || true
+    PROGRESS_PID=""
+  fi
 }
 
 print_summary() {
   local end_epoch=$(date +%s)
   local elapsed=$((end_epoch - CI_START_EPOCH))
+  stop_progress
   cleanup_containers
   "$SCRIPT_DIR/e2e-stack.sh" down || true
-  cleanup_build_dir
   echo ""
   if [ -f "$STEP_LOG" ]; then
     echo "⏱️  Per-step timings:"
@@ -135,10 +132,7 @@ print_summary() {
     cat "$STEP_LOG"
     echo "────────────────────────────────────"
   fi
-  # Per-shard phase timings - always written to disk so they're available
-  # after the fact, but only echoed to the main log when the debug toggle
-  # is set. Default is off because the summary bloats a green-run log.
-  # Enable with: WAVE_E2E_SHOW_SHARD_TIMINGS=1 ./scripts/ci-playwright-local.sh
+  # Per-shard timings always go to disk; WAVE_E2E_SHOW_SHARD_TIMINGS=1 also prints them.
   local shard_sum="$ARTIFACTS_ROOT/shard-summaries.txt"
   : > "$shard_sum"
   for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
@@ -157,8 +151,7 @@ print_summary() {
     cat "$shard_sum"
     echo "────────────────────────────────────"
   fi
-  # Total Playwright test count across all shards (functional + visual),
-  # summed from each shard's JSON report.
+  # Total test count, summed from every shard's JSON reports.
   local total_tests=0
   for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
     for report in "$ARTIFACTS_ROOT/shard-$i/functional-report.json" \
@@ -171,11 +164,15 @@ print_summary() {
   done
   echo "🧪 Total Playwright tests run: $total_tests (across $WAVE_E2E_N_SHARDS shards)"
   echo "⏱️  Playwright CI total duration: $(format_duration "$elapsed")"
+  echo "Log: $LOG_FILE"
 }
 trap print_summary EXIT
 
 echo "🎭 Running Playwright CI checks (container-sharded)..."
 echo "Project root: $PROJECT_ROOT"
+if [ "${#SPECS[@]}" -gt 0 ]; then
+  echo "Specs: ${SPECS[*]}"
+fi
 if [ "$CPU_PIN_AVAILABLE" = true ]; then
   echo "Shards: $WAVE_E2E_N_SHARDS × pinned-${WAVE_E2E_CORES_PER_SHARD}-cores / ${WAVE_E2E_MEM_PER_SHARD} RAM"
 else
@@ -197,8 +194,7 @@ if ! podman image exists "$IMAGE_NAME"; then
   exit 1
 fi
 
-# Ensure host-side npm deps exist (containers mount project RW, so the
-# node_modules directories the shard runner reaches for must live on disk).
+# The containers mount the project, so the shards use the host's node_modules.
 cd "$FRONTEND_DIR"
 if [ ! -d "node_modules" ]; then
   echo "📦 Installing frontend npm dependencies..."
@@ -212,23 +208,45 @@ fi
 
 cleanup_containers
 
+# The test count of each shard's bin, for the progress line. The shards plan the same bins.
+WEIGHTS_FILE="$E2E_DIR/shard-weights.json"
+SHARD_TESTS=()
+if [ -f "$WEIGHTS_FILE" ]; then
+  plan_args=(--shards "$WAVE_E2E_N_SHARDS" --artifacts "$ARTIFACTS_ROOT" --weights "$WEIGHTS_FILE" --e2e-dir "$E2E_DIR")
+  if [ "${#SPECS[@]}" -gt 0 ]; then
+    plan_args+=(--specs "$GIVEN_LIST")
+  fi
+  plan_rc=0
+  node "$SCRIPT_DIR/e2e-shard-plan.mjs" "${plan_args[@]}" || plan_rc=$?
+  if [ "$plan_rc" -eq 2 ]; then
+    # A listed file no config picks up: stop before the build, with no stack to take down.
+    trap - EXIT
+    echo "Log: $LOG_FILE"
+    exit 2
+  elif [ "$plan_rc" -ne 0 ]; then
+    exit 1
+  fi
+  for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
+    SHARD_TESTS+=("$(cat "$ARTIFACTS_ROOT/shard-$i/plan-tests.txt" 2>/dev/null || echo 0)")
+  done
+elif [ "${#SPECS[@]}" -gt 0 ]; then
+  echo "❌ A spec list needs tests/e2e/shard-weights.json; run ./scripts/generate-shard-weights.sh"
+  exit 1
+fi
+echo ""
+
 # ---------------------------------------------------------------------------
-# Step 1: Build the single shared frontend bundle.
-#
-# The container-sharded layout has every container's browser pointing at
-# its own 127.0.0.1:8000, so VITE_API_BASE_URL is the same for every shard
-# and we only need one build. (Vite inlines VITE_API_BASE_URL at build
-# time - that's why the old host-mode needed one build per stack.)
+# Step 1: one frontend build, since every shard's browser reaches its own 127.0.0.1:8000.
 # ---------------------------------------------------------------------------
 echo "✅ Building frontend bundle (shared by all shards)..."
 cd "$FRONTEND_DIR"
 rm -rf build
-time_step "Vite build (shared)" bash -c '
+VITE_LOG="$ARTIFACTS_ROOT/vite-build.log" time_step "Vite build (shared)" bash -c '
 set -e
 VITE_API_BASE_URL=http://localhost:8000 \
-  npx vite build --outDir build --emptyOutDir > /tmp/vite-build.log 2>&1 || {
+  npx vite build --outDir build --emptyOutDir > "$VITE_LOG" 2>&1 || {
     echo "Vite build failed:"
-    tail -30 /tmp/vite-build.log
+    tail -30 "$VITE_LOG"
     exit 1
   }
 echo "Built $(du -sh build | cut -f1) bundle at frontend/build"
@@ -239,14 +257,7 @@ echo "✅ Bringing up real-service stack..."
 "$SCRIPT_DIR/e2e-stack.sh" up --wait || exit 1
 
 # ---------------------------------------------------------------------------
-# Step 2: Launch N containers in parallel. Each container:
-#   - pins itself to a unique CPU range via --cpuset-cpus
-#   - caps memory via --memory
-#   - mounts the project RW + a per-shard artifacts dir RW
-#   - runs run-e2e-shard.sh, which starts services then runs Playwright
-#     (functional + visual dark) with --shard=K/N --workers=1
-# Container output is streamed to per-shard log files on the host so the
-# final log shows interleaved progress without a tangled mess.
+# Step 2: launch the shard containers in parallel, each writing its own log file.
 # ---------------------------------------------------------------------------
 echo "✅ Launching $WAVE_E2E_N_SHARDS shard container(s)..."
 
@@ -257,8 +268,7 @@ for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
   shard_log="$ARTIFACTS_ROOT/shard-$i.log"
   name="wave-e2e-shard-$i"
 
-  # Build the podman run command. --cpuset-cpus is conditional because
-  # rootless podman without delegated cpuset cgroup rejects the flag.
+  # --cpuset-cpus only with pinning; rootless podman without a delegated cpuset rejects it.
   run_args=(
     --sysctl "net.ipv4.ping_group_range=1000 1000"
     --rm
@@ -273,6 +283,9 @@ for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
     -e "SHARD_TOTAL=$WAVE_E2E_N_SHARDS"
     -e "ARTIFACTS_DIR=/artifacts"
   )
+  if [ "${#SPECS[@]}" -gt 0 ]; then
+    run_args+=( -e "WAVE_E2E_SPECS=$SPEC_LIST" )
+  fi
   if [ "$CPU_PIN_AVAILABLE" = true ]; then
     cpu_start=$(( (i - 1) * WAVE_E2E_CORES_PER_SHARD ))
     cpu_end=$(( i * WAVE_E2E_CORES_PER_SHARD - 1 ))
@@ -290,6 +303,31 @@ for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
   ) &
   shard_pids+=($!)
 done
+
+# One line with every shard's share: tests started in its log against its bin's test count.
+shard_percent() {
+  local i="$1" total="${SHARD_TESTS[$(( $1 - 1 ))]:-0}" started
+  started=$(grep -cE '\[[0-9]+/[0-9]+\]( \(retries\))? ' "$ARTIFACTS_ROOT/shard-$i.log" 2>/dev/null || true)
+  started="${started:-0}"
+  if [ "$total" -le 0 ]; then
+    echo 0
+  elif [ "$started" -ge "$total" ]; then
+    echo 100
+  else
+    echo $(( started * 100 / total ))
+  fi
+}
+(
+  while sleep "$PROGRESS_SECONDS"; do
+    line="Progress:"
+    for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
+      [ "$i" -gt 1 ] && line+=","
+      line+=" shard $i/$WAVE_E2E_N_SHARDS $(shard_percent "$i")%"
+    done
+    echo "$line"
+  done
+) &
+PROGRESS_PID=$!
 
 # ---------------------------------------------------------------------------
 # Step 3: Wait for all shards and collect exit codes.
@@ -313,6 +351,7 @@ for i in $(seq 1 "$WAVE_E2E_N_SHARDS"); do
   fi
 done
 printf "%-32s %ds\n" "All shards (wall clock)" "$(( $(date +%s) - SHARD_RUN_START ))" >> "$STEP_LOG"
+stop_progress
 
 echo ""
 echo "════════════════════════════════════════════"
@@ -324,11 +363,7 @@ fi
 
 echo "❌ Playwright CI FAILED in ${#failed_shards[@]} shard(s): ${failed_shards[*]}"
 echo ""
-# Print the full error block (from the first failure marker to end of log)
-# plus any remaining tail lines up to 800. Playwright's list reporter
-# prints received/expected/stack right after the ✘ marker, so anchoring
-# on that gives us the diagnostic detail without being drowned out by
-# the visual suite's 100+ passing dots.
+# Failure detail from the first failure marker on, then the log's tail for context.
 for i in "${failed_shards[@]}"; do
   log_file="$ARTIFACTS_ROOT/shard-$i.log"
   if [ -f "$log_file" ]; then

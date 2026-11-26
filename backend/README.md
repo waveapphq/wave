@@ -64,20 +64,22 @@ The full suite runs through `./scripts/ci-backend-local.sh`, from the root of th
 poetry run pytest tests/<area>
 ```
 
-From the root of the clone, `./scripts/ci-backend-local.sh` runs every test and fails below 100% coverage.
+From the root of the clone, `./scripts/ci-backend-local.sh` runs every test and fails below 100% coverage. Run `./scripts/ci-checks-local.sh` first: it runs the fast checks, the ones in Code Quality among them.
 
 ### Code Quality
 
 ```bash
 # Format code
-poetry run black wavecore/
+poetry run black wavecore/ tests/
 
 # Lint and auto-fix
-poetry run ruff check wavecore/ --fix
+poetry run ruff check wavecore/ tests/ --fix
 
 # Type checking
 poetry run mypy wavecore/
 ```
+
+From the root of the clone, `./scripts/ci-checks-local.sh` runs these three checks with the branch name, text, orphaned file and exclusion ID checks, the frontend lint, type and build checks and the E2E type check. It runs every check even after one fails and ends with `Fast checks passed.` or `Fast checks failed: <names>.`.
 
 ### Running the Server
 

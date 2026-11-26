@@ -20,9 +20,11 @@ RUN apk add --no-cache curl patch unzip
 WORKDIR /build
 COPY kwok-exec-fidelity.patch /build/kwok-exec-fidelity.patch
 # Module-zip entries unpack read-only, so make the tree writable before patching.
-RUN curl -sSLo /tmp/kwok.zip "https://proxy.golang.org/sigs.k8s.io/kwok/@v/${KWOK_VERSION}.zip" \
- && unzip -q /tmp/kwok.zip -d /tmp/kwok-src \
- && cp -a "/tmp/kwok-src/sigs.k8s.io/kwok@${KWOK_VERSION}/." /build/ \
+RUN work="$(mktemp -d)" \
+ && curl -sSLo "${work}/kwok.zip" "https://proxy.golang.org/sigs.k8s.io/kwok/@v/${KWOK_VERSION}.zip" \
+ && unzip -q "${work}/kwok.zip" -d "${work}/kwok-src" \
+ && cp -a "${work}/kwok-src/sigs.k8s.io/kwok@${KWOK_VERSION}/." /build/ \
+ && rm -rf "${work}" \
  && chmod -R u+w /build \
  && patch -p1 < /build/kwok-exec-fidelity.patch \
  && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/kwok ./cmd/kwok

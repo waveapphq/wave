@@ -343,12 +343,16 @@ if [ "$CLEAN_MODE" = true ] && [ -n "$PARALLEL_WORKERS" ]; then
         FAST_PYTEST_ARGS+=(-x)
     fi
 
+    # pytest's output streams to a log file; only its progress rows reach the screen.
+    PYTEST_LOG=$(mktemp)
     FAST_START=$(date +%s)
     set +e
-    OUTPUT=$(poetry run pytest "${FAST_PYTEST_ARGS[@]}" 2>&1)
-    EXIT_CODE=$?
+    PYTHONUNBUFFERED=1 poetry run pytest "${FAST_PYTEST_ARGS[@]}" 2>&1 | tee "$PYTEST_LOG" | grep --line-buffered -E '\[ *[0-9]+%\]$'
+    EXIT_CODE=${PIPESTATUS[0]}
     FAST_DURATION=$(( $(date +%s) - FAST_START ))
     set -e
+    OUTPUT=$(<"$PYTEST_LOG")
+    rm -f "$PYTEST_LOG"
 
     # Parse pytest summary
     PASSED=$(echo "$OUTPUT" | grep -oP "\d+(?= passed)" | tail -1 || echo "0")

@@ -6,6 +6,7 @@
  */
 
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 
 // Per-worker port routing for the N-stack CI layout. We use
@@ -36,10 +37,10 @@ export const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`
  * dirs the backends are started with: run-e2e-shard.sh (container mode) and
  * the playwright config webServer blocks (host mode).
  */
-export const STORAGE_BASE_PATH =
-  process.env.WAVE_E2E_EXTERNAL_SERVICES === '1'
-    ? '/tmp/wave-shard-data'
-    : `/tmp/wave-e2e-stack-${STACK_INDEX}`
+export const STORAGE_BASE_PATH = path.join(
+  os.tmpdir(),
+  process.env.WAVE_E2E_EXTERNAL_SERVICES === '1' ? 'wave-shard-data' : `wave-e2e-stack-${STACK_INDEX}`,
+)
 
 /**
  * Host of the published HTTP-side compose services (http-echo, tls-lab, the

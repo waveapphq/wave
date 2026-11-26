@@ -124,27 +124,32 @@ Every change must follow this process:
 
 ### CI Validation Policy
 - **All CI checks must pass** - Never declare a change or any work complete until CI is green; fix any failing check immediately, never disable CI checks, and never use `# type: ignore` without explicit justification
-- **Change CI files only when that is the pull request's purpose** - A pull request that changes the CI scripts (`scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`), the exclusion check (`scripts/check-exclusions.py`), the text check settings (`typos.toml`), the SonarQube scripts and settings (`scripts/sonar-*.sh`, `backend/sonar-project.properties`, `frontend/sonar-project.properties`) or the GitHub workflows and code owners (`.github/workflows/`, `.github/CODEOWNERS`) is rejected unless fixing those files is the purpose of its issue. Fix the code instead; change a test only as the Test-Driven Development Policy allows.
-- **Local validation is mandatory** - Run the full CI suite locally before declaring work complete. There are exactly three CI surfaces; do not invoke `pytest --cov`, `npm test -- --coverage`, or `sonar-scan-*.sh` separately - the BE and FE CI scripts run coverage and then `sonar-scan-*.sh` internally. The one exception is a `sonar-scan-*.sh` run to read new issues early, before the CI scripts run; its coverage and gate result do not count. The scan goes to SonarQube Cloud (organization `waveapphq`, projects `waveapphq_wave-backend` and `waveapphq_wave-frontend`), waits for the quality gate (`qualitygate.wait=true`), and runs as the current branch, so a detached HEAD stops it. GitHub CI runs the same scan scripts.
+- **Change CI files only when that is the pull request's purpose** - A pull request that changes the CI scripts (`scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`), the exclusion check (`scripts/check-exclusions.py`), the text check settings (`typos.toml`), the SonarQube scripts and settings (`scripts/sonar-*.sh`, `backend/sonar-project.properties`, `frontend/sonar-project.properties`) or the GitHub workflows, the scripts they load and the code owners (`.github/workflows/`, `.github/scripts/`, `.github/CODEOWNERS`) is rejected unless fixing those files is the purpose of its issue. Fix the code instead; change a test only as the Test-Driven Development Policy allows.
+- **Local validation is mandatory** - Run the full local CI before declaring work complete. There are exactly four local CI surfaces; do not invoke `pytest --cov` or `npm test -- --coverage` separately - the BE and FE CI scripts run the tests and the coverage gate. Run the fast checks first.
   ```bash
-  # Backend CI (container-based) - includes text checks, tests, 100% coverage gate,
-  # mypy, black, ruff, and SonarQube scan with quality-gate wait
+  # Fast checks - host checks, then mypy over wavecore/, black and ruff over wavecore/ and tests/, ESLint, type checks and build
+  ./scripts/ci-checks-local.sh
+
+  # Backend CI (container-based) - tests, 100% coverage gate
   ./scripts/ci-backend-local.sh
 
-  # Frontend CI (container-based) - includes text checks, tests, 100% coverage gate,
-  # type-check, build, and SonarQube scan with quality-gate wait
+  # Frontend CI (container-based) - tests, 100% coverage gate
   ./scripts/ci-frontend-local.sh
 
-  # Playwright (sharded across Podman containers) - E2E visual + functional tests
+  # Playwright (sharded across Podman containers) - optional spec paths relative to tests/e2e/
   ./scripts/ci-playwright-local.sh
   ```
-- **Required host** - The three suites are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. For now, this is a hard requirement.
-- **Text checks** - `./scripts/check-text.sh` fails on spelling that `typos.toml` does not allow (`typos`, pinned in `backend/poetry.lock`), on em and en dashes in every text file that `.gitignore` does not exclude, and on process markers in source comments. The backend and frontend CI scripts and GitHub CI run it. Fix the text; a test string that needs a dash or a misspelling uses an escape or another misspelling.
-- **Branch name check** - `./scripts/check-branch-name.sh` allows only `master`, `release/<version>`, `fix/<version>-<name>` and `feature/<version>-<name>`; the three CI scripts run it first, and there a fix or feature branch also needs its release branch in `origin`; the `Branch name` workflow runs it on each pull request, which must go from a fix or feature branch into the release branch of the same version, or from a release branch into `master`.
-- **Optional results helpers** - `./scripts/sonar-results-backend.sh` and `./scripts/sonar-results-frontend.sh` are read-only reporting tools that summarize the SonarQube findings of the current branch after a scan of that branch has run. Use them only to inspect details when the quality-gate fails inside a CI script; never as a substitute for the CI script itself. With `--fix` they also print each finding's flow (for a security finding, the path from the input to the issue) and, once per rule, SonarQube's text on why it is an issue and how to fix it.
+- **No SonarQube in the local CI** - The local CI scripts do not run the SonarQube scan; GitHub CI runs it on each pull request and fails on its quality gate. To read its result before a push, run `./scripts/sonar-scan-backend.sh` or `./scripts/sonar-scan-frontend.sh` on the host after the matching suite, which writes the coverage the scan reads. Its gate counts only on a commit with nothing uncommitted on top, after the matching suite passed on the same files, because a branch scan counts only the files the branch's commits change. The scan goes to SonarQube Cloud (organization `waveapphq`, projects `waveapphq_wave-backend` and `waveapphq_wave-frontend`), waits for the quality gate (`qualitygate.wait=true`), and runs as the current branch, so a detached HEAD stops it.
+- **Progress lines** - While the tests run, the backend, frontend and Playwright scripts print `Progress: <N>%` (Playwright: one share per shard) every `WAVE_CI_PROGRESS_SECONDS` seconds, default 60.
+- **Required host** - The four local CI surfaces are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. This is a hard requirement.
+- **Text checks** - `./scripts/check-text.sh` fails on spelling that `typos.toml` does not allow (`typos`, pinned in `backend/poetry.lock`), on em and en dashes in every text file that `.gitignore` does not exclude, and on process markers in source comments, Python docstrings and the lines of `/* */` comments. The fast checks script and GitHub CI run it. Fix the text; a test string that needs a dash or a misspelling uses an escape or another misspelling.
+- **Branch name check** - `./scripts/check-branch-name.sh` allows only `master`, `release/<version>`, `fix/<version>-<name>` and `feature/<version>-<name>`; the fast checks script runs it, and there a fix or feature branch also needs its release branch in `origin`; the `Branch name` workflow runs it on each pull request, which must go from a fix or feature branch into the release branch of the same version, or from a release branch into `master`.
+- **Results helpers** - `./scripts/sonar-results-backend.sh` and `./scripts/sonar-results-frontend.sh` are read-only reporting tools that summarize the SonarQube findings and the quality gate, with each of its conditions, of the current branch after a scan of that branch has run; `--pr <number>` reads a pull request's instead. They show a scan's details and are never a substitute for the scan. With `--fix` they also print each finding's flow (for a security finding, the path from the input to the issue) and, once per rule, SonarQube's text on why it is an issue and how to fix it. When a fix or feature branch's scan counts 0 lines while HEAD adds or modifies that project's code against its release branch (Python under `backend/`, TypeScript or JavaScript under `frontend/`), they print `NOT PROVEN` and exit 3: commit the work and scan again.
 - **Optional CodeQL check** - `./scripts/codeql-scan.sh` runs the checks GitHub's code scanning runs, on the host, and lists the alerts the target branch does not have (`--all` lists every alert of the working tree instead, `--flows` adds the path from the input to each problem). Run it before a push; it is not part of the CI scripts, and GitHub runs CodeQL on each pull request itself.
-- **Exclusion checks** - `python3 scripts/check-exclusions.py --sonarqube` and `--codeql` compare SonarQube Cloud's false positive marks and GitHub's dismissed CodeQL alerts with `tests/exclusions/`, and fail on each mark, dismissal, entry or ID comment without its match. GitHub runs them as the required checks SonarQube exclusions and CodeQL exclusions; locally, run them after the CI scripts, which do not run them.
-- **CI scripts write logs to files** - Output is tee'd to `/tmp/ci-frontend.log` and `/tmp/ci-backend.log`
+- **Exclusion checks** - `python3 scripts/check-exclusions.py --sonarqube` and `--codeql` compare SonarQube Cloud's false positive marks and GitHub's dismissed CodeQL alerts with `tests/exclusions/`, and fail on each mark, dismissal, entry or ID comment without its match. GitHub runs them as the required checks SonarQube exclusions and CodeQL exclusions; locally, run them after the CI scripts, which do not run them. The fast checks script checks each ID comment in the code against its entry, through `scripts/check-orphaned-files.sh`.
+- **CI scripts write logs to files** - Output is tee'd to the git-ignored folder `ci-output/` at the clone's root: `ci-checks.log`, `ci-backend.log`, `ci-frontend.log`, `ci-playwright.log` and `ci-playwright-targeted.log`, with the E2E artifacts in `ci-output/e2e-artifacts/` and `ci-output/e2e-targeted-artifacts/`. Each script prints the full path of its log as `Log: <path>` at its start and its end
+- **Optional license check** - `python3 scripts/check-licenses.py`, run from the clone root once per release, checks every shipped dependency (backend runtime packages, frontend runtime packages, remote host wheels) against the approved list `scripts/dependency-licenses.json` and fails on an unapproved or changed license, a GPL or AGPL license, a dependency from git, a path, a URL or a file, a `patches/` folder outside `tests/e2e/services/`, and a wheel that does not match `backend/vendor/wheels.lock`. No CI runs it
+- **Optional vulnerability audit** - `python3 scripts/audit-dependencies.py`, run from the clone root in dedicated security work, runs pip-audit (OSV) and npm audit over the backend, remote host wheel, frontend and E2E dependencies. Exit 0: nothing found; 1: advisories found; 2: a source could not be reached. No CI runs it
 - **Never re-run CI to see truncated output** - After a CI run, read or search the log file to find specific details (coverage gaps, error messages, etc.)
 - **Group changes before running CI** - Make all reasonable code and test changes first, then run CI once. Do not run CI after every small edit. Group related fixes (implementation + tests + coverage) together, then verify. CI runs take minutes - minimize the number of runs by doing more work between them.
 - **No "pre-existing" or "unrelated" excuses** - If CI fails on your branch, find the cause before you call it unrelated. A failure your change caused is fixed in that pull request. A failure that is already on `master` or on the release branch gets an issue, as Pull Request Scope says; never ignore it.
@@ -301,8 +306,11 @@ wave/
 │   └── package.json             # NPM config
 ├── tests/
 │   └── e2e/                     # Playwright E2E and visual tests
-├── scripts/                     # CI, coverage, SonarQube, container and E2E scripts
-├── .github/workflows/           # CI and pull request checks
+├── scripts/                     # CI, coverage, SonarQube, container, E2E, license and audit scripts
+├── ci-output/                   # Logs and artifacts of the local CI scripts (git-ignored)
+├── .github/
+│   ├── workflows/               # CI and pull request checks
+│   └── scripts/                 # Logic the workflows load
 └── CLAUDE.md
 ```
 
@@ -322,9 +330,9 @@ poetry run pytest tests/<area>
 # Type checking
 poetry run mypy wavecore/
 
-# Code formatting
-poetry run black wavecore/
-poetry run ruff check wavecore/ --fix
+# Code formatting and lint, code and tests
+poetry run black wavecore/ tests/
+poetry run ruff check wavecore/ tests/ --fix
 ```
 
 **Note**: Poetry 2.0+ removed the `shell` command. Use `poetry run` to execute commands in the virtual environment, or activate it with `source $(poetry env info --path)/bin/activate`.
@@ -353,6 +361,15 @@ npx vitest run tests/<file>
 
 # Type checking
 npm run type-check
+
+# Lint the code and the tests
+npm run lint
+```
+
+### Checks Before the Suites
+```bash
+# From the clone root: text, orphan and exclusion ID, lint, format, type and build checks in one go
+./scripts/ci-checks-local.sh
 ```
 
 ## Testing Requirements
@@ -382,5 +399,5 @@ npm run type-check
 - `SONAR_URL` - Optional; points the scan and the results helpers at another SonarQube server (default `https://sonarcloud.io`)
 - `CODEQL_WORK_DIR` - Optional; where the CodeQL scan keeps its work files, several GB while a scan runs (default `~/.cache/wave-codeql`)
 - `CODEQL_BASE` - Optional; the branch the CodeQL scan compares with (default `release/<version>` for a fix or feature branch, else `master`)
-- `CODEQL_GITHUB_TOKEN` - Optional; a GitHub token that can read code scanning alerts. With it, the CodeQL scan leaves out the alerts a maintainer dismissed on GitHub for the branch or its pull request
+- `CODEQL_GITHUB_TOKEN` - Optional; a GitHub token that can read code scanning alerts. With it, the CodeQL scan leaves out the alerts a maintainer dismissed on GitHub for the branch or its pull request, and reads the target branch's results from GitHub's own scan of that commit instead of scanning it
 - `WAVE_MCP_SECRETS_DIR` - Server-side root for the recipe `value_from_file` secret mode (overrides `security.secrets_input_dir`; unset disables the mode)

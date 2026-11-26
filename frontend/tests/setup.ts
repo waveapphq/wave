@@ -19,7 +19,6 @@ import { useLayoutSessionStore } from '../src/stores/layout-session-store'
 // @testing-library/react checks for Jest's presence; this tricks it into working with Vitest
 // See: https://github.com/testing-library/user-event/issues/1115
 declare global {
-  // eslint-disable-next-line no-var
   var jest: unknown
 }
 

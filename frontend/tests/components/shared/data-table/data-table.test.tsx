@@ -21,6 +21,8 @@ interface TestRow {
   name: string
 }
 
+type CellRenderer = (props: never) => React.ReactElement
+
 const testColumns: ColumnDef<TestRow, unknown>[] = [
   { id: 'name', accessorKey: 'name', header: 'Name' },
 ]
@@ -340,7 +342,7 @@ describe('Entity column definitions', () => {
       original: { id: '1', name: 'Prod', description: null, tags: [], usage: 1, createdAt: '', updatedAt: '' },
     }
     const { container } = render(
-      (usageCol.cell as Function)({ row: mockRow, getValue: () => 1 } as never)
+      (usageCol.cell as CellRenderer)({ row: mockRow, getValue: () => 1 } as never)
     )
     expect(container.textContent).toBe('1 profile')
   })
@@ -357,7 +359,7 @@ describe('Entity column definitions', () => {
       original: { id: '1', name: 'Prod', description: null, tags: [], usage: 3, createdAt: '', updatedAt: '' },
     }
     const { container } = render(
-      (usageCol.cell as Function)({ row: mockRow, getValue: () => 3 } as never)
+      (usageCol.cell as CellRenderer)({ row: mockRow, getValue: () => 3 } as never)
     )
     expect(container.textContent).toBe('3 profiles')
   })
@@ -429,7 +431,7 @@ describe('Suite tests column definitions', () => {
       index: 0,
     }
     const { container } = render(
-      (actionsCol.cell as Function)({ row: mockRow, getValue: () => '' } as never),
+      (actionsCol.cell as CellRenderer)({ row: mockRow, getValue: () => '' } as never),
     )
 
     const editBtn = container.querySelector('[data-testid="test-edit-btn"]')!
@@ -450,7 +452,7 @@ describe('Suite tests column definitions', () => {
       index: 0,
     }
     const { container } = render(
-      (actionsCol.cell as Function)({ row: mockRow, getValue: () => '' } as never),
+      (actionsCol.cell as CellRenderer)({ row: mockRow, getValue: () => '' } as never),
     )
 
     const excludeBtn = container.querySelector('[data-testid="test-exclude-btn"]')!

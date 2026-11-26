@@ -1096,9 +1096,7 @@ describe('ConsoleContent Component', () => {
       // Mock getBoundingClientRect - use different values for container vs measurement element
       // Container gets large width, test element (span) gets 80px for 10 chars = 8px/char
       const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect
-      let callCount = 0
       Element.prototype.getBoundingClientRect = vi.fn().mockImplementation(function (this: Element) {
-        callCount++
         // First call is for container (main component), second is for measurement span
         if (this.tagName === 'SPAN') {
           // Measurement element: 10 chars at 8px = 80px total

@@ -16,6 +16,11 @@ vi.mock('@/hooks/use-viewport', () => ({
   useViewport: () => ({ isTouchDevice: false, width: 1024, height: 768, breakpoint: 'lg' }),
 }))
 
+// The stand-in calls onSave with only the arguments each case needs.
+type SheetStandInProps = Omit<React.ComponentProps<typeof import('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet').ValueEditorSheet>, 'onSave'> & {
+  onSave: (...args: unknown[]) => void
+}
+
 // The shared "Edit value" sheet mounted by the row for string + complex
 // values - a stand-in exposing its props/wiring so the row's orchestration
 // (which type opens, allowTemplate, save routing) can be asserted. sheet-save
@@ -23,7 +28,7 @@ vi.mock('@/hooks/use-viewport', () => ({
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {
   const { createPortal } = await import('react-dom')
   return {
-    ValueEditorSheet: ({ type, value, allowTemplate, allowedFormats, captureEsc, elementTypes, onSave, onClose }: any) =>
+    ValueEditorSheet: ({ type, value, allowTemplate, allowedFormats, captureEsc, elementTypes, onSave, onClose }: SheetStandInProps) =>
       createPortal(
         <div
           data-testid="value-editor-sheet"
@@ -83,7 +88,7 @@ const scalarBody = vi.hoisted(() => ({ real: false }))
 vi.mock('@/components/shared/variable-bodies/scalar-edit-body', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/shared/variable-bodies/scalar-edit-body')>()
   return {
-    ScalarEditBody: (props: any) =>
+    ScalarEditBody: (props: React.ComponentProps<typeof import('@/components/shared/variable-bodies/scalar-edit-body').ScalarEditBody>) =>
       scalarBody.real ? (
         <actual.ScalarEditBody {...props} />
       ) : (

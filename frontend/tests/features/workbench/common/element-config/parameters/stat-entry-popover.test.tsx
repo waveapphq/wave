@@ -20,11 +20,16 @@ vi.mock('@/features/workbench/api/opensearch-tools', () => ({
   cancelFields: vi.fn(() => Promise.resolve({ status: 'canceled' })),
 }))
 
+// The stand-in calls onSave with only the arguments each case needs.
+type SheetStandInProps = Omit<React.ComponentProps<typeof import('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet').ValueEditorSheet>, 'onSave'> & {
+  onSave: (...args: unknown[]) => void
+}
+
 // The Edit value sheet stand-in: exposes what the Custom (JSON) button hands it.
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {
   const { createPortal } = await import('react-dom')
   return {
-    ValueEditorSheet: ({ label, value, allowTemplate, allowedFormats, onRun, onSave, onClose }: any) =>
+    ValueEditorSheet: ({ label, value, allowTemplate, allowedFormats, onRun, onSave, onClose }: SheetStandInProps) =>
       createPortal(
         <div
           data-testid="value-editor-sheet"

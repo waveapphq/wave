@@ -319,12 +319,17 @@ vi.mock('@/features/workbench/stores/workflow-store', () => ({
   ),
 }))
 
+// The stand-in calls onSave with only the arguments each case needs.
+type SheetStandInProps = Omit<React.ComponentProps<typeof import('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet').ValueEditorSheet>, 'onSave'> & {
+  onSave: (...args: unknown[]) => void
+}
+
 // PYRUN-21: Run from the Python editor. The shared "Edit value" sheet is a
 // prop-reflecting stand-in so the modal's own wiring is assertable here.
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {
   const { createPortal } = await import('react-dom')
   return {
-    ValueEditorSheet: ({ value, nodeId, onRun, runBusy, runAllowed, onSyntaxIssues, onClose }: any) =>
+    ValueEditorSheet: ({ value, nodeId, onRun, runBusy, runAllowed, onSyntaxIssues, onClose }: SheetStandInProps) =>
       createPortal(
         <div
           data-testid="value-editor-sheet"

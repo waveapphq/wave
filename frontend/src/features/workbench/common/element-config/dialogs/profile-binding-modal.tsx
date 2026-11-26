@@ -28,7 +28,7 @@ export interface ProfileBinding {
   profileName: string
   profileType: string
   alias: string
-  /** Profile type schema fields for autocomplete. May be absent in legacy data. */
+  /** Profile type schema fields for autocomplete. absent when a recipe binds the profile without fields. */
   fields?: Array<{ name: string; type: string }>
 }
 

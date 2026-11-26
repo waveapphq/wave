@@ -7,9 +7,12 @@ End-to-end tests for WAVE. Tests verify the UI matches design wireframes and dec
 Run these from the root of the clone:
 
 ```bash
-./scripts/e2e-targeted-local.sh <spec>    # one or more specs
+./scripts/e2e-targeted-local.sh <spec>    # one or more specs in one container
+./scripts/ci-playwright-local.sh <spec>   # one or more specs, split across up to 8 containers
 ./scripts/ci-playwright-local.sh          # all specs
 ```
+
+Logs and artifacts go to `ci-output/` at the root of the clone; each script prints the path of its log as `Log:` at its start and its end.
 
 Never run the Playwright configs in this folder straight on the host. Their setup resets the data of the backend on port 8000.
 
@@ -109,7 +112,12 @@ Fixture tests are ordered by shared seed script groups to minimize re-seeding.
 
 `./scripts/ci-playwright-local.sh` runs the full functional + visual-dark suite
 across N podman containers (default 8; override with `WAVE_E2E_N_SHARDS`), each
-with its own isolated backend/frontend stack. 8 shards runs reliably on a
+with its own isolated backend/frontend stack. Given spec paths relative to
+`tests/e2e/`, it runs only those files, on as many shards as there are files, 8
+at most; a path that does not exist stops the run with `Spec not found: <path>`
+and exit 2 before any container starts, and a file that neither the functional
+nor the visual config picks up stops it the same way with
+`Not in any Playwright config: <path>`. A spec list skips the e2e type-check. 8 shards runs reliably on a
 16-core host because (a) the work is duration-balanced so no shard runs hot far
 longer than the rest, and (b) the shared `request` fixture
 (`helpers/playwright-fixtures.ts`) retries idempotent backend reads on transient
@@ -121,7 +129,15 @@ because per-test durations vary widely. Instead, each container runs
 `tests/e2e/shard-weights.json` and packs spec files into duration-balanced bins
 (greedy LPT, functional + visual jointly). The partition is deterministic, so
 every container computes the same bins and selects its own slice. With no
-profile present it falls back to count-based `--shard`.
+profile present it falls back to count-based `--shard`; a spec list needs the
+profile. With a spec list the planner gets the files through `--specs` and packs
+only those, with the same weights; listed `empty-db-dark` files still go together
+onto one shard, which runs just those files.
+
+The host runs the planner too, before the shards start, to learn each shard's
+test count. It prints `Progress: shard 1/<k> <N>%, shard 2/<k> <N>%, ...` every
+`WAVE_CI_PROGRESS_SECONDS` seconds (default 60), each share counting the tests a
+shard has started against its count.
 
 `empty-db-dark` runs once per CI run. The planner packs its files as one item;
 the shard that gets it runs the three dark projects as usual (`empty-db-dark`
@@ -132,9 +148,11 @@ shard: a `--shard` fallback next to planned shards would leave files unrun.
 **Refresh the profile after adding or materially changing tests:**
 
 ```bash
-./scripts/ci-playwright-local.sh            # green run writes per-shard JSON
+./scripts/ci-playwright-local.sh            # green run writes per-shard JSON to ci-output/e2e-artifacts/
 ./scripts/generate-shard-weights.sh         # harvest -> tests/e2e/shard-weights.json
 ```
+
+Refresh it only after a full run: a run of listed specs reports only those files.
 
 The profile holds each file's wall time, hooks included: Playwright reports a
 test's `beforeAll` / `afterAll` time in the gap after it, so that gap goes to the
@@ -145,7 +163,7 @@ median seconds per test).
 Preview balance without running CI:
 
 ```bash
-node scripts/e2e-shard-plan.mjs --shards 4 --artifacts /tmp/plan \
+node scripts/e2e-shard-plan.mjs --shards 4 --artifacts ci-output/plan \
   --weights tests/e2e/shard-weights.json --e2e-dir tests/e2e
 ```
 
@@ -154,7 +172,8 @@ node scripts/e2e-shard-plan.mjs --shards 4 --artifacts /tmp/plan \
 `./scripts/e2e-targeted-local.sh` runs exactly the spec files you name in one
 isolated container - the same image, service stack and ephemeral DB as a full
 CI shard. Use it to watch a new spec fail before the fix and pass after; the
-merge gate is still the full `ci-playwright-local.sh` run.
+merge gate is still the full `ci-playwright-local.sh` run. For many specs,
+`ci-playwright-local.sh <spec> ...` splits them across containers instead.
 
 ```bash
 ./scripts/e2e-targeted-local.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts
@@ -165,7 +184,8 @@ Spec paths are relative to `tests/e2e/`. Paths under `visual/` run in the dark
 visual projects and everything else in the functional config; you can name both
 kinds in one invocation and a phase with no specs is skipped. The frontend
 bundle rebuilds only when missing or older than `frontend/src` (force with
-`WAVE_E2E_REBUILD=1`). Artifacts land in `/tmp/wave-e2e-targeted-artifacts/`.
+`WAVE_E2E_REBUILD=1`). The log is `ci-output/ci-playwright-targeted.log` and the
+artifacts land in `ci-output/e2e-targeted-artifacts/`.
 
 ## Real-Service Stack
 

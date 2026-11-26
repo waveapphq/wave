@@ -248,7 +248,6 @@ export default [
   },
   {
     ignores: [
-      'tests/**',
       'coverage/**',
       'build/**',
       'public/**',

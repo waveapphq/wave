@@ -16,7 +16,8 @@
 #   CODEQL_GITHUB_TOKEN  a GitHub token that can read code scanning alerts; with it, an
 #                    alert dismissed on GitHub for this branch or its pull request is
 #                    left out: the one result with its rule, file and line text that is
-#                    nearest its line
+#                    nearest its line, and the target branch's results come from GitHub's
+#                    own analysis of that commit, scanned here only when GitHub has none
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -140,10 +141,51 @@ else:
 json.dump(list(found.values()), open(out, "w"))
 PY
 
+github_base() { # github_base <sha> <language> <sarif out>: GitHub's CodeQL analysis of that commit, if it has one
+  [ -n "${CODEQL_GITHUB_TOKEN:-}" ] || return 1
+  python3 -I - "$1" "$2" "$3" "$(git remote get-url origin)" "${CODEQL_BASE#origin/}" <<'PY'
+import json, os, re, sys, urllib.parse, urllib.request
+
+sha, lang, out, remote, base = sys.argv[1:6]
+repo = re.search(r"github\.com[:/](.+?)(\.git)?$", remote).group(1)
+
+def api(path, accept="application/vnd.github+json"):
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}/{path}")
+    req.add_header("Authorization", f"Bearer {os.environ['CODEQL_GITHUB_TOKEN']}")
+    req.add_header("Accept", accept)
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.load(resp)
+
+try:
+    ref = urllib.parse.quote(f"refs/heads/{base}")
+    for page in range(1, 6):
+        analyses = api(f"code-scanning/analyses?ref={ref}&per_page=100&page={page}")
+        hit = next((a for a in analyses if a["tool"]["name"] == "CodeQL" and a["commit_sha"] == sha
+                    and a.get("category", "").strip("/") == f"language:{lang}"), None)
+        if hit or len(analyses) < 100:
+            break
+    if not hit:
+        print(f"GitHub has no CodeQL analysis of {sha[:7]} for {lang}")
+        sys.exit(1)
+    sarif = api(f"code-scanning/analyses/{hit['id']}", "application/sarif+json")
+except Exception as error:
+    print(f"Could not read GitHub's CodeQL analysis of {sha[:7]} for {lang} ({error})")
+    sys.exit(1)
+json.dump(sarif, open(out, "w"))
+print(f"Target branch for {lang}: GitHub's analysis of {sha[:7]} (CodeQL {hit['tool']['version']})")
+PY
+}
+
 status=0
 for lang in "${LANGS[@]}"; do
   base_sarif=""
   $ALL || base_sarif="$WORK/base-$base_sha-$lang-$version.sarif"
+  if [ -n "$base_sarif" ] && [ ! -f "$base_sarif" ]; then
+    gh_sarif="$WORK/base-$base_sha-$lang-github.sarif"
+    if [ -f "$gh_sarif" ] || github_base "$base_sha" "$lang" "$gh_sarif"; then
+      base_sarif="$gh_sarif"
+    fi
+  fi
   if [ -n "$base_sarif" ] && [ ! -f "$base_sarif" ]; then
     echo "Scanning $CODEQL_BASE for $lang (kept until that branch moves)..."
     if [ ! -d "$base_src" ]; then

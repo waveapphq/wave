@@ -44,4 +44,6 @@ Search the code for the ID, for example `git grep -n "BCOV-ABSTRACT-001"`. Each 
 
 ## Checks
 
+`scripts/check-orphaned-files.sh` fails on an orphan ID: an ID comment in the code without its entry, or an entry with no ID in the code. It runs locally in `./scripts/ci-checks-local.sh`, the fast checks.
+
 Two required checks on each pull request compare these lists with SonarQube Cloud and GitHub code scanning. `scripts/check-exclusions.py --sonarqube` fails when an SQ entry has no ID comment, an ID comment has no entry, a commented line is not marked false positive, or a false positive mark has no ID comment. `scripts/check-exclusions.py --codeql` fails when a dismissed CodeQL alert has no CQL entry, a listed alert is open, or a CQL entry and its ID comments do not match. Each failure says what to mark, dismiss or document. After a maintainer marks or dismisses, re-run the failed job.

@@ -28,6 +28,7 @@ const weightsPath = arg('weights')
 const e2eDir = arg('e2e-dir')
 const shardIndexArg = arg('shard-index')
 const outDir = arg('out-dir')
+const specsArg = arg('specs')
 const singleShard = shardIndexArg !== undefined
 
 if (!Number.isInteger(nShards) || nShards < 1 || !weightsPath || !e2eDir) {
@@ -44,6 +45,23 @@ if (singleShard) {
   console.error('e2e-shard-plan: provide --artifacts (all shards) or --shard-index + --out-dir')
   process.exit(1)
 }
+
+const givenSpecs = specsArg === undefined ? [] : specsArg.split(',').map((spec) => spec.trim())
+
+// A listed path as the phase's --list names it, or null when it lies outside that phase.
+function phaseFile(prefix, spec) {
+  const rel = spec.replace(/^\.\//, '')
+  return rel.startsWith(`${prefix}/`) ? rel.slice(prefix.length + 1) : null
+}
+
+// The listed files per phase, keyed the way --list names them, or null to plan every file.
+function listedFiles(prefix) {
+  if (specsArg === undefined) return null
+  return new Set(givenSpecs.map((spec) => phaseFile(prefix, spec)).filter((file) => file !== null))
+}
+const listedFunctional = listedFiles('functional')
+const listedVisual = listedFiles('visual')
+const isListed = (listed, file) => listed === null || listed.has(file)
 
 function playwrightCommand() {
   const local = path.resolve(e2eDir, 'node_modules', '.bin', 'playwright')
@@ -112,31 +130,52 @@ const weights = JSON.parse(readFileSync(weightsPath, 'utf8'))
 const functionalList = listTests(['--config=playwright.functional.config.ts'])
 const visualList = listTests(['--project=empty-db-dark', '--project=no-data-dark', '--project=fixture-dark'])
 
+// A listed file no config picks up would run nothing, so the plan stops with exit 2.
+const unpicked = givenSpecs.filter((spec) => {
+  const functionalFile = phaseFile('functional', spec)
+  const visualFile = phaseFile('visual', spec)
+  return !(functionalFile !== null && functionalList.has(functionalFile)) && !(visualFile !== null && visualList.has(visualFile))
+})
+if (unpicked.length) {
+  for (const spec of unpicked) console.log(`Not in any Playwright config: ${spec}`)
+  process.exit(2)
+}
+
 const fn = makePhase(functionalList, weights.functional || {})
 const vis = makePhase(visualList, weights.visual || {})
 
 const items = []
-for (const file of functionalList.keys()) {
-  items.push({ key: file, file, phase: 'functional', weight: fn.weightOf(file) })
+for (const [file, entry] of functionalList) {
+  if (!isListed(listedFunctional, file)) continue
+  items.push({ key: file, file, phase: 'functional', weight: fn.weightOf(file), tests: entry.count })
 }
 
 // A file with tests in empty-db-dark and in another project splits its weight by test count.
 const emptyDbFiles = []
 let emptyDbWeight = 0
+let emptyDbTestCount = 0
 for (const [file, entry] of visualList) {
+  if (!isListed(listedVisual, file)) continue
   const fileWeight = vis.weightOf(file)
   const emptyDbTests = entry.projects.get(EMPTY_DB_PROJECT) || 0
   if (emptyDbTests) {
     emptyDbFiles.push(file)
     emptyDbWeight += (fileWeight * emptyDbTests) / entry.count
+    emptyDbTestCount += emptyDbTests
   }
   if (entry.count > emptyDbTests) {
     const weight = (fileWeight * (entry.count - emptyDbTests)) / entry.count
-    items.push({ key: file, file, phase: 'visual', weight })
+    items.push({ key: file, file, phase: 'visual', weight, tests: entry.count - emptyDbTests })
   }
 }
 if (emptyDbFiles.length) {
-  items.push({ key: EMPTY_DB_PROJECT, file: null, phase: 'emptyDb', weight: emptyDbWeight })
+  items.push({
+    key: EMPTY_DB_PROJECT,
+    file: null,
+    phase: 'emptyDb',
+    weight: emptyDbWeight,
+    tests: emptyDbTestCount,
+  })
 }
 
 const bins = Array.from({ length: nShards }, () => ({
@@ -147,8 +186,10 @@ const bins = Array.from({ length: nShards }, () => ({
   funcW: 0,
   visW: 0,
   total: 0,
+  tests: 0,
 }))
-bins[0].preload = nShards > 1 ? SHARD1_TYPECHECK_SECONDS : 0
+// A run of listed files skips the type-check.
+bins[0].preload = nShards > 1 && specsArg === undefined ? SHARD1_TYPECHECK_SECONDS : 0
 bins[0].total = bins[0].preload
 
 // Greedy LPT: heaviest first, each onto the currently-lightest bin (lowest index on a tie).
@@ -160,6 +201,7 @@ for (const item of items) {
   }
   const bin = bins[best]
   bin.total += item.weight
+  bin.tests += item.tests
   if (item.phase === 'functional') {
     bin.functional.push(item.file)
     bin.funcW += item.weight
@@ -180,6 +222,7 @@ function writeBin(dir, bin) {
   writeFileSync(path.join(dir, 'plan-functional.txt'), join(bin.functional))
   writeFileSync(path.join(dir, 'plan-visual.txt'), join(bin.visual))
   writeFileSync(path.join(dir, 'plan-empty-db.txt'), join(bin.emptyDb ? emptyDbFiles : []))
+  writeFileSync(path.join(dir, 'plan-tests.txt'), `${bin.tests}\n`)
 }
 
 const nMissing = fn.missing.length + vis.missing.length
@@ -205,7 +248,7 @@ if (singleShard) {
   const ideal = totals.reduce((a, b) => a + b, 0) / nShards
   const owner = bins.findIndex((b) => b.emptyDb) + 1
   console.log(
-    `Shard plan: ${nShards} bins, ${functionalList.size} functional + ${items.filter((i) => i.phase === 'visual').length}` +
+    `Shard plan: ${nShards} bins, ${items.filter((i) => i.phase === 'functional').length} functional + ${items.filter((i) => i.phase === 'visual').length}` +
       ` visual files; ${EMPTY_DB_PROJECT} (${emptyDbFiles.length} files, ${fmt(emptyDbWeight)}) runs once,` +
       ` in shard ${owner || '-'}`,
   )

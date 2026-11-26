@@ -8,7 +8,7 @@
 # HTTP/TLS/proxy and Netcat targets are shared compose services (see
 # tests/e2e/services/), reached over the slirp gateway like the SSH stack.
 # Then runs, in order:
-#   1. tsc type-check of tests/e2e (shard 1 of a full-suite run only)
+#   1. tsc type-check of tests/e2e (shard 1 of a full-suite run only, no spec list)
 #   2. playwright functional tests (planned bin; --shard=K/N without a profile)
 #   3. playwright visual dark-theme tests (same; empty-db-dark once per run)
 #
@@ -25,6 +25,8 @@
 #                     defaults to /artifacts. The orchestrator mounts a
 #                     per-shard host dir here so traces/screenshots for
 #                     each shard land in their own directory.
+# Optional:
+#   WAVE_E2E_SPECS  - comma-separated spec paths relative to tests/e2e
 #
 # Exit code: non-zero if either the functional or visual run failed.
 
@@ -50,7 +52,8 @@ fi
 log "starting shard"
 
 # One type-check per run: shard 1 owns it, and targeted runs skip it.
-if [ "$SHARD_INDEX" = "1" ] && [ -z "${TARGET_SPECS:-}" ] && [ -z "${TARGET_VISUAL_SPECS:-}" ]; then
+if [ "$SHARD_INDEX" = "1" ] && [ -z "${TARGET_SPECS:-}" ] && [ -z "${TARGET_VISUAL_SPECS:-}" ] \
+   && [ -z "${WAVE_E2E_SPECS:-}" ]; then
   log "type-checking tests/e2e"
   if ! ( set -o pipefail
          cd /workspace/tests/e2e && npm run --silent type-check 2>&1 | sed "s|^|${PREFIX} |" ); then
@@ -60,7 +63,8 @@ if [ "$SHARD_INDEX" = "1" ] && [ -z "${TARGET_SPECS:-}" ] && [ -z "${TARGET_VISU
   log "type-check clean"
 fi
 
-DATA_DIR="/tmp/wave-shard-data"
+# helpers/config.ts reads the store at the same path, through os.tmpdir().
+DATA_DIR="$(dirname "$(mktemp -u)")/wave-shard-data"
 CONFIG_FILE="${DATA_DIR}.config.yaml"
 mkdir -p "$DATA_DIR" "$ARTIFACTS_DIR"
 
@@ -233,14 +237,14 @@ if [ -n "${TARGET_SPECS:-}" ] || [ -n "${TARGET_VISUAL_SPECS:-}" ]; then
 elif [ -f "$WEIGHTS_FILE" ]; then
   PLAN_MODE="planned"
   log "planning shard ${SHARD_INDEX}/${SHARD_TOTAL} from shard-weights.json"
+  PLAN_ARGS=(--shards "$SHARD_TOTAL" --shard-index "$SHARD_INDEX" --weights "$WEIGHTS_FILE"
+             --e2e-dir /workspace/tests/e2e --out-dir "$ARTIFACTS_DIR")
+  if [ -n "${WAVE_E2E_SPECS:-}" ]; then
+    PLAN_ARGS+=(--specs "$WAVE_E2E_SPECS")
+  fi
   # Never fall back to --shard here: the other shards run planned bins, so a count-based slice would drop files.
   if ! ( set -o pipefail
-         node /workspace/scripts/e2e-shard-plan.mjs \
-           --shards "$SHARD_TOTAL" \
-           --shard-index "$SHARD_INDEX" \
-           --weights "$WEIGHTS_FILE" \
-           --e2e-dir /workspace/tests/e2e \
-           --out-dir "$ARTIFACTS_DIR" 2>&1 | sed "s|^|${PREFIX} |" ); then
+         node /workspace/scripts/e2e-shard-plan.mjs "${PLAN_ARGS[@]}" 2>&1 | sed "s|^|${PREFIX} |" ); then
     log "planner failed - stopping this shard so no planned file is skipped (see the planner output above)"
     exit 1
   fi
@@ -250,6 +254,9 @@ elif [ -f "$WEIGHTS_FILE" ]; then
       exit 1
     fi
   done
+elif [ -n "${WAVE_E2E_SPECS:-}" ]; then
+  log "a spec list needs shard-weights.json - stopping this shard"
+  exit 1
 fi
 
 FUNC_EXIT=0
@@ -301,7 +308,15 @@ log "functional finished in ${FUNC_ELAPSED}s (exit ${FUNC_EXIT})"
 # Step 2: Visual dark tests (own globalSetup resets the BE again); a planned run runs empty-db-dark on its owner only.
 VISUAL_PLAN="$ARTIFACTS_DIR/plan-visual.txt"
 VISUAL_ARGS=(--project=empty-db-dark --project=no-data-dark --project=fixture-dark)
-if [ "$PLAN_MODE" = "planned" ]; then
+if [ "$PLAN_MODE" = "planned" ] && [ -n "${WAVE_E2E_SPECS:-}" ]; then
+  # A spec list runs only its listed empty-db-dark files, so no project pulls in the whole of it.
+  if [ -s "$ARTIFACTS_DIR/plan-empty-db.txt" ]; then
+    log "visual dark: this shard runs the listed empty-db-dark files"
+    VISUAL_PLAN="$ARTIFACTS_DIR/plan-visual-listed.txt"
+    cat "$ARTIFACTS_DIR/plan-empty-db.txt" "$ARTIFACTS_DIR/plan-visual.txt" > "$VISUAL_PLAN"
+  fi
+  VISUAL_ARGS+=(--no-deps)
+elif [ "$PLAN_MODE" = "planned" ]; then
   if [ -s "$ARTIFACTS_DIR/plan-empty-db.txt" ]; then
     log "visual dark: this shard runs empty-db-dark for the whole run"
     if ! grep -q '[^[:space:]]' "$VISUAL_PLAN"; then

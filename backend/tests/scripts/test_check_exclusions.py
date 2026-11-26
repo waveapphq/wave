@@ -1,6 +1,7 @@
 """Tests for scripts/check-exclusions.py, run from the clone on a git work tree in tmp_path."""
 
 import json
+import re
 import socket
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from tests.scripts.exclusions_support import (
     ALERTS_PATH,
@@ -32,6 +34,7 @@ from tests.scripts.exclusions_support import (
     sq_id,
     start_services,
 )
+from tests.scripts.script_support import CLONE
 
 SQ_A = sq_id("TEST-001")
 SQ_B = sq_id("TEST-002")
@@ -1269,6 +1272,24 @@ def ready_analyses(sha: str, categories: tuple[str, ...] = CATEGORIES) -> list[d
     ]
 
 
+def waiting_line(sha: str, found: int, minutes: int = 0, of: int = 30) -> str:
+    return f"Waiting for CodeQL analyses of {sha}: {found}/3 found, {minutes} of {of} minutes"
+
+
+WAITING = re.compile(
+    r"^Waiting for CodeQL analyses of [0-9a-f]{40}: [0-3]/3 found, [0-9]+ of [0-9]+ minutes$"
+)
+
+
+def without_waiting(result: Result) -> Result:
+    """The run's output without the poll lines."""
+    return Result(
+        result.code,
+        [line for line in result.stdout if not WAITING.match(line)],
+        [line for line in result.stderr if not WAITING.match(line)],
+    )
+
+
 class TestCodeQLWaiting:
     """In CI the CodeQL part waits for an analysis of the commit in each category."""
 
@@ -1284,7 +1305,7 @@ class TestCodeQLWaiting:
         result = run_script(repo, push_env(home, services), "--codeql")
 
         assert_output(
-            result,
+            without_waiting(result),
             0,
             [],
             f"CodeQL exclusions: 2 entries, 3 alerts and 3 ID comments match on {PUSH_REF}.",
@@ -1364,6 +1385,114 @@ class TestCodeQLWaiting:
 
         assert_output(result, 0, [], CODEQL_ALL_MATCH)
         assert services.requests_to(ANALYSES_PATH) == []
+
+
+class TestCodeQLPollLines:
+    """Each poll prints its line, and a failed CodeQL run of the commit stops the wait."""
+
+    def test_each_poll_prints_how_many_analyses_it_found(
+        self, repo: Repo, services: FakeServices, home: Path
+    ) -> None:
+        write_codeql_tree(repo)
+        repo.commit()
+        repo.detach()
+        services.alerts = {PUSH_REF: base_alerts()}
+        answers = {1: [], 2: ready_analyses(PUSH_SHA, CATEGORIES[:1])}
+        services.analyses = lambda call: answers.get(call, ready_analyses(PUSH_SHA))
+
+        result = run_script(
+            repo, push_env(home, services, WAVE_EXCLUSIONS_WAIT_SECONDS="1800"), "--codeql"
+        )
+
+        assert result.code == 0, result.all_lines
+        polls = [line for line in result.all_lines if WAITING.match(line)]
+        assert polls[:2] == [waiting_line(PUSH_SHA, 0), waiting_line(PUSH_SHA, 1)]
+        assert len(polls) == len(services.requests_to(ANALYSES_PATH))
+        assert result.stdout[-1] == (
+            f"CodeQL exclusions: 2 entries, 3 alerts and 3 ID comments match on {PUSH_REF}."
+        )
+
+    def test_the_poll_line_counts_only_analyses_of_the_commit(
+        self, repo: Repo, services: FakeServices, home: Path
+    ) -> None:
+        write_codeql_tree(repo)
+        repo.commit()
+        repo.detach()
+        services.alerts = {PUSH_REF: base_alerts()}
+        answers = {1: ready_analyses("d" * 40)}
+        services.analyses = lambda call: answers.get(call, ready_analyses(PUSH_SHA))
+
+        result = run_script(
+            repo, push_env(home, services, WAVE_EXCLUSIONS_WAIT_SECONDS="1800"), "--codeql"
+        )
+
+        assert result.code == 0, result.all_lines
+        polls = [line for line in result.all_lines if WAITING.match(line)]
+        assert polls[0] == waiting_line(PUSH_SHA, 0)
+
+    @pytest.mark.parametrize(
+        "name", ["Analyze (python)", "Analyze (javascript-typescript)", "Analyze (actions)"]
+    )
+    def test_a_failed_codeql_run_of_the_commit_stops_with_exit_1(
+        self, repo: Repo, services: FakeServices, home: Path, name: str
+    ) -> None:
+        write_codeql_tree(repo)
+        repo.commit()
+        repo.detach()
+        services.alerts = {PUSH_REF: base_alerts()}
+        services.analyses = lambda _call: ready_analyses(PUSH_SHA, CATEGORIES[:2])
+        services.add_check_run(PUSH_SHA, "Analyze (actions)", "success")
+        services.add_check_run(PUSH_SHA, name, "failure")
+
+        result = run_script(
+            repo, push_env(home, services, WAVE_EXCLUSIONS_WAIT_SECONDS="5"), "--codeql"
+        )
+
+        assert result.code == 1, result.all_lines
+        assert f"The CodeQL run for {PUSH_SHA} failed; no analysis to compare." in (
+            result.all_lines
+        )
+        assert services.requests_to(ALERTS_PATH) == []
+
+    @pytest.mark.parametrize(
+        ("name", "conclusion"),
+        [
+            ("CodeQL exclusions", "failure"),
+            ("Backend Tests", "failure"),
+            ("Analyze (python)", None),
+            ("Analyze (python)", "success"),
+        ],
+        ids=["own-job-failed", "other-job-failed", "codeql-in-progress", "codeql-passed"],
+    )
+    def test_other_check_runs_do_not_stop_the_wait(
+        self,
+        repo: Repo,
+        services: FakeServices,
+        home: Path,
+        name: str,
+        conclusion: str | None,
+    ) -> None:
+        write_codeql_tree(repo)
+        repo.commit()
+        repo.detach()
+        services.alerts = {PUSH_REF: base_alerts()}
+        services.analyses = lambda call: [] if call == 1 else ready_analyses(PUSH_SHA)
+        services.add_check_run(PUSH_SHA, name, conclusion)
+
+        result = run_script(
+            repo, push_env(home, services, WAVE_EXCLUSIONS_WAIT_SECONDS="1800"), "--codeql"
+        )
+
+        assert result.code == 0, result.all_lines
+        assert not any(line.startswith("The CodeQL run for ") for line in result.all_lines)
+        assert [line for line in result.all_lines if WAITING.match(line)][0] == (
+            waiting_line(PUSH_SHA, 0)
+        )
+
+    def test_the_codeql_exclusions_job_may_read_check_runs(self) -> None:
+        workflow = yaml.safe_load((CLONE / ".github" / "workflows" / "ci.yml").read_text())
+        job = workflow["jobs"]["codeql-exclusions"]
+        assert job["permissions"].get("checks") == "read"
 
 
 # Errors, tokens and usage

@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -36,6 +36,12 @@ jobs:
       - name: Text checks
         run: ./scripts/check-text.sh
 
+      - name: Restore remote-host wheels
+        uses: actions/cache@v6
+        with:
+          path: backend/vendor/wheels/
+          key: remote-host-wheels-${{ hashFiles('backend/vendor/wheels.lock') }}
+
       - name: Fetch remote-host wheels
         run: ./scripts/fetch-remote-wheels.sh
 
@@ -48,11 +54,11 @@ jobs:
 
       - name: Check code formatting with black
         working-directory: ./backend
-        run: poetry run black --check wavecore/
+        run: poetry run black --check wavecore/ tests/
 
       - name: Lint with ruff
         working-directory: ./backend
-        run: poetry run ruff check wavecore/
+        run: poetry run ruff check wavecore/ tests/
 
       - name: Install SonarScanner CLI
         run: |
@@ -71,12 +77,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -122,10 +128,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -147,12 +153,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -165,14 +171,15 @@ jobs:
     permissions:
       contents: read
       security-events: read
+      checks: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 

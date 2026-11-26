@@ -19,8 +19,68 @@ import React from 'react'
 // above ALL const/let/var declarations, so we cannot reference any such binding.
 // However, function declarations ARE hoisted (no TDZ), so this function is safe
 // to call from within vi.mock factories. vi is a vitest global, always available.
-function ensureTestGlobals() {
-  const g = globalThis as any
+type TestMock = ReturnType<typeof vi.fn>
+
+/** An extension object the CodeMirror stand-ins return. */
+interface ExtensionStub {
+  type: string
+  fn: (update: unknown) => void
+  text: unknown
+  attrs: unknown
+}
+
+interface KeyBindingStub {
+  key: string
+  run: (view?: unknown) => boolean
+}
+
+interface TestCaptured {
+  extensions: unknown[]
+  keymapBindings: KeyBindingStub[]
+  transactionFilter: Parameters<typeof import('@codemirror/state').EditorState.transactionFilter.of>[0] | null
+  escapeHandler: ((event: KeyboardEvent) => boolean) | null
+  themeSpecs: Record<string, Record<string, string>>[]
+  editorRef?: { view: unknown }
+  viewPluginFactory?: () => unknown
+}
+
+interface TestMocks {
+  codeMirrorProps: TestMock
+  startCompletion: TestMock
+  completionStatus: TestMock
+  closeCompletion: TestMock
+  acceptCompletion: TestMock
+  moveCompletionSelection: TestMock
+  validateExpressions: TestMock
+  initializeTreeSitter: TestMock
+  isInitialized: TestMock
+  createCompletionSource: TestMock
+  createHighlighter: TestMock
+  createTooltip: TestMock
+  unregisterEscape: TestMock
+}
+
+interface CodeMirrorStandInProps {
+  value?: string
+  onChange?: (value: string) => void
+  extensions?: unknown[]
+  className?: string
+  basicSetup?: unknown
+  theme?: unknown
+  ref?: ((instance: { view: unknown }) => void) | { current: { view: unknown } | null }
+}
+
+interface TestGlobals {
+  __test_captured?: TestCaptured
+  __test_mocks?: TestMocks
+}
+
+function isExtension(ext: unknown, type: string): ext is ExtensionStub {
+  return typeof ext === 'object' && ext !== null && 'type' in ext && ext.type === type
+}
+
+function ensureTestGlobals(): { captured: TestCaptured; mocks: TestMocks } {
+  const g = globalThis as TestGlobals
   if (!g.__test_captured) {
     g.__test_captured = {
       extensions: [],
@@ -51,20 +111,18 @@ function ensureTestGlobals() {
 }
 
 // Initialize for file-level use
-ensureTestGlobals()
-const captured = (globalThis as any).__test_captured
-const mocks = (globalThis as any).__test_mocks
+const { captured, mocks } = ensureTestGlobals()
 
 // Mock @uiw/react-codemirror
 vi.mock('@uiw/react-codemirror', () => {
   const { captured: c, mocks: m } = ensureTestGlobals()
   return {
-    default: ({ value, onChange, extensions, className, basicSetup, theme, ref }: any) => {
+    default: ({ value, onChange, extensions, className, basicSetup, theme, ref }: CodeMirrorStandInProps) => {
       m.codeMirrorProps({ value, onChange, extensions, className, basicSetup, theme })
       c.extensions = extensions || []
       if (ref) {
         // Store the ref object so tests can mutate .view later
-        const refObj = { view: null }
+        const refObj: { view: unknown } = { view: null }
         if (typeof ref === 'function') {
           ref(refObj)
         } else {
@@ -92,21 +150,21 @@ vi.mock('@codemirror/view', () => {
         c.themeSpecs.push(spec)
         return 'editor-theme-mock'
       },
-      updateListener: { of: (fn: any) => ({ type: 'updateListener', fn }) },
-      contentAttributes: { of: (attrs: any) => ({ type: 'contentAttributes', attrs }) },
+      updateListener: { of: (fn: (update: unknown) => void) => ({ type: 'updateListener', fn }) },
+      contentAttributes: { of: (attrs: unknown) => ({ type: 'contentAttributes', attrs }) },
     },
     keymap: {
-      of: (bindings: any) => {
+      of: (bindings: KeyBindingStub[]) => {
         c.keymapBindings = bindings
         return { type: 'keymap', bindings }
       },
     },
     placeholder: (text: string) => ({ type: 'placeholder', text }),
     ViewPlugin: {
-      define: (factory: any) => { factory(); c.viewPluginFactory = factory; return 'view-plugin-mock' },
-      fromClass: (_cls: any) => 'view-plugin-from-class-mock',
+      define: (factory: () => unknown) => { factory(); c.viewPluginFactory = factory; return 'view-plugin-mock' },
+      fromClass: (_cls: unknown) => 'view-plugin-from-class-mock',
     },
-    tooltips: (opts: any) => ({ type: 'tooltips', opts }),
+    tooltips: (opts: unknown) => ({ type: 'tooltips', opts }),
   }
 })
 
@@ -115,20 +173,20 @@ vi.mock('@codemirror/state', () => {
   return {
     EditorState: {
       transactionFilter: {
-        of: (fn: any) => {
+        of: (fn: NonNullable<TestCaptured['transactionFilter']>) => {
           c.transactionFilter = fn
           return { type: 'transactionFilter', fn }
         },
       },
     },
-    Prec: { highest: (x: any) => x },
+    Prec: { highest: (x: unknown) => x },
   }
 })
 
 vi.mock('@codemirror/autocomplete', () => {
   const { mocks: m } = ensureTestGlobals()
   return {
-    autocompletion: (config: any) => ({ type: 'autocompletion', config }),
+    autocompletion: (config: unknown) => ({ type: 'autocompletion', config }),
     startCompletion: (view: unknown) => m.startCompletion(view),
     completionStatus: (state: unknown) => m.completionStatus(state),
     closeCompletion: (view: unknown) => m.closeCompletion(view),
@@ -182,7 +240,7 @@ vi.mock('@/features/workbench/lib/codemirror/expression-theme', () => ({
 vi.mock('@/features/workbench/lib/codemirror/escape-handler', () => {
   const { captured: c, mocks: m } = ensureTestGlobals()
   return {
-    registerEscapeHandler: (handler: any) => {
+    registerEscapeHandler: (handler: (event: KeyboardEvent) => boolean) => {
       c.escapeHandler = handler
       return m.unregisterEscape
     },
@@ -190,7 +248,7 @@ vi.mock('@/features/workbench/lib/codemirror/escape-handler', () => {
 })
 
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(' '),
+  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }))
 
 // ============================================================================
@@ -232,7 +290,7 @@ function placeholderColors(): string[] {
     .filter(([selector]) => selector.includes('.cm-placeholder'))
     .map(([, style]) => style.color)
   const content = captured.extensions.find(
-    (ext: any) => ext && typeof ext === 'object' && ext.type === 'placeholder'
+    (ext) => isExtension(ext, 'placeholder')
   )?.text
   const fromElement =
     content instanceof HTMLElement && content.className.includes('--color-text-muted')
@@ -341,13 +399,13 @@ describe('ExpressionInput', () => {
       renderInput()
       // The updateListener is captured in extensions - find it and trigger focus
       const updateListenerExt = captured.extensions.find(
-        (ext: any) => ext && typeof ext === 'object' && 'type' in ext && ext.type === 'updateListener'
-      ) as any
+        (ext) => isExtension(ext, 'updateListener')
+      )
       expect(updateListenerExt).toBeDefined()
 
       // Simulate focus change
       act(() => {
-        updateListenerExt.fn({ focusChanged: true, view: { hasFocus: true } })
+        updateListenerExt!.fn({ focusChanged: true, view: { hasFocus: true } })
       })
 
       const wrapper = screen.getByTestId('param-input-test-param')
@@ -359,11 +417,11 @@ describe('ExpressionInput', () => {
       const onBlur = vi.fn()
       renderInput({ onBlur })
       const updateListenerExt = captured.extensions.find(
-        (ext: any) => ext && typeof ext === 'object' && 'type' in ext && ext.type === 'updateListener'
-      ) as any
+        (ext) => isExtension(ext, 'updateListener')
+      )
 
       act(() => {
-        updateListenerExt.fn({ focusChanged: true, view: { hasFocus: false } })
+        updateListenerExt!.fn({ focusChanged: true, view: { hasFocus: false } })
       })
 
       expect(onBlur).toHaveBeenCalled()
@@ -373,11 +431,11 @@ describe('ExpressionInput', () => {
       const onBlur = vi.fn()
       renderInput({ onBlur })
       const updateListenerExt = captured.extensions.find(
-        (ext: any) => ext && typeof ext === 'object' && 'type' in ext && ext.type === 'updateListener'
-      ) as any
+        (ext) => isExtension(ext, 'updateListener')
+      )
 
       act(() => {
-        updateListenerExt.fn({ focusChanged: false, view: { hasFocus: false } })
+        updateListenerExt!.fn({ focusChanged: false, view: { hasFocus: false } })
       })
 
       expect(onBlur).not.toHaveBeenCalled()
@@ -386,18 +444,18 @@ describe('ExpressionInput', () => {
     it('removes ring classes when unfocused', () => {
       renderInput()
       const updateListenerExt = captured.extensions.find(
-        (ext: any) => ext && typeof ext === 'object' && 'type' in ext && ext.type === 'updateListener'
-      ) as any
+        (ext) => isExtension(ext, 'updateListener')
+      )
 
       // Focus
       act(() => {
-        updateListenerExt.fn({ focusChanged: true, view: { hasFocus: true } })
+        updateListenerExt!.fn({ focusChanged: true, view: { hasFocus: true } })
       })
       expect(screen.getByTestId('param-input-test-param').className).toContain('ring-2')
 
       // Unfocus
       act(() => {
-        updateListenerExt.fn({ focusChanged: true, view: { hasFocus: false } })
+        updateListenerExt!.fn({ focusChanged: true, view: { hasFocus: false } })
       })
       expect(screen.getByTestId('param-input-test-param').className).not.toContain('ring-2')
     })
@@ -540,7 +598,7 @@ describe('ExpressionInput', () => {
     it('includes placeholder extension when placeholder prop is provided', () => {
       renderInput({ placeholder: 'Enter expression…' })
       const placeholderExt = captured.extensions.find(
-        (ext: any) => ext && typeof ext === 'object' && 'type' in ext && ext.type === 'placeholder'
+        (ext) => isExtension(ext, 'placeholder')
       )
       expect(placeholderExt).toBeDefined()
     })
@@ -549,7 +607,7 @@ describe('ExpressionInput', () => {
       renderInput()
       // The placeholder slot should be an empty array
       const hasPlaceholderExt = captured.extensions.some(
-        (ext: any) => ext && typeof ext === 'object' && 'type' in ext && ext.type === 'placeholder'
+        (ext) => isExtension(ext, 'placeholder')
       )
       expect(hasPlaceholderExt).toBe(false)
     })
@@ -591,7 +649,7 @@ describe('ExpressionInput', () => {
       renderInput()
       // Set up a view with dom
       const editorDom = document.createElement('div')
-      captured.editorRef.view = {
+      captured.editorRef!.view = {
         state: {},
         dom: editorDom,
         contentDOM: { blur: vi.fn() },
@@ -607,7 +665,7 @@ describe('ExpressionInput', () => {
       renderInput()
       const editorDom = document.createElement('div')
       const outsideElement = document.createElement('div')
-      captured.editorRef.view = {
+      captured.editorRef!.view = {
         state: {},
         dom: editorDom,
         contentDOM: { blur: vi.fn() },
@@ -629,7 +687,7 @@ describe('ExpressionInput', () => {
         dom: editorDom,
         contentDOM: { blur: vi.fn() },
       }
-      captured.editorRef.view = mockView
+      captured.editorRef!.view = mockView
       mocks.completionStatus.mockReturnValue('active')
 
       const event = new KeyboardEvent('keydown', { key: 'Escape' })
@@ -651,7 +709,7 @@ describe('ExpressionInput', () => {
         dom: editorDom,
         contentDOM: { blur: vi.fn() },
       }
-      captured.editorRef.view = mockView
+      captured.editorRef!.view = mockView
       mocks.completionStatus.mockReturnValue(null)
 
       const event = new KeyboardEvent('keydown', { key: 'Escape' })
@@ -671,11 +729,11 @@ describe('ExpressionInput', () => {
   describe('accessible name, invalid state and description', () => {
     /** The attributes the editor content takes, merged across every contentAttributes extension. */
     function contentAttributes(): Record<string, unknown> {
-      const flat = (captured.extensions as unknown[]).flat(Infinity) as any[]
+      const flat: unknown[] = captured.extensions.flat(Infinity)
       return Object.assign(
         {},
         ...flat
-          .filter((ext) => ext && typeof ext === 'object' && ext.type === 'contentAttributes')
+          .filter((ext) => isExtension(ext, 'contentAttributes'))
           .map((ext) => (typeof ext.attrs === 'function' ? ext.attrs({}) : ext.attrs)),
       )
     }
@@ -759,8 +817,8 @@ describe('buildExpressionKeymap', () => {
     return captured.keymapBindings
   }
 
-  function findBinding(bindings: any[], key: string) {
-    return bindings.find((b: any) => b.key === key)
+  function findBinding(bindings: KeyBindingStub[], key: string): KeyBindingStub {
+    return bindings.find((b) => b.key === key)!
   }
 
   function createMockView(completionActive: boolean) {
@@ -978,7 +1036,7 @@ describe('singleLineExtension', () => {
     const { EditorState } = await vi.importActual<typeof import('@codemirror/state')>('@codemirror/state')
     const start = EditorState.create({ doc })
     const tr = start.update({ changes: change, ...(userEvent === undefined ? {} : { userEvent }) })
-    const result = savedTransactionFilter(tr)
+    const result = savedTransactionFilter!(tr)
     if (result === tr) return tr.state.doc.toString()
     const specs = Array.isArray(result) ? result : [result]
     return start.update(...specs).state.doc.toString()
@@ -1117,7 +1175,7 @@ describe('setupGlobalWheelHandler', () => {
     // Calling it again exercises the "already attached" early return in setupGlobalWheelHandler.
     expect(captured.viewPluginFactory).toBeDefined()
     // Should not throw - just returns early
-    captured.viewPluginFactory()
+    captured.viewPluginFactory!()
   })
 
   it('attaches the CodeMirror read-only extension under a read-only canvas context', async () => {

@@ -408,10 +408,7 @@ describe('ErrorBoundary Component', () => {
     it('tracks error identity by message and type', async () => {
       const user = userEvent.setup()
       const onSameErrorRecur = vi.fn()
-      let errorCount = 0
-
       const SameMessageComponent = () => {
-        errorCount++
         // Same message but potentially different stack
         throw new Error('Identical error message')
       }
@@ -754,9 +751,7 @@ describe('ErrorBoundary Component', () => {
       const onSameErrorRecur = vi.fn()
 
       // We use a component that will throw the same error on each render
-      let errorCount = 0
       const AlwaysThrows = () => {
-        errorCount++
         throw new Error('Concurrent mode recurring error')
       }
 

@@ -3,7 +3,7 @@
 # ci-playwright-local.sh run.
 #
 # Each shard of a CI run writes functional-report.json / visual-report.json
-# into /tmp/wave-e2e-artifacts/shard-N/. This harvests their per-file
+# into ci-output/e2e-artifacts/shard-N/. This harvests their per-file
 # durations into the committed weights profile that e2e-shard-plan.mjs uses
 # to balance shards by time. Run it after any green full CI run; balance
 # degrades gracefully between refreshes (new files are weighed by test count).
@@ -14,7 +14,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ARTIFACTS_ROOT="${1:-/tmp/wave-e2e-artifacts}"
+ARTIFACTS_ROOT="${1:-$PROJECT_ROOT/ci-output/e2e-artifacts}"
 OUT="$PROJECT_ROOT/tests/e2e/shard-weights.json"
 
 if ! ls "$ARTIFACTS_ROOT"/shard-*/functional-report.json >/dev/null 2>&1 \

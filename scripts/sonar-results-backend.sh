@@ -1,40 +1,61 @@
 #!/usr/bin/env bash
 # Show detailed SonarQube analysis results for the backend project.
 # Provides actionable detail for all issue categories: bugs, vulnerabilities,
-# code smells, security hotspots, and duplications.
+# code smells, security hotspots, duplications, and the quality gate with its conditions.
 # Requires SONAR_TOKEN. SONAR_URL is optional and defaults to SonarQube Cloud.
-# Usage: sonar-results-backend.sh [--fix]
-#   --fix  also print each finding's flow and, once per rule, why it is an issue and how to fix it
+# Usage: sonar-results-backend.sh [--fix] [--pr <number>]
+#   --fix          also print each finding's flow and, once per rule, why it is an issue and how to fix it
+#   --pr <number>  read that pull request's results and gate instead of the current branch's
+# Exit 3 (NOT PROVEN): a fix or feature branch's analysis counts 0 lines while HEAD adds or modifies
+# Python files under backend/ against its release branch; when HEAD changes none, 0 lines pass.
 set -euo pipefail
 
+USAGE="Usage: $0 [--fix] [--pr <number>]"
 SHOW_FIX=0
-for arg in "$@"; do
-  case "$arg" in
+PULL_REQUEST=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --fix) SHOW_FIX=1 ;;
-    *) echo "Usage: $0 [--fix]" >&2; exit 2 ;;
+    --pr) [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || { echo "$USAGE" >&2; exit 2; }; PULL_REQUEST="$2"; shift ;;
+    *) echo "$USAGE" >&2; exit 2 ;;
   esac
+  shift
 done
 export SONAR_SHOW_FIX="$SHOW_FIX"
+export SONAR_RESULTS_PR="$PULL_REQUEST"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # shellcheck source=sonar-env.sh
 source "$SCRIPT_DIR/sonar-env.sh"
 
 export PROJECT_KEY="waveapphq_wave-backend"
 export SONAR_ORGANIZATION="waveapphq"
+export REPO_ROOT
+export PROJECT_FOLDER="backend"
+export CODE_KIND="Python"
+export CODE_SUFFIXES=".py"
 
 python3 << 'PYEOF'
-import urllib.request, urllib.parse, json, os, re, sys, textwrap
+import urllib.request, urllib.parse, json, os, re, subprocess, sys, textwrap
 from html.parser import HTMLParser
 
 SQ_URL = os.environ["SONAR_URL"]
 PROJECT_KEY = os.environ["PROJECT_KEY"]
 BRANCH = os.environ["SONAR_BRANCH"]
+TARGET = os.environ["SONAR_BRANCH_TARGET"]
+PULL_REQUEST = os.environ["SONAR_RESULTS_PR"]
 TOKEN = os.environ["SONAR_TOKEN"]
 SHOW_FIX = os.environ["SONAR_SHOW_FIX"] == "1"
+REPO_ROOT = os.environ["REPO_ROOT"]
+PROJECT_FOLDER = os.environ["PROJECT_FOLDER"]
+CODE_KIND = os.environ["CODE_KIND"]
+CODE_SUFFIXES = tuple(os.environ["CODE_SUFFIXES"].split())
 # SonarQube Cloud looks rules up within an organization; another server has none.
 RULE_SCOPE = {"organization": os.environ["SONAR_ORGANIZATION"]} if SQ_URL == "https://sonarcloud.io" else {}
+# Every scoped read takes the pull request with --pr, else the current branch.
+SCOPE = {"pullRequest": PULL_REQUEST} if PULL_REQUEST else ({"branch": BRANCH} if BRANCH else {})
 
 import base64
 AUTH = "Basic " + base64.b64encode(f"{TOKEN}:".encode()).decode()
@@ -46,9 +67,9 @@ RULE_SECTIONS = (
 )
 
 
-def api(path, params, branch=True):
-    if BRANCH and branch:
-        params = {**params, "branch": BRANCH}
+def api(path, params, scoped=True):
+    if scoped:
+        params = {**params, **SCOPE}
     url = f"{SQ_URL}{path}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url)
     req.add_header("Authorization", AUTH)
@@ -132,6 +153,39 @@ def fetch_duplication_detail(file_key):
     return api("/api/duplications/show", {"key": file_key})
 
 
+def zero_line_check(ncloc):
+    """At 0 lines on a fix or feature branch: HEAD, the code files it adds or modifies here against its release branch, and a Lines of Code note."""
+    if ncloc or not TARGET or PULL_REQUEST:
+        return "", [], ""
+
+    def git(*args):
+        return subprocess.run(["git", "-C", REPO_ROOT, *args], check=True, capture_output=True, text=True).stdout
+
+    try:
+        head = git("rev-parse", "HEAD").strip()
+        base = git("merge-base", "HEAD", f"origin/{TARGET}").strip()
+        names = git("diff", "--name-only", "--no-renames", "--diff-filter=AM", "-z", base, "HEAD", "--", f"{PROJECT_FOLDER}/")
+    except (subprocess.CalledProcessError, OSError) as e:
+        print(f"  ERROR comparing HEAD with origin/{TARGET}: {getattr(e, 'stderr', '').strip() or e}")
+        sys.exit(1)
+    unseen = [name for name in names.split("\0") if name.endswith(CODE_SUFFIXES)]
+    note = "" if unseen else f" (no code changed: {head[:12]} adds or modifies no {CODE_KIND} file under {PROJECT_FOLDER}/ against {TARGET})"
+    return head, unseen, note
+
+
+def print_gate():
+    """The quality gate of the branch or pull request read above, with each condition and its limit."""
+    try:
+        gate = api("/api/qualitygates/project_status", {"projectKey": PROJECT_KEY})["projectStatus"]
+    except Exception as e:
+        print(f"  ERROR fetching the quality gate: {e}")
+        sys.exit(1)
+    print(f"  Quality Gate:        {gate['status']}")
+    for c in gate.get("conditions", []):
+        limit = {"LT": "fails below", "GT": "fails above"}.get(c.get("comparator"), c.get("comparator", "?"))
+        print(f"    {c['status']:<5}  {c['metricKey']}: {c.get('actualValue', '?')}, {limit} {c.get('errorThreshold', '?')}")
+
+
 class RuleText(HTMLParser):
     """A rule description as plain text lines, with code blocks kept as written."""
 
@@ -201,7 +255,7 @@ def print_rule_help(findings):
     print(f"\n  How to fix ({len(contexts)} rules):")
     print(f"  {SEPARATOR}")
     for rule in sorted(contexts):
-        r = api("/api/rules/show", {"key": rule, **RULE_SCOPE}, branch=False)["rule"]
+        r = api("/api/rules/show", {"key": rule, **RULE_SCOPE}, scoped=False)["rule"]
         print(f"  {rule}: {r.get('name', '')}")
         for key, title in RULE_SECTIONS:
             for section in r.get("descriptionSections", []):
@@ -323,9 +377,11 @@ try:
     d = api("/api/measures/component", {"component": PROJECT_KEY, "metricKeys": metrics})
     m = {x["metric"]: x["value"] for x in d["component"]["measures"]}
     ratings = {"1.0": "A", "2.0": "B", "3.0": "C", "4.0": "D", "5.0": "E"}
+    ncloc = int(float(m.get("ncloc", 0)))
+    head, unseen, lines_note = zero_line_check(ncloc)
 
     print()
-    print(f"  Lines of Code:       {int(float(m.get('ncloc', 0))):,}")
+    print(f"  Lines of Code:       {ncloc:,}{lines_note}")
     print(f"  Coverage:            {m.get('coverage', '?')}%")
     print(f"  Duplications:        {m.get('duplicated_lines_density', '?')}%")
     print()
@@ -339,6 +395,16 @@ try:
 except Exception as e:
     print(f"  ERROR fetching metrics: {e}")
     sys.exit(1)
+
+print()
+print_gate()
+
+if unseen:
+    print()
+    print(f"NOT PROVEN: the scan analyzed 0 lines while {head[:12]} changed {len(unseen)} {CODE_KIND} file{'' if len(unseen) == 1 else 's'}")
+    for path in unseen[:10]:
+        print(f"  {path}")
+    sys.exit(3)
 
 # Bugs
 bugs, _ = fetch_all_issues("BUG")
@@ -363,7 +429,7 @@ if SHOW_FIX:
 dup_files = fetch_duplicated_files()
 print_duplications(dup_files)
 
-dashboard = {"id": PROJECT_KEY, "branch": BRANCH} if BRANCH else {"id": PROJECT_KEY}
+dashboard = {"id": PROJECT_KEY, **SCOPE}
 print(f"  Dashboard: {SQ_URL}/dashboard?{urllib.parse.urlencode(dashboard)}")
 print()
 PYEOF

@@ -17,22 +17,21 @@ vi.mock('@/hooks/use-viewport', () => ({
 }))
 
 // Track the onOpenChange callback so tests can invoke it
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let capturedOnOpenChange: ((isOpen: boolean) => void) | undefined
 
 // Mock @radix-ui/react-dialog to render children directly without portal/overlay complexity
 vi.mock('@radix-ui/react-dialog', () => {
   const DialogPrimitive = {
-    Root: ({ children, open, onOpenChange }: any) => {
+    Root: ({ children, open, onOpenChange }: { children?: React.ReactNode; open?: boolean; onOpenChange?: (isOpen: boolean) => void }) => {
       capturedOnOpenChange = onOpenChange
       return open ? <div data-testid="dialog-root">{children}</div> : null
     },
-    Portal: ({ children }: any) => <div data-testid="dialog-portal">{children}</div>,
-    Overlay: (props: any) => <div data-testid="dialog-overlay" {...props} />,
-    Content: ({ children, ...props }: any) => <div data-testid="dialog-content" {...props}>{children}</div>,
-    Title: ({ children, ...props }: any) => <h2 {...props}>{children}</h2>,
-    Description: ({ children, ...props }: any) => <p {...props}>{children}</p>,
-    Close: ({ children, asChild, ...props }: any) => {
+    Portal: ({ children }: { children?: React.ReactNode }) => <div data-testid="dialog-portal">{children}</div>,
+    Overlay: (props: React.ComponentProps<'div'>) => <div data-testid="dialog-overlay" {...props} />,
+    Content: ({ children, ...props }: React.ComponentProps<'div'>) => <div data-testid="dialog-content" {...props}>{children}</div>,
+    Title: ({ children, ...props }: React.ComponentProps<'h2'>) => <h2 {...props}>{children}</h2>,
+    Description: ({ children, ...props }: React.ComponentProps<'p'>) => <p {...props}>{children}</p>,
+    Close: ({ children, asChild, ...props }: React.HTMLAttributes<HTMLElement> & { asChild?: boolean }) => {
       // When asChild, render the child directly but wrap with click handler
       if (asChild && children) {
         return <span data-testid="dialog-close" {...props}>{children}</span>

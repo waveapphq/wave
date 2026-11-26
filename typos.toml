@@ -6,6 +6,7 @@ extend-ignore-re = [
   "\\.cancelled\\(\\)",
   "\\.cancelling\\(\\)",
   "task\\.cancelled\\b",
+  "LICENCE\\.rst",
   # Base64 blobs, such as keys.
   "[A-Za-z0-9+/]{60,}={0,2}",
 ]
@@ -21,6 +22,7 @@ grey = "gray"
 whilst = "while"
 # Allowed words that look like typos, such as package names. Format: word = word.
 certifi = "certifi"
+devlop = "devlop"
 gost = "gost"
 nd = "nd"
 

@@ -23,6 +23,7 @@ SONAR_LIST = "tests/exclusions/sonarqube-cloud.md"
 CODEQL_LIST = "tests/exclusions/codeql.md"
 PROJECTS = {"backend": "waveapphq_wave-backend", "frontend": "waveapphq_wave-frontend"}
 REPO_API = "/repos/waveapphq/wave/code-scanning"
+COMMITS_API = "/repos/waveapphq/wave/commits"
 CATEGORIES = (
     "/language:actions",
     "/language:javascript-typescript",
@@ -48,6 +49,10 @@ PULL_MERGE_REF = re.compile(r"^refs/pull/([0-9]+)/merge$")
 
 class Stop(Exception):
     """An error that ends the run with exit 2 and its text."""
+
+
+class Failed(Exception):
+    """A finding that ends the run with exit 1 and its text, before any comparison."""
 
 
 @dataclass
@@ -472,19 +477,45 @@ def wait_for_analyses(base: str, token: str, ref: str, sha: str) -> None:
     """Wait until GitHub has a CodeQL analysis of sha on ref in each category."""
     poll = env_int("WAVE_EXCLUSIONS_POLL_SECONDS", 30)
     wait = env_int("WAVE_EXCLUSIONS_WAIT_SECONDS", 1800)
-    deadline = time.monotonic() + wait
+    start = time.monotonic()
+    deadline = start + wait
     query = {"ref": ref, "tool_name": "CodeQL", "per_page": "100"}
     while True:
         analyses = get_json("CodeQL", base, f"{REPO_API}/analyses", query, token)
         done = {a.get("category") for a in analyses if a.get("commit_sha") == sha}
-        if all(c in done for c in CATEGORIES):
+        found = sum(1 for c in CATEGORIES if c in done)
+        minutes = int(time.monotonic() - start) // 60
+        print(
+            f"Waiting for CodeQL analyses of {sha}: {found}/{len(CATEGORIES)} found,"
+            f" {minutes} of {wait // 60} minutes",
+            file=sys.stderr,
+            flush=True,
+        )
+        if found == len(CATEGORIES):
             return
+        if codeql_run_failed(base, token, sha):
+            raise Failed(f"The CodeQL run for {sha} failed; no analysis to compare.")
         if time.monotonic() >= deadline:
             raise Stop(
                 f"CodeQL exclusions: no CodeQL analysis for {sha} on {ref} after"
                 f" {wait // 60} minutes. Re-run this job when code scanning has finished."
             )
         time.sleep(poll)
+
+
+def codeql_run_failed(base: str, token: str, sha: str) -> bool:
+    """Whether a CodeQL check run of sha ended in failure, so no analysis will come."""
+    names = {f"Analyze ({c.split(':', 1)[1]})" for c in CATEGORIES}
+    page = 1
+    while True:
+        query = {"per_page": "100", "page": str(page)}
+        reply = get_json("CodeQL", base, f"{COMMITS_API}/{sha}/check-runs", query, token)
+        runs = reply.get("check_runs", [])
+        if any(r.get("name") in names and r.get("conclusion") == "failure" for r in runs):
+            return True
+        if len(runs) < 100:
+            return False
+        page += 1
 
 
 def codeql_alerts(base: str, token: str, ref: str, state: str) -> list[dict[str, Any]]:
@@ -572,6 +603,9 @@ def main(argv: list[str]) -> int:
     except Stop as error:
         print(error, file=sys.stderr)
         return 2
+    except Failed as error:
+        print(error)
+        return 1
     for failure in failures:
         print(failure)
     if failures:

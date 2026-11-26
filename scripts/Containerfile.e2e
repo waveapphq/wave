@@ -70,11 +70,12 @@ RUN arch="$(dpkg --print-architecture)" && \
         arm64) sha="${HELM_SHA256_ARM64}" ;; \
         *) echo "unsupported architecture for helm: ${arch}" >&2; exit 1 ;; \
     esac && \
-    curl -fsSLo /tmp/helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" && \
-    echo "${sha}  /tmp/helm.tar.gz" | sha256sum -c - && \
-    tar -xzf /tmp/helm.tar.gz -C /tmp "linux-${arch}/helm" && \
-    install -m 0755 "/tmp/linux-${arch}/helm" /usr/local/bin/helm && \
-    rm -rf /tmp/helm.tar.gz "/tmp/linux-${arch}" && \
+    work="$(mktemp -d)" && \
+    curl -fsSLo "${work}/helm.tar.gz" "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" && \
+    echo "${sha}  ${work}/helm.tar.gz" | sha256sum -c - && \
+    tar -xzf "${work}/helm.tar.gz" -C "${work}" "linux-${arch}/helm" && \
+    install -m 0755 "${work}/linux-${arch}/helm" /usr/local/bin/helm && \
+    rm -rf "${work}" && \
     helm version --short
 
 USER ciuser

@@ -22,7 +22,9 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 E2E_DIR="$PROJECT_ROOT/tests/e2e"
 IMAGE_NAME="wave-e2e:latest"
-LOG_FILE="/tmp/ci-playwright-targeted.log"
+OUTPUT_DIR="$PROJECT_ROOT/ci-output"
+LOG_FILE="$OUTPUT_DIR/ci-playwright-targeted.log"
+ARTIFACTS_DIR="$OUTPUT_DIR/e2e-targeted-artifacts"
 
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <spec-path-relative-to-tests/e2e> [more specs...]"
@@ -47,6 +49,10 @@ if ! podman image exists "$IMAGE_NAME"; then
   exit 1
 fi
 
+rm -rf "$ARTIFACTS_DIR"
+mkdir -p "$ARTIFACTS_DIR"
+echo "Log: $LOG_FILE"
+
 cd "$FRONTEND_DIR"
 if [ ! -d node_modules ]; then
   echo "📦 Installing frontend npm dependencies..."
@@ -68,19 +74,15 @@ if [ "${WAVE_E2E_REBUILD:-0}" = "1" ] || [ ! -d build ] || \
    [ -n "$(find src -newer build -print -quit 2>/dev/null)" ]; then
   echo "✅ Building frontend bundle..."
   VITE_API_BASE_URL=http://localhost:8000 \
-    npx vite build --outDir build --emptyOutDir > /tmp/vite-build-targeted.log 2>&1 || {
+    npx vite build --outDir build --emptyOutDir > "$ARTIFACTS_DIR/vite-build.log" 2>&1 || {
       echo "Vite build failed:"
-      tail -30 /tmp/vite-build-targeted.log
+      tail -30 "$ARTIFACTS_DIR/vite-build.log"
       exit 1
     }
   touch "$E2E_BUILD_STAMP"
 else
   echo "✅ Reusing existing frontend bundle (frontend/build)"
 fi
-
-ARTIFACTS_DIR="/tmp/wave-e2e-targeted-artifacts"
-rm -rf "$ARTIFACTS_DIR"
-mkdir -p "$ARTIFACTS_DIR"
 
 NAME="wave-e2e-targeted"
 podman rm -f "$NAME" > /dev/null 2>&1 || true

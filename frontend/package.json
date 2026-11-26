@@ -11,7 +11,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "eslint src/ tests/",
     "lint:boundaries": "eslint src/ --no-warn-ignored 2>&1 | grep -c 'boundaries/' || echo '0 violations'"
   },
   "license": "MIT",

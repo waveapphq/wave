@@ -79,7 +79,7 @@ WAVE_ADMIN_ALLOWED=true poetry run uvicorn wavecore.api.app:app --reload --reloa
 npx vitest run tests/lib/api.test.ts
 ```
 
-From the root of the clone, `./scripts/ci-frontend-local.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions.
+From the root of the clone, `./scripts/ci-frontend-local.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions. It prints `Progress: <N>%` of test files done about once a minute (`WAVE_CI_PROGRESS_SECONDS` sets the interval) and each failed test as it happens. Run `./scripts/ci-checks-local.sh` first for the lint, type and build checks, which the frontend CI does not run.
 
 ### Running E2E/Visual Tests (Playwright)
 
@@ -88,12 +88,17 @@ E2E specs live in `tests/e2e/` and run in containers. From the root of the clone
 ### Code Quality
 
 ```bash
+# Lint the source and the unit tests (src/ and tests/)
+npm run lint
+
 # Type checking
 npm run type-check
 
 # Build production bundle
 npm run build
 ```
+
+From the root of the clone, `./scripts/ci-checks-local.sh` runs these frontend checks together with the backend's fast checks and lists every check that failed.
 
 ## Project Structure
 
