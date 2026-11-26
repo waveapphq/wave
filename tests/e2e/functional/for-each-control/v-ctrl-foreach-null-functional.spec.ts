@@ -19,6 +19,7 @@
  *    `item-a`, `item-null`, `item-c` in that order, never `item-None`.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { bindOutput, pickVariableRef, setRowExpression } from '../../helpers/config-sheet'
@@ -66,7 +67,7 @@ const created: string[] = []
 async function seedBlankTest(request: APIRequestContext, label: string): Promise<string> {
   await ensureEnvironment(request)
   const testId = await createValidTest(request, {
-    name: `zz-V-CTRL-FOREACH-NULL ${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `zz-V-CTRL-FOREACH-NULL ${label} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: [],
     edges: [],
     variables: {

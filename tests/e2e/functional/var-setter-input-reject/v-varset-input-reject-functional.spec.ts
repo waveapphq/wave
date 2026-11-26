@@ -12,6 +12,7 @@
  *      offers `x` (it is filtered out as a Function input source).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { configSheet } from '../../helpers/workbench'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -21,7 +22,7 @@ const FN_NODE_ID = 'fn-varset-input-reject-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-VARSET-INPUT-REJECT ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-VARSET-INPUT-REJECT ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function with input `x` and a Variable Setter writing a local',
     workflow: {

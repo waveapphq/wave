@@ -8,6 +8,7 @@
  * localStorage-clean double navigation to /workbench?editTest=<id>.
  */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Locator, type Page } from './playwright-fixtures'
 import { waitForCanvasLoad } from './canvas'
 import {
@@ -106,7 +107,7 @@ export async function importFixtureTest(
   const baseName = (prepared as { name?: string }).name ?? 'Functional Test'
   const uniqueFixture = {
     ...prepared,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   const createResp = await page.request.post(`${BACKEND_URL}/tests`, {
@@ -193,7 +194,7 @@ export async function importExpectingErrors(
   }
   const baseName = source.name ?? 'Invalid Fixture'
   const testId = await rawPersistTest(page.request, {
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: source.workflow?.nodes ?? [],
     edges: source.workflow?.edges ?? [],
     variables: source.variables ?? {},

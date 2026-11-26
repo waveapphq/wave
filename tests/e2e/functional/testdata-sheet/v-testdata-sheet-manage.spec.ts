@@ -25,7 +25,7 @@
  *    marks the row copied.
  * 9. A test that was never saved offers no upload at all.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-manage.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-manage.spec.ts
  */
 
 import fs from 'fs'

@@ -26,7 +26,7 @@ case pulls the tables of a SQLite File (REQ-3.4.1.19, SQL-12).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/sql-editor/v-plugin-sql-editor-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/sql-editor/v-plugin-sql-editor-functional.spec.ts`.
 2. `beforeAll` imports `fixture-admin.json` with a setup script and runs it as a
    tracked execution: it creates `sqled_<token>_orders` (two rows) and
    `sqled_<token>_order_items`.

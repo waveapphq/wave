@@ -27,7 +27,7 @@
  *     it now holds the session, and holds the half-done change as unsaved work, which it reports
  *     to the server.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-interrupt-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-interrupt-functional.spec.ts
  */
 
 import type { APIRequestContext, BrowserContext } from '@playwright/test'

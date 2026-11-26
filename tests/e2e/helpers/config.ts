@@ -34,8 +34,7 @@ export const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`
 /**
  * Backend storage root for the current worker, for raw at-rest inspection
  * (encrypt-at-rest assertions read store files directly). Mirrors the data
- * dirs the backends are started with: run-e2e-shard.sh (container mode) and
- * the playwright config webServer blocks (host mode).
+ * dir scripts/e2e/run-e2e-shard.sh starts the shard's backend with.
  */
 export const STORAGE_BASE_PATH = path.join(
   os.tmpdir(),

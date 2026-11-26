@@ -47,7 +47,7 @@
  *    the run fails at that block with the remote-host refusal; the then branch
  *    never runs
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/file-io-remote/v-plugin-fileio-remote-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/file-io-remote/v-plugin-fileio-remote-functional.spec.ts
  */
 
 import fs from 'fs'

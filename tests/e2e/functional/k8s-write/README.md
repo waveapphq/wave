@@ -41,10 +41,10 @@ nothing is carried between them.
 
 The manifests, Stages, log files, `kwok.yaml` and `tokens.csv` are copied into
 the image at BUILD time and applied from inside the container at startup.
-Editing one and running `scripts/e2e-stack.sh up` leaves the old image serving
+Editing one and running `scripts/e2e/e2e-stack.sh up` leaves the old image serving
 and the cluster exactly as it was - the specs then fail against stale
 permissions or a missing Stage, and it reads like a plugin bug. The sequence is
-`scripts/e2e-stack.sh build`, then `down`, then `up --wait kwok`. The rebuild
+`scripts/e2e/e2e-stack.sh build`, then `down`, then `up --wait kwok`. The rebuild
 recreates the cluster from scratch, so every runtime object any suite created is
 wiped and only the baked bootstrap returns.
 

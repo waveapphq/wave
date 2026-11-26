@@ -24,6 +24,7 @@
  *  4. S4: the same for the `profile-binding-sheet` opened by Profiles
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad, expandPalette } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -34,7 +35,7 @@ const SFTP_NODE = 'sftp-node-1'
 
 function buildFixture() {
   return {
-    name: `Sheet Reopen Pulse ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: `Sheet Reopen Pulse ${Date.now()}-${randomUUID().slice(0, 5)}`,
     version: '1.0.0',
     description: 'One Log node + one variable for the sheet reopen-pulse triggers.',
     workflow: {

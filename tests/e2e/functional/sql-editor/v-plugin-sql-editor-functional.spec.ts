@@ -62,6 +62,7 @@
  * and uploads it to the Test's own Test Data.
  */
 
+import { randomUUID } from 'node:crypto'
 import { leaveExpressionEditor } from '../../helpers/code-editor'
 import { fieldInput } from '../../helpers/value-field'
 import fs from 'fs'
@@ -241,7 +242,7 @@ async function runAdmin(
   const fixture = sqlFixture('fixture-admin.json')
   Object.assign(fixture.workflow.nodes[0].data.config.values, { sql, parameters })
   const testId = await createValidTest(request, {
-    name: `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: fixture.workflow.nodes as unknown as Array<Record<string, unknown>>,
     edges: fixture.workflow.edges,
     variables: fixture.variables,

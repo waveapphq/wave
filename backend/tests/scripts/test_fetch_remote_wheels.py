@@ -1,4 +1,4 @@
-"""Tests for scripts/fetch-remote-wheels.sh against a fake PyPI that drops requests."""
+"""Tests for scripts/lib/fetch-remote-wheels.sh against a fake PyPI that drops requests."""
 
 import hashlib
 import json
@@ -15,7 +15,7 @@ import pytest
 
 from tests.scripts.script_support import Repo, Run, copy_from_clone, run
 
-SCRIPT = "scripts/fetch-remote-wheels.sh"
+SCRIPT = "scripts/lib/fetch-remote-wheels.sh"
 WHEEL = "fixwheel-1.0.0-py3-none-any.whl"
 WHEEL_BYTES = b"a wheel for the fetch test"
 JSON_PATH = "/pypi/fixwheel/1.0.0/json"

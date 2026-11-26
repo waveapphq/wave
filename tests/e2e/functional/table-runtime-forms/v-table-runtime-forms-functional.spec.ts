@@ -18,7 +18,7 @@
  * Assertions anchor on emitted console output, run status and the persisted
  * config surface - never on an element merely rendering.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/table-runtime-forms/v-table-runtime-forms-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/table-runtime-forms/v-table-runtime-forms-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

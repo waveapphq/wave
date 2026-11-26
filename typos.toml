@@ -4,6 +4,8 @@ extend-ignore-re = [
   # Names set by third-party code; we cannot rename them.
   "CancelledError",
   "\\.cancelled\\(\\)",
+  # The GitHub Actions status function.
+  "!cancelled\\(\\)",
   "\\.cancelling\\(\\)",
   "task\\.cancelled\\b",
   "LICENCE\\.rst",

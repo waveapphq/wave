@@ -12,6 +12,7 @@
  *      (role=combobox TextField).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -19,7 +20,7 @@ import { configSheet } from '../../helpers/workbench'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-OUTPUT-BINDING-PICKER ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-OUTPUT-BINDING-PICKER ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Plugin Log + Local Function with output for binding-picker coverage',
     workflow: {

@@ -26,6 +26,7 @@
  *    leaves no two stored Blocks overlapping.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, BACKEND_PORT, ensureEnvironment } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -37,7 +38,7 @@ import { resetOwnership } from '../../helpers/ownership'
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 const LABEL_LONG = 'Write push file on sshd host'

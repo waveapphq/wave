@@ -21,7 +21,7 @@ OS-6, OS-8 to OS-11).
   `/os`). Nothing listens on 9479.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait opensearch opensearch-gateway
+  ./scripts/e2e/e2e-stack.sh up --wait opensearch opensearch-gateway
   ```
 
 - Fixtures carry the host-mode addresses `https://127.0.0.1:9477` and

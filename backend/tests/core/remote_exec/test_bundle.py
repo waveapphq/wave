@@ -992,7 +992,7 @@ class TestBundleWheelCarry:
     def test_the_real_oracle_wheels_for_this_interpreter_import_without_site_packages(
         self,
     ) -> None:
-        """A missing cache fails here naming scripts/fetch-remote-wheels.sh; it never skips."""
+        """A missing cache fails here naming scripts/lib/fetch-remote-wheels.sh; it never skips."""
         paths = runner.select_wheels(local_probe(), "oracle", "localhost")
 
         responses = _run_bundle_lines(
@@ -1008,7 +1008,7 @@ class TestBundleWheelCarry:
     def test_the_real_sqlite_build_for_this_interpreter_loads_without_site_packages(
         self,
     ) -> None:
-        """A missing cache fails here naming scripts/fetch-remote-wheels.sh; it never skips."""
+        """A missing cache fails here naming scripts/lib/fetch-remote-wheels.sh; it never skips."""
         paths = runner.select_wheels(local_probe(), "sqlite", "localhost")
 
         # Starts a child Python.

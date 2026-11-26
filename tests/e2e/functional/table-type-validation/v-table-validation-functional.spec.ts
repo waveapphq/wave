@@ -17,6 +17,7 @@
  * Phase: functional-workflow (imports its own fixture via POST /tests).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type Locator } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -39,7 +40,7 @@ const FIXTURE_PATH = path.resolve(__dirname, 'fixture.json')
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_PATH, 'utf-8'))
-  fixture.name = `Table Type Validation ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `Table Type Validation ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

@@ -19,6 +19,7 @@
  * content + action and that the success path stays silent.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 
@@ -158,7 +159,7 @@ test.describe('V-TESTS-DELETE-RUNNING-01: Tests list delete blocked by running e
     await ensureEnvironment(request)
     const environmentId = await getEnvironmentId(request)
 
-    const testName = `V-TESTS-DEL-RUN ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const testName = `V-TESTS-DEL-RUN ${Date.now()}-${randomUUID().slice(0, 5)}`
     const testId = await importTest(request, testName)
     const executionId = await startTrackedExecution(request, testId, environmentId)
 

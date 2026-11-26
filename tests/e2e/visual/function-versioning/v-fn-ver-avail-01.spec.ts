@@ -62,7 +62,7 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<SeededFu
 
 function buildSeedTest(fn: SeededFunction): Record<string, unknown> {
   return {
-    name: `V-FN-VER-AVAIL-01 ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-VER-AVAIL-01 ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'V-FN-VER-AVAIL-01 host Test (pins a missing version)',
     workflow: {

@@ -60,7 +60,7 @@
  *    entity types ticked), the archive of the first run holds a `functions/` member for that
  *    Function and the entity counts of `manifest.json` have the key `functions` (BACKUP-1, REQ-4.7.20).
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/backup-restore/v-backup-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/backup-restore/v-backup-functional.spec.ts
  */
 
 import fs from 'fs'

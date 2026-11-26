@@ -13,7 +13,7 @@
  *   - missing client identity to 9451 is rejected in the handshake (caught).
  *   - the connect entry renders "TLS TLSv1.X, cipher TLS_...".
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-tls/v-http-tls-mtls-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/http-tls/v-http-tls-mtls-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

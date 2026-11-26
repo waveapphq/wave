@@ -477,7 +477,8 @@ class TestAFittingWheelMissingFromTheCache:
         absent = wheel_entry("cryptography")["file"]
         wheels = wheel_cache(monkeypatch, tmp_path, x86_glibc_cache(), missing=(absent,))
         message = (
-            f"Remote wheel {absent} is missing from {wheels}: run scripts/fetch-remote-wheels.sh"
+            f"Remote wheel {absent} is missing from {wheels}: "
+            "run scripts/lib/fetch-remote-wheels.sh"
         )
 
         with pytest.raises(FileNotFoundError, match=exact(message)):

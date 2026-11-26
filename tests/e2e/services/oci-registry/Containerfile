@@ -2,12 +2,12 @@
 # leaf signed by the WAVE Test CA) with htpasswd basic auth, serving one chart,
 # charts/wave-demo 0.1.0. The chart is pushed into the image at BUILD time, so
 # the stack starts with it present and nothing is pushed at run time.
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e)
 
 FROM docker.io/library/registry:3.1.2 AS seed
 
 # Helm for the build-time push only. Pinned version + checksum, like the helm
-# baked into scripts/Containerfile.e2e.
+# baked into scripts/images/Containerfile.e2e.
 ARG HELM_VERSION=4.2.4
 ARG HELM_SHA256_AMD64=c306b46f719b0a4da32d0f78ee21bf90ce8d602f15b22ab753f0674d1670a7f3
 ARG HELM_SHA256_ARM64=564de2191b881e9f71b5606b25345821ea1682f06ab90499d3ab22b530176da1

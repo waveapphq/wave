@@ -1,7 +1,7 @@
 # WAVE E2E OpenSearch (test-only): one node, the security, SQL and job-scheduler
 # plugins only, TLS on HTTP and transport with the lab-CA leaf, and the security
 # configuration (users, roles, JWT, API tokens) loaded on first start.
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e)
 FROM docker.io/opensearchproject/opensearch:3.8.0
 
 # Two passes: a plugin another plugin extends is removed once its dependent is gone.

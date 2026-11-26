@@ -24,9 +24,10 @@
  * 5. A run of the restored test resolves `testdata://<rel>` and logs the
  *    content back.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/backup-restore/v-backup-testdata-travel.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/backup-restore/v-backup-testdata-travel.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { exec } from '../../helpers/exec'
@@ -69,7 +70,7 @@ test.describe('V-BACKUP-TESTDATA-TRAVEL: a restore brings a test back with its f
   }) => {
     test.setTimeout(180_000)
 
-    const name = `Test Data Backup Travel ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `Test Data Backup Travel ${Date.now()}-${randomUUID().slice(0, 6)}`
     const testId = await createTestViaApi(page, loadTravelFixture(), name)
     await uploadTravelFiles(page.request, testId)
 

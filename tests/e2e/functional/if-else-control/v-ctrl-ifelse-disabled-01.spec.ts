@@ -11,6 +11,7 @@
  *   2. The Log under the second branch ('else') is cascade-skipped
  *   3. session final status == "passed"
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -23,7 +24,7 @@ const ELSE_LOG_ID = 'else-log'
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-IFELSE-DISABLED-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-IFELSE-DISABLED-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Disabled If/Else pass-through (first branch runs)',
     workflow: {

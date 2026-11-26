@@ -20,7 +20,7 @@ Port (REQ-3.3.4.3, REQ-3.4.1.9; NETCAT-9, NETCAT-18).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/netcat-tunnel/v-plugin-netcat-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/netcat-tunnel/v-plugin-netcat-tunnel-functional.spec.ts`.
 2. The spec checks the fixture's SSH, tunnel and Netcat targets against the
    `helpers/config.ts` constants, clears the workbench draft, imports and
    validates the fixture, and opens it in the workbench.

@@ -22,6 +22,7 @@
  * the browser to drop the inner Log and observe the live badge).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad, dragPaletteItemToCanvas } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -69,7 +70,7 @@ function buildSeed(name: string): Record<string, unknown> {
 }
 
 async function seed(page: Page): Promise<string> {
-  const name = `V-CANVAS-FN-VAL-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `V-CANVAS-FN-VAL-01 ${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, { data: buildSeed(name) })
   expect(resp.ok(), `POST /tests failed: ${resp.status()}`).toBeTruthy()
   const body = await resp.json()

@@ -53,7 +53,7 @@ extract of spec/schemas/_common.query_dsl.yaml and
 spec/schemas/_common.aggregations.yaml in
 https://github.com/opensearch-project/opensearch-api-specification at commit
 81c7ccfd8101698a2ac4ee060ef7740158e3ff69, made by
-scripts/opensearch-api-spec-extract.mjs.
+scripts/dev/opensearch-api-spec-extract.mjs.
 Modified: reduced to the query and aggregation types, their parameters, value
 kinds, enum values, descriptions and versions.
 
@@ -187,7 +187,7 @@ A SQL Block on a remote host also gets prebuilt wheels, sent unchanged at the
 versions and builds backend/vendor/wheels.lock pins: oracledb, cryptography,
 cffi and typing_extensions for Oracle; pyOpenSSL, cryptography, cffi and
 typing_extensions for SQL Server over TLS; apsw for SQLite.
-scripts/fetch-remote-wheels.sh downloads them from PyPI; this repository does
+scripts/lib/fetch-remote-wheels.sh downloads them from PyPI; this repository does
 not hold them. Each wheel also carries its own license files.
 
 Two wheel builds also bundle a system library that has no license file in

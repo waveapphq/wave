@@ -5,6 +5,7 @@
  * mirrors those so every fixture passes /tests/{id}/validate before it is run.
  */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Page, type Locator } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad, clickNodeKebabItem } from '../../helpers/canvas'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -31,7 +32,7 @@ export async function importValidateOpen(
   const baseName = (fixture as { name?: string }).name ?? 'Float Precision'
   const uniqueFixture = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   const createResp = await page.request.post(`${BACKEND_URL}/tests`, { data: uniqueFixture })

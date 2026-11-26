@@ -17,6 +17,7 @@
  * 6. All of the above hold in both themes
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -30,7 +31,7 @@ const LONG_NAME = 'threshold_for_the_downstream_service_response_time_in_millis'
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-VARPICK-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-VARPICK-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'A condition row whose variable list holds a very long name.',
     workflow: {

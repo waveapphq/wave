@@ -73,7 +73,7 @@ async function seedLibrary(request: APIRequestContext): Promise<{ functionId: st
 async function seedTest(request: APIRequestContext, fn: { functionId: string; name: string }): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-CONFIG-DIALOGS-MD ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-CONFIG-DIALOGS-MD ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Shared instance for the markdown dialog guards',
       workflow: {

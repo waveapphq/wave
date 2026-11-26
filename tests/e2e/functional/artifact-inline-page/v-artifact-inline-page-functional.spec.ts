@@ -14,9 +14,10 @@
  *  3. drawing.svg opened with disposition=inline behaves the same.
  *  4. A download keeps the file's own type and name.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/artifact-inline-page/v-artifact-inline-page-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/artifact-inline-page/v-artifact-inline-page-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { validateTest } from '../../helpers/fn-seed'
@@ -30,7 +31,7 @@ interface ArtifactRow {
 
 async function importFixture(request: APIRequestContext): Promise<string> {
   const fixture = loadFixture()
-  fixture.name = `${fixture.name as string} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  fixture.name = `${fixture.name as string} ${Date.now()}-${randomUUID().slice(0, 5)}`
   const response = await request.post(`${BACKEND_URL}/tests`, { data: fixture })
   expect(response.ok(), `POST /tests failed: ${response.status()}`).toBeTruthy()
   const body = await response.json()

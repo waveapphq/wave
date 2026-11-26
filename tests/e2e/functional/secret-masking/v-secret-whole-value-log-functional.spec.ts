@@ -17,6 +17,7 @@
  *    logs exactly `********`: no key or bracket of the map shows, and the run passes.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { chainEdges, logBlock } from '../../helpers/fn-block'
@@ -37,7 +38,7 @@ const PRINTS: Array<{ label: string; message: string; line: string }> = [
 
 const DONE = 'whole-value-done'
 
-const uniqueSuffix = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const uniqueSuffix = (): string => `${Date.now()}-${randomUUID().slice(0, 6)}`
 
 /** Levels of the deep secret map: past the 100 levels a masking pass walks. */
 const DEEP_LEVELS = 150

@@ -19,6 +19,7 @@
  *      `test_var`, no system variable).
  */
 
+import { randomUUID } from 'node:crypto'
 import { leaveExpressionEditor } from '../../helpers/code-editor'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -32,7 +33,7 @@ const SYSTEM_VAR = 'sys_env'
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8'))
-  return { ...fixture, name: `V-CANVAS-FN-SCOPE-AUTOCOMPLETE-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  return { ...fixture, name: `V-CANVAS-FN-SCOPE-AUTOCOMPLETE-01 ${Date.now()}-${randomUUID().slice(0, 6)}` }
 }
 
 async function seedSystemVariable(request: APIRequestContext) {

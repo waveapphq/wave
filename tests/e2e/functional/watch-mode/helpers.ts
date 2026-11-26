@@ -7,6 +7,7 @@
  * by debug-step / function-debug-halt.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { expect, type Page } from '../../helpers/playwright-fixtures'
@@ -28,7 +29,7 @@ export async function importFixture(
   const baseName = (fixture as { name?: string }).name ?? 'Watch Mode Test'
   const unique = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
   const createResp = await request.post(`${BACKEND_URL}/tests`, { data: unique })
   const body = await createResp.json().catch(() => null)
@@ -90,7 +91,7 @@ export async function openWatcher(
 
 /** A unique name for a test a spec makes (names are globally unique). */
 export function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 /** Save the tab's unsaved draft as a new test through the toolbar Save and the New Test window. */

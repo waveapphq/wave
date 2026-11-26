@@ -16,7 +16,7 @@
  *  3. A watched change keeps them the same way, every frame it plays shows both descriptions open,
  *     and only the Block whose message changed takes a turn.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-canvas-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-canvas-functional.spec.ts
  */
 
 import type { APIRequestContext, BrowserContext } from '@playwright/test'

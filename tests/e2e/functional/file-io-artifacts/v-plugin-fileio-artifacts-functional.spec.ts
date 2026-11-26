@@ -21,7 +21,7 @@
  *    written byte lengths (Write has no output; the listing proves what landed)
  * 7. GET /workbench/session/artifacts/content/result.json returns the content
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/file-io-artifacts/v-plugin-fileio-artifacts-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/file-io-artifacts/v-plugin-fileio-artifacts-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

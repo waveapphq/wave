@@ -4,6 +4,7 @@
  * helpers/testdata.ts.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import {
@@ -29,7 +30,7 @@ export function loadFixture(file = 'fixture.json'): Record<string, unknown> {
 
 /** A short suffix that makes an uploaded body unique to this run. */
 export function marker(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  return `${prefix}-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`
 }
 
 // ---------------------------------------------------------------------------

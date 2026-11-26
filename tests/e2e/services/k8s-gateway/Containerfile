@@ -1,6 +1,6 @@
 # WAVE E2E Kubernetes gateway service (test-only): one nginx on plain HTTP :8080
 # proxying /k8s/clusters/wave/ to the published kwok API over the compose network.
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e)
 FROM docker.io/library/nginx:stable
 
 # Entrypoint exports NGINX_LOCAL_RESOLVERS from /etc/resolv.conf, then renders the template.

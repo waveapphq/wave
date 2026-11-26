@@ -17,7 +17,7 @@
  * 3. Choose file with a differently named file is reported on the row and sends
  *    nothing; with the expected name it lands where the original was going.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-recovery.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-recovery.spec.ts
  */
 
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'

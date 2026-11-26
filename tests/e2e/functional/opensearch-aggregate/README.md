@@ -18,7 +18,7 @@ REQ-3.4.1.15; OS-7 to OS-11, OS-13).
   WAVE Test CA).
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait opensearch
+  ./scripts/e2e/e2e-stack.sh up --wait opensearch
   ```
 
 - The fixture carries the host-mode address `https://127.0.0.1:9477`; the

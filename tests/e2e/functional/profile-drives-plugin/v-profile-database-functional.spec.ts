@@ -40,9 +40,10 @@
  *     export and report carry neither secret.
  * 11. Nothing outlives the run: the tracked execution, the Test and the profile are gone.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/profile-drives-plugin/v-profile-database-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/profile-drives-plugin/v-profile-database-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { escapeRegExp, getLogCopyTexts, setConsoleMinimumLevel } from '../../helpers/log-reader'
 import {
@@ -118,7 +119,7 @@ async function createProfile(
   environmentId: string,
 ): Promise<{ id: string; name: string }> {
   const profile = loadProfile()
-  profile.name = `${profile.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  profile.name = `${profile.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   profile.environment_values = { [environmentId]: profile.config }
   const resp = await page.request.post(`${BACKEND_URL}/profiles`, { data: profile })
   const body = await resp.json().catch(() => null)

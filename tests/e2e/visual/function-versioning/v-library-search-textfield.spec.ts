@@ -11,6 +11,7 @@
  *   3. Placeholder is exactly "Search Functions…".
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad, expandPalette } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -18,7 +19,7 @@ import { BACKEND_URL } from '../../helpers/config'
 async function createBlankTest(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-LIBRARY-SEARCH-TEXTFIELD ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-LIBRARY-SEARCH-TEXTFIELD ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Blank Test',
       workflow: { nodes: [], edges: [] },

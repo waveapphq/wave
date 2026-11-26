@@ -20,7 +20,7 @@
  *   variable on the detail page and returning to the workbench must remove
  *   that variable from autocomplete.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/regression-namespace-autocomplete/v-regression-namespace-autocomplete.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/regression-namespace-autocomplete/v-regression-namespace-autocomplete.spec.ts
  */
 
 import { leaveExpressionEditor } from '../../helpers/code-editor'

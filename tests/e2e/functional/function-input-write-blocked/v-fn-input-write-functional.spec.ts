@@ -9,6 +9,7 @@
  *   3. Validate flags `INPUT_WRITE_FORBIDDEN`; save / run blocked.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 
@@ -16,7 +17,7 @@ const FN_NODE_ID = 'fn-input-write-1'
 
 async function buildSeedThatViolatesRule(): Promise<Record<string, unknown>> {
   return {
-    name: `V-FN-INPUT-WRITE ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-INPUT-WRITE ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function whose body attempts to write to input `x`',
     workflow: {

@@ -1,4 +1,4 @@
-"""Tests for scripts/sonar-results-backend.sh with a fake SonarQube Cloud and no network."""
+"""Tests for scripts/report/sonar-results-backend.sh with a fake SonarQube Cloud and no network."""
 
 from pathlib import Path
 

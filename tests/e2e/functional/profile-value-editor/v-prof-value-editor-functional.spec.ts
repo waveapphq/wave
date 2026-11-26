@@ -12,7 +12,7 @@
  * control, an empty name blocking Save, and the list / map / table editors and the delete control.
  *
  * Phase: functional-destructive (each test seeds + deletes its own profile via API).
- * Run: ./scripts/e2e-targeted-local.sh functional/profile-value-editor/v-prof-value-editor-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/profile-value-editor/v-prof-value-editor-functional.spec.ts
  */
 
 import { test, expect, type APIRequestContext, type Page, type Locator } from '../../helpers/playwright-fixtures'

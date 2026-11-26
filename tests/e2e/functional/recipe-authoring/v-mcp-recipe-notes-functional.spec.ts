@@ -26,7 +26,7 @@
  * 9. A wired Note holding a description and a disabled mark reads back with both named in
  *    `inexpressible`, and the amend is refused with both still stored.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-notes-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-notes-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

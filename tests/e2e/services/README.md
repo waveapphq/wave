@@ -2,12 +2,12 @@
 
 Real backing services the functional E2E suite runs against, so plugin tests
 exercise real protocols instead of in-process fakes. Managed by
-`scripts/e2e-stack.sh` (a docker-compose v2 wrapper over the rootless podman
+`scripts/e2e/e2e-stack.sh` (a docker-compose v2 wrapper over the rootless podman
 socket).
 
 ## Licenses
 
-The `mssql` and `oracle` services use vendor images under the vendors' own terms. Building or running the stack means you accept them: the SQL Server Developer Edition license (`mssql/Containerfile` sets `ACCEPT_EULA=Y` and `MSSQL_PID=Developer`; Developer Edition is for development and test, not production) and the Oracle Free Use Terms and Conditions (the Oracle Database Free in `gvenzl/oracle-free`). `scripts/e2e-stack.sh up` and `run` build missing images by themselves, so the first run of any E2E script also does this.
+The `mssql` and `oracle` services use vendor images under the vendors' own terms. Building or running the stack means you accept them: the SQL Server Developer Edition license (`mssql/Containerfile` sets `ACCEPT_EULA=Y` and `MSSQL_PID=Developer`; Developer Edition is for development and test, not production) and the Oracle Free Use Terms and Conditions (the Oracle Database Free in `gvenzl/oracle-free`). `scripts/e2e/e2e-stack.sh up` and `run` build missing images by themselves, so the first run of any E2E script also does this.
 
 ## Test certificates
 
@@ -203,7 +203,7 @@ container-shard mode alike. Neither is in the trusted SSH hosts list
   image at build time (`Containerfile`) and applied from inside the container at
   startup (`entrypoint.sh`). Editing a manifest and running `up` leaves the
   cluster exactly as it was, and the stale permissions look like a plugin bug.
-  The sequence is `scripts/e2e-stack.sh build`, then `down`, then
+  The sequence is `scripts/e2e/e2e-stack.sh build`, then `down`, then
   `up --wait kwok`. A rebuild recreates the cluster from scratch, so every
   runtime object any suite or person created is wiped; only the baked bootstrap
   comes back.
@@ -460,7 +460,7 @@ Cost of the patch: the fixture image build goes from a few seconds to about 40 s
 and from 593 MB to 659 MB, because it now compiles kwok. That is paid once per
 machine and again after any `Containerfile` change. **GitHub CI never builds or
 runs this image** - the stack is brought up only by
-`scripts/ci-playwright-local.sh` and `scripts/e2e-targeted-local.sh` on a
+`scripts/gate/15-playwright.sh` and `scripts/e2e/e2e-targeted-local.sh` on a
 developer machine - so CI is unaffected.
 
 The source is fetched at build time from the Go module proxy
@@ -719,8 +719,8 @@ and 9464 are outside the `injectHttp` fixture-rewrite range (9449-9461), so a
 chart URL hardcoded in a fixture would not be rewritten for container shards.
 
 The two helm binaries the suite runs against are pinned in their images: Helm
-4.2.4 in the E2E runner (`scripts/Containerfile.e2e`, the image
-`scripts/run-e2e-shard.sh` starts the backend in) and Helm 3.21.4 in `sshd`
+4.2.4 in the E2E runner (`scripts/images/Containerfile.e2e`, the image
+`scripts/e2e/run-e2e-shard.sh` starts the backend in) and Helm 3.21.4 in `sshd`
 (`services/sshd/Containerfile`), so the remote-execution leg proves the other
 major. Both land at `/usr/local/bin/helm`.
 
@@ -759,8 +759,8 @@ the CA (`generate-certs.sh` creates the CA only when absent).
   a TEST-NET-1 address routed nowhere. The remote leg pings `netcat-target` by
   name, which only `sshd` resolves. Unprivileged ICMP needs
   `net.ipv4.ping_group_range=1000 1000` on every container WAVE runs in: the two
-  podman run sites (`scripts/ci-playwright-local.sh`,
-  `scripts/e2e-targeted-local.sh`) and the `sshd` service in `compose.yaml`.
+  podman run sites (`scripts/gate/15-playwright.sh`,
+  `scripts/e2e/e2e-targeted-local.sh`) and the `sshd` service in `compose.yaml`.
 - Database fixtures carry Host `127.0.0.1` on the direct leg and are imported
   through `injectServiceHost(fixture, SQL_TARGET_HOST)`, which rewrites every
   `host` key equal to the sentinel. The tunnel leg names the compose DNS service
@@ -784,20 +784,17 @@ the CA (`generate-certs.sh` creates the CA only when absent).
 ## Lifecycle
 
 ```bash
-scripts/e2e-stack.sh build          # build the service images (podman build)
-scripts/e2e-stack.sh up --wait      # start all services, wait until healthy
-scripts/e2e-stack.sh up --wait sshd # start (and wait for) a subset
-scripts/e2e-stack.sh status         # compose ps
-scripts/e2e-stack.sh down           # stop + remove containers and volumes (keeps the network)
-scripts/e2e-stack.sh run            # foreground: up + block + teardown on signal (Playwright webServer)
+scripts/e2e/e2e-stack.sh build          # build the service images (podman build)
+scripts/e2e/e2e-stack.sh up --wait      # start all services, wait until healthy
+scripts/e2e/e2e-stack.sh up --wait sshd # start (and wait for) a subset
+scripts/e2e/e2e-stack.sh status         # compose ps
+scripts/e2e/e2e-stack.sh down           # stop + remove containers and volumes (keeps the network)
 ```
 
-- CI (`ci-playwright-local.sh`) brings the stack up before shards and tears it
+- CI (`scripts/gate/15-playwright.sh`) brings the stack up before shards and tears it
   down on exit.
 - Local targeted runs (`e2e-targeted-local.sh`) bring the stack up and down
   around the run (`WAVE_E2E_KEEP_STACK=1` to persist it between iterations).
-- In host mode, which CONTRIBUTING forbids, the webServer block keeps the stack
-  up; an already-running stack is reused.
 
 The wrapper owns two rootless-podman 3.4.x quirks: it pre-creates the external
 network (`wave-e2e-net`) and patches its CNI conflist `cniVersion` 1.0.0 -> 0.4.0,
@@ -811,7 +808,7 @@ and it builds images with `podman build` (compose only references them by tag).
    a `healthcheck`, a `container_name: wave-e2e-<name>`, and either a
    `127.0.0.1:<port>:<port>` publish (if WAVE connects to it directly) or NO
    `ports:` (if it should only be reachable inside the network).
-3. Add its build to `scripts/e2e-stack.sh` (`build_images`, `ensure_images`) and
+3. Add its build to `scripts/e2e/e2e-stack.sh` (`build_images`, `ensure_images`) and
    its name to `ALL_SERVICES`.
 4. Add endpoint constants to `helpers/config.ts` (host + port, mode-aware like
    `SSH_TARGET_HOST`).

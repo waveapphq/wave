@@ -23,7 +23,7 @@
  *    the notice is dismissed.
  * 5. The close warning names the uploads that are still going.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-sessions.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-sessions.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

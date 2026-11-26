@@ -29,7 +29,7 @@
  *     each fail the Block with the shipped message, stop the run, and leave the
  *     bytes on disk untouched
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/file-io-operations/v-plugin-fileio-operations-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/file-io-operations/v-plugin-fileio-operations-functional.spec.ts
  */
 
 import { createHash } from 'crypto'

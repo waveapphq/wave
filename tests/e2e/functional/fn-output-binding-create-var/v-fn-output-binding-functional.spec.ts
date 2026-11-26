@@ -13,6 +13,7 @@
  *   5. Run completes and `fresh_var` carries the body-emitted value.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { configSheet } from '../../helpers/workbench'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -23,7 +24,7 @@ const FN_NODE_ID = 'fn-output-binding-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-OUTPUT-BINDING ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-OUTPUT-BINDING ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function with output result; body emits result via inner Log',
     variables: {},

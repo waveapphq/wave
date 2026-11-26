@@ -1,5 +1,5 @@
 {
-  "_note": "Per-file E2E wall time (seconds, hooks included) for duration-balanced sharding. Regenerate with scripts/generate-shard-weights.sh.",
+  "_note": "Per-file E2E wall time (seconds, hooks included) for duration-balanced sharding. Regenerate with scripts/e2e/generate-shard-weights.sh.",
   "_generatedAt": "2026-10-21T09:55:08Z",
   "functional": {
     "admin-workbench-session/v-admin-workbench-session-functional.spec.ts": 0.2,

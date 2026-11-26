@@ -79,11 +79,11 @@ WAVE_ADMIN_ALLOWED=true poetry run uvicorn wavecore.api.app:app --reload --reloa
 npx vitest run tests/lib/api.test.ts
 ```
 
-From the root of the clone, `./scripts/ci-frontend-local.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions. It prints `Progress: <N>%` of test files done about once a minute (`WAVE_CI_PROGRESS_SECONDS` sets the interval) and each failed test as it happens. Run `./scripts/ci-checks-local.sh` first for the lint, type and build checks, which the frontend CI does not run.
+From the root of the clone, `./scripts/gate/09-frontend-tests.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions, and on any warning a test prints. It prints `Progress: <N>%` of test files done about once a minute (`WAVE_CI_PROGRESS_SECONDS` sets the interval), each failed test as it happens, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`. `./scripts/gate/run.sh frontend` runs every gate check a frontend change needs, in number order.
 
 ### Running E2E/Visual Tests (Playwright)
 
-E2E specs live in `tests/e2e/` and run in containers. From the root of the clone: `./scripts/e2e-targeted-local.sh <spec>` for one spec, `./scripts/ci-playwright-local.sh` for all. See `tests/e2e/README.md`.
+E2E specs live in `tests/e2e/` and run in containers. From the root of the clone: `./scripts/e2e/e2e-targeted-local.sh <spec>` for one spec, `./scripts/gate/15-playwright.sh <spec> ...` for a spec list and `./scripts/gate/15-playwright.sh full` for all. See `tests/e2e/README.md`.
 
 ### Code Quality
 
@@ -98,7 +98,7 @@ npm run type-check
 npm run build
 ```
 
-From the root of the clone, `./scripts/ci-checks-local.sh` runs these frontend checks together with the backend's fast checks and lists every check that failed.
+From the root of the clone, `./scripts/gate/05-frontend-static.sh` runs the lint and the type check, and reports each tool; `./scripts/gate/07-frontend-build.sh` runs the build.
 
 ## Project Structure
 

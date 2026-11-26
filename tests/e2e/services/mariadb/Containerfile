@@ -3,7 +3,7 @@
 # database leaf signed by the WAVE Test CA (plain connections still accepted; a
 # client certificate, when sent, is verified against the same CA). Connection
 # attributes are recorded and the `wave` user may read them.
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e)
 FROM docker.io/library/mariadb:11
 
 ENV MARIADB_ROOT_PASSWORD=Wave-Admin-Secret-1 \

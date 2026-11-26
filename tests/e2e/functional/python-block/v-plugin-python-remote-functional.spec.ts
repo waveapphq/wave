@@ -48,7 +48,7 @@
  *     reports on the remote host: its `os.getcwd()` equals its `tempfile.gettempdir()`, and
  *     neither is empty.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/python-block/v-plugin-python-remote-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/python-block/v-plugin-python-remote-functional.spec.ts
  */
 
 import fs from 'fs'

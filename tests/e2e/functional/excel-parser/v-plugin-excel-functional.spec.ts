@@ -25,7 +25,7 @@
  *   abort-missing-sheet  a named sheet the workbook does not carry
  *   abort-mismatch       a declared-type mismatch under the fail policy
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/excel-parser/v-plugin-excel-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/excel-parser/v-plugin-excel-functional.spec.ts
  */
 
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'

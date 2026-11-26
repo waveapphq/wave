@@ -32,6 +32,7 @@
  *          the same release back, both reporting deployed.
  */
 
+import { randomUUID } from 'node:crypto'
 import { execFileSync } from 'child_process'
 import path from 'path'
 import { test, expect } from '../../helpers/playwright-fixtures'
@@ -361,7 +362,7 @@ test.describe('Helm Blocks authored through the MCP recipe surface', () => {
     page,
   }) => {
     test.setTimeout(300_000)
-    const name = `${BASE_NAME} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `${BASE_NAME} ${Date.now()}-${randomUUID().slice(0, 6)}`
     const recipe = recipeYaml(name)
     let recipeTestId = ''
 

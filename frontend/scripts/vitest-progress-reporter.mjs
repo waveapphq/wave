@@ -16,13 +16,14 @@ function describeError(error) {
   return parts.join('\n');
 }
 
-/** Prints a `Progress: <N>%` line of test files done at a fixed interval and each failure as it happens. */
+/** Prints a `Progress: <N>%` line at a fixed interval, each failure as it happens and the test counts at the end. */
 export default class VitestProgressReporter {
   root = process.cwd();
   total = 0;
   done = new Set();
   reported = new Set();
   timer = undefined;
+  counts = { passed: 0, failed: 0, skipped: 0 };
 
   onInit(vitest) {
     this.root = vitest.config.root;
@@ -32,6 +33,7 @@ export default class VitestProgressReporter {
     this.total = specifications.length;
     this.done.clear();
     this.reported.clear();
+    this.counts = { passed: 0, failed: 0, skipped: 0 };
     clearInterval(this.timer);
     this.timer = setInterval(() => this.printProgress(), intervalSeconds() * 1000);
     this.timer.unref?.();
@@ -39,6 +41,7 @@ export default class VitestProgressReporter {
 
   onTestCaseResult(testCase) {
     const result = testCase.result();
+    if (result.state in this.counts) this.counts[result.state] += 1;
     if (result.state !== 'failed') return;
     const errors = result.errors.map(describeError).join('\n');
     this.write(`FAIL ${this.path(testCase.module.moduleId)} > ${testCase.fullName}\n${errors}\n`);
@@ -63,6 +66,12 @@ export default class VitestProgressReporter {
     for (const error of unhandledErrors) {
       this.write(`Unhandled error\n${describeError(error)}\n`);
     }
+    this.printCounts(testModules);
+  }
+
+  printCounts(testModules) {
+    const { passed, failed, skipped } = this.counts;
+    this.write(`Tests: ${passed} passed, ${failed} failed, ${skipped} skipped (${testModules.length} files)\n`);
   }
 
   printModuleErrors(testModule) {

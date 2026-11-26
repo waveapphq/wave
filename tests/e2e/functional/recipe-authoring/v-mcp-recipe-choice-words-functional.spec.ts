@@ -13,7 +13,7 @@
  * 3. get_test_recipe reads the Test back as a recipe that says `proxy_mode: 'off'`.
  * 4. In the Workbench the block's Proxy row reads "Off".
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-choice-words-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-choice-words-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

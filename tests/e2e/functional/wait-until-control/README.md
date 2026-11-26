@@ -16,7 +16,7 @@ rounds.
 - Shared execution environment (`ensureEnvironment` creates it if absent)
 - The E2E service stack's `http-echo` up (automatic: Playwright `webServer` in
   host mode, the CI script in container-shard mode). Manual escape hatch:
-  `scripts/e2e-stack.sh up --wait http-echo`
+  `scripts/e2e/e2e-stack.sh up --wait http-echo`
 - `fixture.json` - four waits chained through their `then` lanes, so a lost
   egress breaks the chain rather than passing silently
 - `fixture-fail-scope.json` - one wait with Fail Current Scope on

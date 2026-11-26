@@ -40,9 +40,10 @@
  *  6. The last block removes the directory the run created outside the
  *     artifacts folder.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-filepath.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-filepath.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import {
   test,
   expect,
@@ -60,7 +61,7 @@ import { finishRun, startRun } from '../../helpers/k8s-run'
 import { getActiveSessionId, getSessionVariables } from '../../helpers/fixture-import'
 import { uploadTestData } from '../../helpers/testdata'
 
-const SUFFIX = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const SUFFIX = `${Date.now()}-${randomUUID().slice(0, 6)}`
 const ECHO = `https://${HTTP_TARGET_HOST}:${HTTP_MAIN_PORT}`
 
 const AUTO_NAME = 'wave-drop.json'

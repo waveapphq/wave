@@ -1,5 +1,6 @@
 /** Shared drivers of the reference specs in this folder: blocks dropped and removed, the stored Test read back, renames and deletes in the Variable Manager. */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, dragSourceToCanvas, expandPalette, type PaletteDragSpec } from '../../helpers/canvas'
 import { leaveExpressionEditor } from '../../helpers/code-editor'
@@ -38,7 +39,7 @@ export function expressionOf(node: StoredNode | undefined, field: string): unkno
 }
 
 export function uniqueName(prefix: string): string {
-  return `zz-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `zz-${prefix}-${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 export async function readStoredTest(page: Page, testId: string): Promise<StoredTest> {

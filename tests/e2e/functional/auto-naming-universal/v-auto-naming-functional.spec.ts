@@ -14,6 +14,7 @@
  *      Function makes the local Function land as "Function_1".
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import {
   waitForCanvasLoad,
@@ -26,7 +27,7 @@ import { BACKEND_URL } from '../../helpers/config'
 async function createBlankTest(page: Page): Promise<string> {
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-AUTO-NAMING ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `V-AUTO-NAMING ${Date.now()}-${randomUUID().slice(0, 6)}`,
       version: '1.0.0',
       description: 'Universal auto-naming repro',
       workflow: { nodes: [], edges: [] },
@@ -106,7 +107,7 @@ test.describe('V-AUTO-NAMING (functional): universal bare-first then _N labeling
     // free collision check forces the next NEW local Function to "Function_1".
     const seedResp = await page.request.post(`${BACKEND_URL}/tests`, {
       data: {
-        name: `V-AUTO-NAMING-COLLIDE ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: `V-AUTO-NAMING-COLLIDE ${Date.now()}-${randomUUID().slice(0, 4)}`,
         version: '1.0.0',
         description: 'Pre-seeded with a Log node labeled "Function"',
         workflow: {

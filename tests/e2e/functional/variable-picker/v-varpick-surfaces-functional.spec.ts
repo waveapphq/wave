@@ -14,13 +14,14 @@
  * REQ: REQ-3.5.1.20 (shared variable picker, VARPICK-1, VARPICK-2)
  */
 
+import { randomUUID } from 'node:crypto'
 import { leaveExpressionEditor } from '../../helpers/code-editor'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
 import { configSheet, openBlockSheet } from '../../helpers/workbench'
 
-const UNIQUE = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const UNIQUE = `${Date.now()}-${randomUUID().slice(0, 6)}`
 
 /** 60 chars - long enough to overflow the condition row, short enough to be a
  *  legal variable name. */

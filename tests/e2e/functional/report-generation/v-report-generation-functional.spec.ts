@@ -39,9 +39,10 @@
  *     0 in the same gray as its own label. A WARN-level Log line is not a
  *     warning Block and must not move the tile
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/report-generation/v-report-generation-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/report-generation/v-report-generation-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -81,7 +82,7 @@ async function importFixture(
   file = 'fixture.json',
 ): Promise<{ id: string; name: string }> {
   const fixture = loadFixture(file)
-  const name = `${fixture.name as string} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  const name = `${fixture.name as string} ${Date.now()}-${randomUUID().slice(0, 5)}`
   fixture.name = name
   const response = await request.post(`${BACKEND_URL}/tests`, { data: fixture })
   expect(response.ok(), `POST /tests failed: ${response.status()}`).toBeTruthy()

@@ -151,7 +151,7 @@ test.describe('V-QADD-02: Quick Insert insert modes end-to-end', () => {
     // A saved Test, so the run has a surface to execute (the clean-canvas
     // Start anchor is proved in the second test, which needs no run).
     const testId = await createValidTest(request, {
-      name: `V-QADD-02 ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-QADD-02 ${Date.now()}-${randomUUID().slice(0, 4)}`,
       nodes: [logNode('anchor', 'Anchor', "'anchor ran'", { x: 260, y: 140 })],
       edges: [startEdge('anchor')],
     })
@@ -387,7 +387,7 @@ test.describe('V-QADD-02: Quick Insert insert modes end-to-end', () => {
       name: `qadd_selfnest_${randomUUID().slice(0, 6)}`,
     })
     const testId = await createValidTest(request, {
-      name: `V-QADD-02-SELFNEST ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-QADD-02-SELFNEST ${Date.now()}-${randomUUID().slice(0, 4)}`,
       nodes: [
         sharedNode('fn-self', {
           functionId: fn.functionId,

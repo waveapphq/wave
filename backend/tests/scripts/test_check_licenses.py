@@ -1,4 +1,4 @@
-"""Tests for scripts/check-licenses.py on a tmp tree with fake lock files, venv and wheels."""
+"""Tests for scripts/audit/check-licenses.py on a tmp tree with fake lock files, venv and wheels."""
 
 import hashlib
 import json
@@ -11,8 +11,8 @@ import pytest
 
 from tests.scripts.script_support import CLONE, Repo, Run, Stubs, copy_from_clone, run, stub_env
 
-SCRIPT = "scripts/check-licenses.py"
-APPROVED = "scripts/dependency-licenses.json"
+SCRIPT = "scripts/audit/check-licenses.py"
+APPROVED = "scripts/audit/dependency-licenses.json"
 WHEEL = "fixwheel-1.0.0-py3-none-any.whl"
 PASSED = "License check passed: 5 shipped packages approved."
 

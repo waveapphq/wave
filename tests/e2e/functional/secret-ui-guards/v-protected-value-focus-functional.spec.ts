@@ -11,7 +11,7 @@
  * parameter, so the Variable Setter row is the block dialog's stored secret number.
  *
  * Phase: functional-workflow (each test imports its own Test; no run).
- * Run: ./scripts/e2e-targeted-local.sh functional/secret-ui-guards/v-protected-value-focus-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/secret-ui-guards/v-protected-value-focus-functional.spec.ts
  *
  * Pass Criteria:
  * 1. Block dialog, secret text: after Cancel and after Escape the question is gone, no

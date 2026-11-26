@@ -34,7 +34,7 @@ save check that refuses the same value written as a literal.
 ## Run
 
 ```bash
-./scripts/e2e-targeted-local.sh functional/validation-runtime-enum/v-validate-runtime-enum-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/validation-runtime-enum/v-validate-runtime-enum-functional.spec.ts
 ```
 
 ## Files

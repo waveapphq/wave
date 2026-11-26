@@ -25,8 +25,8 @@ workbench. No external service.
 
 ## Steps
 
-1. `./scripts/e2e-targeted-local.sh functional/table-expression-guards/v-table-expression-guards.spec.ts` from the root of
-   the clone, or the whole suite via `./scripts/ci-playwright-local.sh`.
+1. `./scripts/e2e/e2e-targeted-local.sh functional/table-expression-guards/v-table-expression-guards.spec.ts` from the root of
+   the clone, or the whole suite via `./scripts/gate/15-playwright.sh full`.
 
 ## Validation
 

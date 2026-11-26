@@ -28,6 +28,7 @@
  *     for its literal, and runs green once write_testdata supplies the file.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
@@ -56,7 +57,7 @@ interface Entry {
 }
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 function loadFixture(file = 'fixture.json'): Record<string, unknown> {
@@ -339,7 +340,7 @@ test.describe('V-MCP-TESTDATA-FUNCTIONAL: the MCP test data tools', () => {
     })
 
     await test.step('an unknown test reference raises the way get_test does', () => {
-      const missing = `no-such-test-${Math.random().toString(36).slice(2, 10)}`
+      const missing = `no-such-test-${randomUUID().slice(0, 8)}`
       expectRaised(
         callTool(MCP_PORT, 'get_test', { test_ref: missing }),
         'get_test',

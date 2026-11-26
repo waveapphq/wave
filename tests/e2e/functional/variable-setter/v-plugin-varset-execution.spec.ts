@@ -27,7 +27,7 @@
  *
  * REQ: REQ-3.4.1.14 Variable Setter Control
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/variable-setter/v-plugin-varset-execution.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/variable-setter/v-plugin-varset-execution.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

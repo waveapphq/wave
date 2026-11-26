@@ -23,7 +23,7 @@ SQL-10).
   certificate when one is sent. Oracle is plain TCP only.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait postgres mariadb oracle mssql
+  ./scripts/e2e/e2e-stack.sh up --wait postgres mariadb oracle mssql
   ```
 
 - The fixture carries the `127.0.0.1` sentinel in every Host row;
@@ -41,7 +41,7 @@ SQL-10).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/sql-run/v-plugin-sql-run-functional.spec.ts`
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/sql-run/v-plugin-sql-run-functional.spec.ts`
    (or `functional/sql-run/v-plugin-sql-run-errors-functional.spec.ts`, which
    waits for the bookend `sqlerr-run-errors-done` instead).
 2. The spec replaces the token, checks the connection rows against config,
@@ -214,7 +214,7 @@ Fail the block, which ends that run).
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/sql-run/v-plugin-sql-sqlite-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/sql-run/v-plugin-sql-sqlite-functional.spec.ts`.
 2. The spec replaces the token, imports the fixture via `POST /tests` (no
    repairs), opens it in the workbench, uploads the database to its Test Data
    and confirms `POST /tests/{id}/validate?context=run` reports zero errors.
@@ -294,7 +294,7 @@ SQL Server and Oracle (REQ-3.4.1.19; SQL-5, SQL-8).
   database services up:
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait postgres mariadb oracle mssql
+  ./scripts/e2e/e2e-stack.sh up --wait postgres mariadb oracle mssql
   ```
 
 - Nothing is written to a database, so nothing is left behind. Nothing listens
@@ -310,7 +310,7 @@ SQL Server and Oracle (REQ-3.4.1.19; SQL-5, SQL-8).
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/sql-run/v-plugin-sql-driver-identity-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/sql-run/v-plugin-sql-driver-identity-functional.spec.ts`.
 2. Workbench test: the spec imports `fixture-driver-identity.json` through
    `POST /tests` (no repairs), confirms `POST /tests/{id}/validate?context=run`
    reports zero errors, opens the Test, sets the console to DEBUG, picks the

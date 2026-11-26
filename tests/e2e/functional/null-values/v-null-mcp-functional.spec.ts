@@ -22,6 +22,7 @@
  *    values, and the test's stored variables do not change.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
@@ -67,7 +68,7 @@ interface ExecutionRow {
 }
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 function loadRecipe(file: string, baseName: string, name: string): string {

@@ -32,8 +32,8 @@ on the canvas is the whole dirty edit - nothing is saved afterwards.
 
 ## Steps
 
-1. `./scripts/e2e-targeted-local.sh functional/prerun-dirty-gate/v-prerun-dirty-gate-functional.spec.ts` from the root of
-   the clone, or the whole suite via `./scripts/ci-playwright-local.sh`.
+1. `./scripts/e2e/e2e-targeted-local.sh functional/prerun-dirty-gate/v-prerun-dirty-gate-functional.spec.ts` from the root of
+   the clone, or the whole suite via `./scripts/gate/15-playwright.sh full`.
 
 ## Validation
 

@@ -16,6 +16,7 @@
  * the edge attached to Log_2 (relocation rejected as duplicate). Total
  * edge count stays at 3.
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { getWorkflowNodes } from '../../helpers/edge-drag'
@@ -96,7 +97,7 @@ function buildSeed(name: string): Record<string, unknown> {
 
 test.describe('V-CTRL-ASSERT-DUP-EGRESS-01', () => {
   test('relocating the fail edge onto Log_1 is rejected (Assert.pass already there)', async ({ page }) => {
-    const seedName = `V-CTRL-ASSERT-DUP-EGRESS ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const seedName = `V-CTRL-ASSERT-DUP-EGRESS ${Date.now()}-${randomUUID().slice(0, 6)}`
     const createResp = await page.request.post(`${BACKEND_URL}/tests`, { data: buildSeed(seedName) })
     expect(createResp.ok()).toBeTruthy()
     const testId: string = (await createResp.json()).data.id

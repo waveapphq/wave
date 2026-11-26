@@ -51,7 +51,7 @@ would have carried the wrong value.
   command:
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd kwok kwok-internal
+  ./scripts/e2e/e2e-stack.sh up --wait sshd kwok kwok-internal
   ```
 
   `up --wait` runs each container's own healthcheck, so a healthy
@@ -74,9 +74,9 @@ would have carried the wrong value.
 
 The manifests, Stages, log files, `kwok.yaml` and `tokens.csv` are copied into
 the image at BUILD time and applied from inside the container at startup.
-Editing one and running `scripts/e2e-stack.sh up` leaves the old image serving
+Editing one and running `scripts/e2e/e2e-stack.sh up` leaves the old image serving
 and both clusters exactly as they were. The sequence is
-`scripts/e2e-stack.sh build`, then `down`, then
+`scripts/e2e/e2e-stack.sh build`, then `down`, then
 `up --wait sshd kwok kwok-internal`. The rebuild recreates both clusters from
 scratch, so every runtime object any suite created is wiped and only the baked
 bootstrap returns.
@@ -171,7 +171,7 @@ tunnel closed that way reports `closed=false`.
 
 ```bash
 # from the root of the clone
-./scripts/e2e-targeted-local.sh functional/k8s-tunnel/v-k8s-tunnel-write.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/k8s-tunnel/v-k8s-tunnel-write.spec.ts
 ```
 
 The suite runs in the `functional-workflow` project and needs its directory

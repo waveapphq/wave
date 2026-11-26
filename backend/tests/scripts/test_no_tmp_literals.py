@@ -1,23 +1,29 @@
-"""No CI script or E2E infrastructure file names the host's shared temp folder."""
+"""Static checks of the CI scripts and the E2E infrastructure files.
+
+No file names the host's shared temp folder, no script under scripts/ turns a shellcheck warning
+off, and neither Playwright config starts a web server of its own on the host.
+"""
+
+import re
 
 import pytest
 
+from tests.scripts.gate_support import GATES, RUNNER, gate_path
 from tests.scripts.script_support import CLONE, SHARED_TEMP, SHARED_TEMP_PATTERN
 
-# The CI and E2E scripts, the three E2E config files and the five Containerfiles.
+# The gate scripts and the runner, the E2E scripts, the three E2E config files and the five
+# Containerfiles.
 FILES = [
-    "scripts/ci-checks-local.sh",
-    "scripts/ci-backend-local.sh",
-    "scripts/ci-frontend-local.sh",
-    "scripts/ci-playwright-local.sh",
-    "scripts/run-e2e-shard.sh",
-    "scripts/e2e-targeted-local.sh",
-    "scripts/generate-shard-weights.sh",
+    *[gate_path(number) for number in GATES],
+    RUNNER,
+    "scripts/e2e/run-e2e-shard.sh",
+    "scripts/e2e/e2e-targeted-local.sh",
+    "scripts/e2e/generate-shard-weights.sh",
     "tests/e2e/playwright.config.ts",
     "tests/e2e/playwright.functional.config.ts",
     "tests/e2e/helpers/config.ts",
-    "scripts/Containerfile",
-    "scripts/Containerfile.e2e",
+    "scripts/images/Containerfile",
+    "scripts/images/Containerfile.e2e",
     "tests/e2e/services/kwok/Containerfile",
     "tests/e2e/services/oci-registry/Containerfile",
     "tests/e2e/services/sshd/Containerfile",
@@ -44,3 +50,47 @@ def test_the_log_folder_is_ignored_and_the_coverage_markers_are_gone() -> None:
     assert "ci-output/" in [line.strip() for line in lines]
     assert not any(".ci-be-coverage-ready" in line for line in lines)
     assert not any(".ci-fe-coverage-ready" in line for line in lines)
+
+
+# A comment that turns a shellcheck warning off, such as `# shellcheck disable=SC2086`.
+SHELLCHECK_SUPPRESSION = re.compile(r"#\s*shellcheck\s+disable\b")
+
+SCRIPTS = sorted(
+    path.relative_to(CLONE).as_posix()
+    for path in (CLONE / "scripts").rglob("*")
+    if path.is_file() and "__pycache__" not in path.parts
+)
+
+
+def test_the_scripts_folder_is_scanned() -> None:
+    assert gate_path(15) in SCRIPTS
+
+
+@pytest.mark.parametrize("rel", SCRIPTS)
+def test_the_script_turns_no_shellcheck_warning_off(rel: str) -> None:
+    text = (CLONE / rel).read_text(encoding="utf-8", errors="replace")
+
+    hits = [
+        f"{rel}:{number}: {line.strip()}"
+        for number, line in enumerate(text.splitlines(), 1)
+        if SHELLCHECK_SUPPRESSION.search(line)
+    ]
+
+    assert hits == [], f"{rel} turns a shellcheck warning off"
+
+
+# The host-mode web server path: a vite preview of a per-stack build-<i> folder.
+PLAYWRIGHT_CONFIGS = ["tests/e2e/playwright.config.ts", "tests/e2e/playwright.functional.config.ts"]
+HOST_MODE_TEXTS = ["webServer", "build-", "vite preview"]
+
+
+@pytest.mark.parametrize("text", HOST_MODE_TEXTS)
+@pytest.mark.parametrize("rel", PLAYWRIGHT_CONFIGS)
+def test_the_playwright_config_has_no_host_mode_web_server(rel: str, text: str) -> None:
+    lines = (CLONE / rel).read_text(encoding="utf-8").splitlines()
+
+    hits = [
+        f"{rel}:{number}: {line.strip()}" for number, line in enumerate(lines, 1) if text in line
+    ]
+
+    assert hits == [], f"{rel} names {text}"

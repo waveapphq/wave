@@ -19,6 +19,7 @@
  * node with empty `localDefinition.inputs` and `localDefinition.outputs`).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -66,7 +67,7 @@ function buildSeed(name: string): Record<string, unknown> {
 }
 
 async function seed(page: Page): Promise<string> {
-  const name = `V-CANVAS-FN-CFG-03 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `V-CANVAS-FN-CFG-03 ${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, { data: buildSeed(name) })
   expect(resp.ok(), `POST /tests failed: ${resp.status()}`).toBeTruthy()
   const body = await resp.json()

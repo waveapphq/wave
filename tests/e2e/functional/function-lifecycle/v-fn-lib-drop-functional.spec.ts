@@ -93,7 +93,7 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<{ id: st
 async function seedEmptyTest(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BASE}/tests`, {
     data: {
-      name: `V-FN-LIB-DROP host ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-LIB-DROP host ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Empty host Test for the library drop.',
       workflow: { nodes: [], edges: [] },

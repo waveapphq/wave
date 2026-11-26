@@ -10,7 +10,7 @@
  *   - Validation: unresolvable test IDs (fixable), masked secrets (warning), missing name (fatal)
  *   - ZIP round-trip
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/import-export-suite/v-suite-export-import.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/import-export-suite/v-suite-export-import.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

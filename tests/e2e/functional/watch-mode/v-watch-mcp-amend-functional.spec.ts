@@ -30,7 +30,7 @@
  *     text: nothing streams (the assistant's banner never shows), nothing is written, and the tab
  *     keeps its edits and the session.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-amend-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-amend-functional.spec.ts
  */
 
 import type { APIRequestContext, BrowserContext } from '@playwright/test'

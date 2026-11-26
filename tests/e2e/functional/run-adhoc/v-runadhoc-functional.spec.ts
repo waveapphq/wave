@@ -18,6 +18,7 @@
  * REQ: REQ-3.2.1.5 (Ad-hoc block execution), REQ-3.2.1.1 (run-current)
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -40,7 +41,7 @@ async function importAndOpen(page: Page): Promise<string> {
   const baseName = (fixture as { name?: string }).name ?? 'Run Ad-Hoc'
   const uniqueFixture = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   await page.request.delete(`http://localhost:${BACKEND_PORT}/workbench/session/`).catch(() => {})

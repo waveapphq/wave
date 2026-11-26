@@ -19,6 +19,7 @@
  *    `note-handle-input-cycle`; the drop makes no wire and the Note keeps its one input.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 import { waitForViewportSettled } from '../../helpers/canvas'
@@ -40,7 +41,7 @@ const created: string[] = []
 async function seed(page: Page, title: string, nodes: CanvasNode[], edges: WorkflowEdge[]): Promise<string> {
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `zz-note-inputs ${title} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `zz-note-inputs ${title} ${Date.now()}-${randomUUID().slice(0, 6)}`,
       version: '1.0.0',
       description: 'Note inputs',
       workflow: { nodes, edges },

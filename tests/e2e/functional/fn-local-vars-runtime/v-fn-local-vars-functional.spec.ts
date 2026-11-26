@@ -16,6 +16,7 @@
  *   5. Console log line carries `3.14` from the function body.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { getLogEntries } from '../../helpers/log-reader'
@@ -25,7 +26,7 @@ const FN_NODE_ID = 'fn-local-vars-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-LOCAL-VARS ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-LOCAL-VARS ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function with a function-local variable run_time',
     variables: {},

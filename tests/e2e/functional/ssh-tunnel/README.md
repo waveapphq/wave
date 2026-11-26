@@ -23,7 +23,7 @@ Target is on (REQ-3.4.1.3 / REQ-5.1.5; SSHTUN-6, SSHTUN-7, SSHTUN-8, SSH-10).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-ssh-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-ssh-tunnel-functional.spec.ts`.
 2. The spec checks the fixture's destinations against the `helpers/config.ts`
    constants, imports `fixture.json` and validates it (zero errors).
 3. Secret round-trip guard: `GET` then `PUT` the test so the masked secret
@@ -107,7 +107,7 @@ database, and that its TLS name check uses the far host (REQ-3.4.1.6, REQ-5.1.4;
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-sql-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-sql-tunnel-functional.spec.ts`.
 2. The spec checks the fixture's targets against the `helpers/config.ts` constants, clears the
    workbench draft, imports and validates the fixture (zero errors), and opens it.
 3. It selects the shared E2E environment, presses Run and waits for `sql-tunnel-e2e-done`.
@@ -164,7 +164,7 @@ host (REQ-5.1.2, REQ-3.4.1.15, REQ-5.1.5; OS-14, OS-11, OS-10).
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-opensearch-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-opensearch-tunnel-functional.spec.ts`.
 2. The spec checks the fixture against the `helpers/config.ts` constants, imports and validates
    it (no repairs, zero errors and warnings), opens it and sets the console to DEBUG.
 3. It selects the shared E2E environment, presses Run and waits for `os-tunnel-done`.

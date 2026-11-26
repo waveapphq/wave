@@ -13,6 +13,7 @@
  *   5. The executed inner Log line contains the bound value.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { getLogEntries } from '../../helpers/log-reader'
@@ -23,7 +24,7 @@ const BOUND_VALUE = 'BareName-Verified'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed: Record<string, unknown> = {
-    name: `V-FN-BARE-NAMES ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-BARE-NAMES ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function with input `some_text` accessed via bare name in body',
     workflow: {

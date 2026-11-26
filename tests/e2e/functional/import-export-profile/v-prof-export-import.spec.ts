@@ -11,7 +11,7 @@
  *   - ZIP round-trip
  *
  * REQ: Profile Import and Export
- * Run: ./scripts/e2e-targeted-local.sh functional/import-export-profile/v-prof-export-import.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/import-export-profile/v-prof-export-import.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

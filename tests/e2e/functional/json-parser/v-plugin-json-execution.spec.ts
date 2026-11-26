@@ -14,7 +14,7 @@
  *
  * REQ: REQ-3.4.1.16 JSON Parser Control
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/json-parser/v-plugin-json-execution.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/json-parser/v-plugin-json-execution.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

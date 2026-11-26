@@ -16,6 +16,7 @@
  * 3. Typing the start of each name in an expression offers it in the suggestion list.
  */
 
+import { randomUUID } from 'node:crypto'
 import { leaveExpressionEditor } from '../../helpers/code-editor'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
@@ -42,7 +43,7 @@ import {
 import { closeConfig } from '../file-picker/picker'
 
 function uniqueName(): string {
-  return `zz-v-table-sandbox-names-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `zz-v-table-sandbox-names-${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 /** Run the Test; the pre-run check lets it start and it passes. */

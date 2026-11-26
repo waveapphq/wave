@@ -31,7 +31,7 @@ sheet's refusal).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/sql-procedure/v-plugin-sql-procedure-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/sql-procedure/v-plugin-sql-procedure-functional.spec.ts`.
 2. The spec fills the fixture, imports it via `POST /tests`, validates it with
    `POST /tests/{id}/validate?context=run` (zero errors) and opens it in the
    workbench.

@@ -40,10 +40,10 @@ gap this suite exists to close.
 The manifests, Stages, log files, `kwok.yaml` and `tokens.csv` are copied into
 the image at BUILD time and applied from inside the container at startup, and
 the kwok controller itself is rebuilt from patched source in the same build.
-Editing one and running `scripts/e2e-stack.sh up` leaves the old image serving
+Editing one and running `scripts/e2e/e2e-stack.sh up` leaves the old image serving
 and the cluster exactly as it was - the specs then fail against a cluster that
 serves no exec at all, and it reads like a plugin bug. The sequence is
-`scripts/e2e-stack.sh build`, then `down`, then `up --wait kwok`.
+`scripts/e2e/e2e-stack.sh build`, then `down`, then `up --wait kwok`.
 
 ### Why the Script legs need the patched kwok
 

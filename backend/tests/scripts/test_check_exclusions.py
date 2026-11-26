@@ -1,4 +1,4 @@
-"""Tests for scripts/check-exclusions.py, run from the clone on a git work tree in tmp_path."""
+"""Tests for scripts/lib/check-exclusions.py, run from the clone on a git work tree in tmp_path."""
 
 import json
 import re
@@ -57,7 +57,7 @@ HEAD_SHA = "a" * 40
 MERGE_SHA = "b" * 40
 PUSH_SHA = "c" * 40
 
-USAGE = "Usage: scripts/check-exclusions.py --sonarqube or --codeql"
+USAGE = "Usage: scripts/lib/check-exclusions.py --sonarqube or --codeql"
 
 
 @pytest.fixture

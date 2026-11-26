@@ -6,7 +6,7 @@ NET-6, NET-7, NET-8). Every settings change goes through the page (Add certifica
 icon, public authorities cards, Save); the run then proves the effect.
 
 ## Pre-requisites
-- Backend + frontend E2E stacks up; real-service stack up (`scripts/e2e-stack.sh up --wait`):
+- Backend + frontend E2E stacks up; real-service stack up (`scripts/e2e/e2e-stack.sh up --wait`):
   the `tls-lab` chain listeners 9480 (leaf + intermediate) and 9481 (leaf only), both signed by
   "WAVE E2E Chain Intermediate CA" under "WAVE E2E Chain Root CA"
   (`tests/e2e/services/tls-lab/certs/generate-chain-certs.sh`).

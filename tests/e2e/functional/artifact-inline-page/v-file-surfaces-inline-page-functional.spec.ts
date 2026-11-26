@@ -15,7 +15,7 @@
  *  2. A workbench run of the fixture passes, and page.html and drawing.svg
  *     opened inline from the session artifacts behave the same.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/artifact-inline-page/v-file-surfaces-inline-page-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/artifact-inline-page/v-file-surfaces-inline-page-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

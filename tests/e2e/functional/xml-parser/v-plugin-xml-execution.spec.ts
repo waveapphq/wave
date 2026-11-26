@@ -14,7 +14,7 @@
  *
  * REQ: REQ-3.4.1.11 XML processing with XPath support
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/xml-parser/v-plugin-xml-execution.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/xml-parser/v-plugin-xml-execution.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

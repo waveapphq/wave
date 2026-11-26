@@ -12,7 +12,7 @@
  * 2. On the canvas each stored wire into the Log is drawn once, under its own id,
  *    and its line leaves from the dot of its own branch.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-wire-ids-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-wire-ids-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

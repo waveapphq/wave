@@ -29,7 +29,7 @@
  *     appears until the glide ends. Then the new Blocks appear one at a time, in flow order, each
  *     at its final place, while every Block that was there stays at its final place.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-flow-order-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-flow-order-functional.spec.ts
  */
 
 import fs from 'fs'

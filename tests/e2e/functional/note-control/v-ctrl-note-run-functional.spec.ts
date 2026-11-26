@@ -21,6 +21,7 @@
  * 8. A For with count 0 whose body is a Note, then a Log: that Log never prints and paints skipped.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { cleanUp } from '../../helpers/fn-block'
@@ -47,7 +48,7 @@ const MAX_ITERATIONS_LINE = /^\[WHILE\] Max iterations/
 const created: string[] = []
 
 function newToken(): string {
-  return Math.random().toString(36).slice(2, 8)
+  return randomUUID().slice(0, 6)
 }
 
 async function seedGraph(request: APIRequestContext, title: string, token: string, graph: NoteGraph): Promise<string> {

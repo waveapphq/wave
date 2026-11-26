@@ -16,6 +16,7 @@
  * 6. The 11th open is refused with the cap toast; 10 sheets remain.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { createValidTest, logNode, startEdge, openTest } from '../../helpers/fn-seed'
 
@@ -34,7 +35,7 @@ async function seedLogs(request: APIRequestContext, count: number): Promise<stri
     }),
   )
   return createValidTest(request, {
-    name: `V-SHEET-01 ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-SHEET-01 ${Date.now()}-${randomUUID().slice(0, 4)}`,
     nodes,
     edges: [startEdge(ids[0])],
   })

@@ -52,7 +52,7 @@ async function seedLibraryFunction(page: Page): Promise<string> {
 }
 
 async function seedTest(page: Page, functionId: string): Promise<string> {
-  const name = `V-FN-MK-LOCAL-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `V-FN-MK-LOCAL-01 ${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
       name,

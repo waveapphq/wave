@@ -5,9 +5,9 @@ real OpenSSH hosts (real-service harness, REQ-3.4.1.3 / REQ-5.1.5).
 
 ## Prerequisites
 
-- The real-service stack must be running (`scripts/e2e-stack.sh up --wait`; started
+- The real-service stack must be running (`scripts/e2e/e2e-stack.sh up --wait`; started
   automatically by `playwright.functional.config.ts` webServer in host mode, by
-  `scripts/e2e-targeted-local.sh` for targeted runs, and by `ci-playwright-local.sh`
+  `scripts/e2e/e2e-targeted-local.sh` for targeted runs, and by `15-playwright.sh`
   for full CI). See `tests/e2e/services/README.md` - user `wave`, password
   `wave-secret`, main host :9445, nested jump host reachable only in-stack.
 - Strict host-key tests rely on WAVE's trusted SSH hosts list, never the

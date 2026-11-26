@@ -45,7 +45,7 @@ async function seed(page: Page, request: APIRequestContext) {
     },
   })
   const testId = await createValidTest(request, {
-    name: `V-BLOCK-KEYS ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-BLOCK-KEYS ${Date.now()}-${randomUUID().slice(0, 4)}`,
     nodes: [
       logNode('plug', 'Plug', "'plug'", { x: 260, y: 120 }),
       sharedNode('fn-shared', {

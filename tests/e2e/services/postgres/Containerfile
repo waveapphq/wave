@@ -2,7 +2,7 @@
 # seed procedure for the Call procedure leg, and TLS offered on the database
 # leaf signed by the WAVE Test CA (plain connections still accepted; a client
 # certificate, when sent, is verified against the same CA).
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e)
 FROM docker.io/library/postgres:alpine
 
 # Superuser `postgres`; only the provisioning scripts use it.

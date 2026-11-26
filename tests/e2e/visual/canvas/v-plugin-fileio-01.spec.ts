@@ -45,6 +45,7 @@
  *         no newer-version arrow
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type Locator } from '../../helpers/playwright-fixtures'
 import { waitForTooltipClosed, waitForTooltipVisible } from '../../helpers/tooltip-wait'
 import {
@@ -468,7 +469,7 @@ const fileIoConfig = {
 
 // A unique name per run: POST /tests refuses a duplicate.
 const REMOTE_FIXTURE = {
-  name: `File I/O Remote Locus Fixture ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  name: `File I/O Remote Locus Fixture ${Date.now()}-${randomUUID().slice(0, 6)}`,
   version: '1.0.0',
   description: '',
   workflow: {

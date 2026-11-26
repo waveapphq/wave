@@ -16,7 +16,7 @@
  *   Test 4: trace name-masking of short and response catalog headers, the reveal path, the
  *     marked-trace parity, a 1-redirect hop trace, and the file-mode size cap.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-flow-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-flow-functional.spec.ts
  */
 
 import http from 'node:http'

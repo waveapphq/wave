@@ -16,7 +16,7 @@ Remote Execution body and a Function body.
   `deleteSignalCellEntities` (`signal-cell-open.ts`) and `deleteStopProbeTests` (`stop-probes.ts`), and
   each spec calls them from its own `afterEach` hooks.
 - Why: Playwright records a test's file as the module where `test()` is called. The CI shard planner
-  (`scripts/e2e-shard-plan.mjs`) builds each shard's file list from `playwright test --list`, so a test
+  (`scripts/e2e/e2e-shard-plan.mjs`) builds each shard's file list from `playwright test --list`, so a test
   declared inside a helper module is listed under that helper, which Playwright does not run as a spec
   file, and the test never runs in CI.
 
@@ -281,7 +281,7 @@ a Function instance's sibling-after edge, or every branch tail of an If/Else or 
 
 ## Services
 
-Needs the `sshd` service up (`scripts/e2e-stack.sh up --wait`). The Remote Execution cells open a
+Needs the `sshd` service up (`scripts/e2e/e2e-stack.sh up --wait`). The Remote Execution cells open a
 connection-scoped session on the shared host and write nothing there. An ad-hoc cell inside a Remote
 Execution body (`C.run-current.remote-body*`, `C.run-from-here.remote-body*`) first runs Run Current on the
 Test's SSH Session Open, which leaves that session open for the ad-hoc run, and `adHocRunToEnd`

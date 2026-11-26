@@ -22,6 +22,7 @@
  * `patch.dict(os.environ, {"WAVE_ADMIN_ALLOWED": "false"})` for that case.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment, E2E_ENV_NAME } from '../../helpers/config'
 
@@ -172,7 +173,7 @@ test.describe('F-WORKBENCH-SESSION-ADMIN-01: admin workbench session endpoints',
   }) => {
     await ensureEnvironment(request)
     const environmentId = await getEnvironmentId(request)
-    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const suffix = `${Date.now()}-${randomUUID().slice(0, 5)}`
     const { id: testId, name: testName } = await importTest(
       request,
       `admin-wb-session-${suffix}`,

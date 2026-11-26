@@ -25,6 +25,7 @@
  *     the breadcrumb (no dialog of any kind)
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
@@ -44,7 +45,7 @@ function loadFixture(): Record<string, any> {
 
 async function importFixture(request: APIRequestContext): Promise<string> {
   const fixture = loadFixture()
-  fixture.name = `${fixture.name as string} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  fixture.name = `${fixture.name as string} ${Date.now()}-${randomUUID().slice(0, 5)}`
   const response = await request.post(`${BACKEND_URL}/tests`, { data: fixture })
   expect(response.ok(), `POST /tests failed: ${response.status()}`).toBeTruthy()
   const body = await response.json()

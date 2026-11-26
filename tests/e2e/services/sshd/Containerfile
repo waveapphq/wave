@@ -4,14 +4,14 @@
 # The compose service selects a config variant via its command; hostname is set
 # per service in compose.yaml.
 #
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/sshd)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e/services/sshd)
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # openssh-server + the five interpreters the SSH Session Script suite exercises
 # (sh + bash are in the base image; add python3, perl, node). Node 22 via
-# nodesource to match scripts/Containerfile's node convention.
+# nodesource to match scripts/images/Containerfile's node convention.
 RUN apt-get update -qq && \
     apt-get install -y -qq --no-install-recommends \
         openssh-server \

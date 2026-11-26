@@ -6,6 +6,7 @@
  * so every fixture passes /tests/{id}/validate before it is run.
  */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Page, type APIRequestContext } from '@playwright/test'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -20,7 +21,7 @@ export async function importAndNavigate(page: Page, fixture: Record<string, unkn
   const baseName = (fixture as { name?: string }).name ?? 'Function Debug Halt'
   const uniqueFixture = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   const createResp = await page.request.post(`${BACKEND_URL}/tests`, { data: uniqueFixture })

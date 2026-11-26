@@ -37,6 +37,19 @@ beforeAll(() => {
       '',
     ].join('\n'),
   )
+  writeFileSync(
+    path.join(fixtureDir, 'counts.test.mjs'),
+    [
+      "test('passes', () => {",
+      '  expect(2).toBe(2)',
+      '})',
+      '',
+      "test.skip('is skipped', () => {",
+      '  expect(1).toBe(2)',
+      '})',
+      '',
+    ].join('\n'),
+  )
   const result = spawnSync(
     process.execPath,
     [VITEST, 'run', '--root', fixtureDir, '--config', path.join(fixtureDir, 'vitest.config.mjs'), `--reporter=${REPORTER}`],
@@ -49,7 +62,7 @@ afterAll(() => {
   if (fixtureDir) rmSync(fixtureDir, { recursive: true, force: true })
 })
 
-describe('vitest progress reporter, test console output', () => {
+describe('vitest progress reporter, test console output and count line', () => {
   it('runs the fixture test file green', () => {
     expect(run.status).toBe(0)
   })
@@ -60,5 +73,11 @@ describe('vitest progress reporter, test console output', () => {
 
   it("passes a test's console.log text through to stdout", () => {
     expect(run.stdout).toContain(STDOUT_TEXT)
+  })
+
+  it('ends a real run with the one test count line', () => {
+    const counts = run.stdout.split('\n').filter((line) => line.startsWith('Tests:'))
+
+    expect(counts).toEqual(['Tests: 2 passed, 0 failed, 1 skipped (2 files)'])
   })
 })

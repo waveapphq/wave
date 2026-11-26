@@ -1,4 +1,4 @@
-"""Tests for scripts/e2e-shard-plan.mjs with a spec list, over a fake `playwright --list`."""
+"""Tests for scripts/e2e/e2e-shard-plan.mjs with a spec list, over a fake `playwright --list`."""
 
 import json
 import shutil
@@ -9,7 +9,7 @@ import pytest
 
 from tests.scripts.script_support import CLONE, Stubs
 
-PLANNER = CLONE / "scripts" / "e2e-shard-plan.mjs"
+PLANNER = CLONE / "scripts" / "e2e" / "e2e-shard-plan.mjs"
 EMPTY_DB = "empty-db-dark"
 
 FUNCTIONAL = {"a.spec.ts": 30.0, "b.spec.ts": 20.0, "c.spec.ts": 10.0, "d.spec.ts": 5.0}

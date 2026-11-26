@@ -32,6 +32,7 @@
  * the Asserts, the copy, the CSV block, its filter and its rows are built through the UI.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import {
   CHECK_BLOCK_PALETTE,
@@ -171,7 +172,7 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
     }) => {
       await ensureEnvironment(request)
       testId = await createValidTest(request, {
-        name: `zz-V-NULL-CHECK-OPERATORS ${block} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: `zz-V-NULL-CHECK-OPERATORS ${block} ${Date.now()}-${randomUUID().slice(0, 6)}`,
         nodes: [],
         variables: seedVariables(),
       })
@@ -231,7 +232,7 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
     ]
     await ensureEnvironment(request)
     testId = await createValidTest(request, {
-      name: `zz-V-NULL-CHECK-OPERATORS landing ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `zz-V-NULL-CHECK-OPERATORS landing ${Date.now()}-${randomUUID().slice(0, 6)}`,
       nodes: [],
       variables: Object.fromEntries(
         TYPES.filter((t) => landings.some((l) => l.variable === t.variable)).map((t) => [
@@ -291,7 +292,7 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
   }) => {
     await ensureEnvironment(request)
     testId = await createValidTest(request, {
-      name: `zz-V-NULL-CHECK-OPERATORS switch-back ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `zz-V-NULL-CHECK-OPERATORS switch-back ${Date.now()}-${randomUUID().slice(0, 6)}`,
       nodes: [],
       variables: { v_string: { type: 'string', scope: 'test', value: 'abc' } },
     })
@@ -341,7 +342,7 @@ test.describe('V-NULL-CHECK-OPERATORS: the operator list of every check block', 
   }) => {
     await ensureEnvironment(request)
     testId = await createValidTest(request, {
-      name: `zz-V-NULL-CHECK-OPERATORS filter ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `zz-V-NULL-CHECK-OPERATORS filter ${Date.now()}-${randomUUID().slice(0, 6)}`,
       nodes: [],
     })
     await openTest(page, testId)

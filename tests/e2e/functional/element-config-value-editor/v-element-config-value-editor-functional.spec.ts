@@ -14,9 +14,10 @@
  * multiline format round-trip).
  *
  * Phase: functional-workflow (each test imports its own fixture; T1 runs to /echo).
- * Run: ./scripts/e2e-targeted-local.sh functional/element-config-value-editor/v-element-config-value-editor-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/element-config-value-editor/v-element-config-value-editor-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type Locator, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { getLogTexts } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -54,7 +55,7 @@ function buildFixture({ body, templateFields }: FixtureOpts): Record<string, unk
     query_params: {},
   }
   return {
-    name: `V-ELEMENT-CONFIG-VALUE-EDITOR ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-ELEMENT-CONFIG-VALUE-EDITOR ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'HTTP node whose Headers / Query / Body edit through the shared value sheet',
     workflow: {

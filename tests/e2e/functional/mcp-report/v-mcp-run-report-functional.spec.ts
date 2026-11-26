@@ -28,7 +28,7 @@
  *    id and the masked log line, and never the secret value.
  * 9. An unknown execution id and an unknown format are refused with their exact texts.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/mcp-report/v-mcp-run-report-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/mcp-report/v-mcp-run-report-functional.spec.ts
  */
 
 import fs from 'fs'

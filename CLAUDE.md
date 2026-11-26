@@ -106,7 +106,7 @@ Every change must follow this process:
 - **Wrong**: 600-line MockSQLClient in conftest.py, or `if self.mock_mode:` in production code
 
 ### Code Coverage Policy
-- **100% coverage is mandatory** - Never lower the 100% gate in `scripts/run-coverage-backend.sh` or the thresholds in `frontend/vite.config.ts`. Write more tests, don't lower the bar.
+- **100% coverage is mandatory** - Never lower the 100% gate in `scripts/lib/run-coverage-backend.sh` or the thresholds in `frontend/vite.config.ts`. Write more tests, don't lower the bar.
 - **Frontend functions read lower** - The frontend's function coverage shows less than 100%, and its gate is 96%, because `v8 ignore` blocks hide their lines, branches and statements from the report but not the functions defined inside them. Aim for 100% there too.
 - **If 100% seems hard, the code design may be wrong** - Question the architecture, not the requirement.
 
@@ -124,32 +124,50 @@ Every change must follow this process:
 
 ### CI Validation Policy
 - **All CI checks must pass** - Never declare a change or any work complete until CI is green; fix any failing check immediately, never disable CI checks, and never use `# type: ignore` without explicit justification
-- **Change CI files only when that is the pull request's purpose** - A pull request that changes the CI scripts (`scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`), the exclusion check (`scripts/check-exclusions.py`), the text check settings (`typos.toml`), the SonarQube scripts and settings (`scripts/sonar-*.sh`, `backend/sonar-project.properties`, `frontend/sonar-project.properties`) or the GitHub workflows, the scripts they load and the code owners (`.github/workflows/`, `.github/scripts/`, `.github/CODEOWNERS`) is rejected unless fixing those files is the purpose of its issue. Fix the code instead; change a test only as the Test-Driven Development Policy allows.
-- **Local validation is mandatory** - Run the full local CI before declaring work complete. There are exactly four local CI surfaces; do not invoke `pytest --cov` or `npm test -- --coverage` separately - the BE and FE CI scripts run the tests and the coverage gate. Run the fast checks first.
+- **Change CI files only when that is the pull request's purpose** - A pull request that changes the gate scripts and the scripts they run (`scripts/gate/`, `scripts/lib/`, `scripts/report/`, `scripts/e2e/`, `scripts/images/`), the text check settings (`typos.toml`), the SonarQube settings (`backend/sonar-project.properties`, `frontend/sonar-project.properties`) or the GitHub workflows, the scripts they load and the code owners (`.github/workflows/`, `.github/scripts/`, `.github/CODEOWNERS`) is rejected unless fixing those files is the purpose of its issue. Fix the code instead; change a test only as the Test-Driven Development Policy allows.
+- **The gate** - The gate is every check a pull request must pass: the gate scripts in `scripts/gate/`, numbered in run order. Each runs alone from the clone root, fixes nothing, prints one result line, `<NN> <Check name>: passed` or `<NN> <Check name>: failed (<reason>)`, and exits 0 when it passes, 1 when it fails and 2 on a usage or setup error. GitHub CI runs each of them as the job of the same name, except 12, which GitHub's own CodeQL runs, and 15, which runs only locally. The docs check runs only on GitHub, since it reads the pull request description.
+
+  | Script | Check | What it checks |
+  |---|---|---|
+  | `01-branch-name.sh` | Branch name | the branch name; `--pr <head> <base>` checks a pull request's branches |
+  | `02-grammar.sh` | Grammar and Comments | spelling, em and en dashes, process markers in comments |
+  | `03-orphans.sh` | Orphaned files and exclusion IDs | unimported frontend files and each exclusion ID comment against its list |
+  | `04-backend-static.sh` | Backend static | mypy over `wavecore/`, black and ruff over `wavecore/` and `tests/` |
+  | `05-frontend-static.sh` | Frontend static | ESLint over `src/` and `tests/`, the type check |
+  | `06-e2e-types.sh` | E2E types | the type check of `tests/e2e/` |
+  | `07-frontend-build.sh` | Frontend build | the Vite build |
+  | `08-backend-tests.sh` | Backend tests | every backend test, 100% coverage gate |
+  | `09-frontend-tests.sh` | Frontend tests | every frontend test, the coverage gate, no warning on stderr |
+  | `10-sonar-backend.sh` | SonarQube backend | the backend scan with its quality gate |
+  | `11-sonar-frontend.sh` | SonarQube frontend | the frontend scan with its quality gate |
+  | `12-codeql.sh` | CodeQL | GitHub's code scanning checks for the changed languages |
+  | `13-sonar-exclusions.sh` | SonarQube exclusions | SonarQube Cloud's false positive marks against `tests/exclusions/` |
+  | `14-codeql-exclusions.sh` | CodeQL exclusions | GitHub's dismissed CodeQL alerts against `tests/exclusions/` |
+  | `15-playwright.sh` | Playwright | a spec list across up to 8 shards, or the full suite with `full` |
+- **Local validation is mandatory** - Run the gate before declaring work complete; do not invoke `pytest --cov` or `npm test -- --coverage` separately - gates 08 and 09 run the tests and the coverage gate. The runner runs the scripts a change needs, in number order, and stops at the first failure:
   ```bash
-  # Fast checks - host checks, then mypy over wavecore/, black and ruff over wavecore/ and tests/, ESLint, type checks and build
-  ./scripts/ci-checks-local.sh
+  # The scripts the changed files need (against the release branch of a fix or feature branch, else master)
+  ./scripts/gate/run.sh
 
-  # Backend CI (container-based) - tests, 100% coverage gate
-  ./scripts/ci-backend-local.sh
+  # The scripts of named areas, with 01, 02, 03 and 12 for their languages
+  ./scripts/gate/run.sh backend frontend e2e scripts
 
-  # Frontend CI (container-based) - tests, 100% coverage gate
-  ./scripts/ci-frontend-local.sh
-
-  # Playwright (sharded across Podman containers) - optional spec paths relative to tests/e2e/
-  ./scripts/ci-playwright-local.sh
+  # Playwright too, last: a spec list relative to tests/e2e/, or the full suite
+  ./scripts/gate/run.sh --playwright functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts
+  ./scripts/gate/run.sh --playwright full
   ```
-- **No SonarQube in the local CI** - The local CI scripts do not run the SonarQube scan; GitHub CI runs it on each pull request and fails on its quality gate. To read its result before a push, run `./scripts/sonar-scan-backend.sh` or `./scripts/sonar-scan-frontend.sh` on the host after the matching suite, which writes the coverage the scan reads. Its gate counts only on a commit with nothing uncommitted on top, after the matching suite passed on the same files, because a branch scan counts only the files the branch's commits change. The scan goes to SonarQube Cloud (organization `waveapphq`, projects `waveapphq_wave-backend` and `waveapphq_wave-frontend`), waits for the quality gate (`qualitygate.wait=true`), and runs as the current branch, so a detached HEAD stops it.
-- **Progress lines** - While the tests run, the backend, frontend and Playwright scripts print `Progress: <N>%` (Playwright: one share per shard) every `WAVE_CI_PROGRESS_SECONDS` seconds, default 60.
-- **Required host** - The four local CI surfaces are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. This is a hard requirement.
-- **Text checks** - `./scripts/check-text.sh` fails on spelling that `typos.toml` does not allow (`typos`, pinned in `backend/poetry.lock`), on em and en dashes in every text file that `.gitignore` does not exclude, and on process markers in source comments, Python docstrings and the lines of `/* */` comments. The fast checks script and GitHub CI run it. Fix the text; a test string that needs a dash or a misspelling uses an escape or another misspelling.
-- **Branch name check** - `./scripts/check-branch-name.sh` allows only `master`, `release/<version>`, `fix/<version>-<name>` and `feature/<version>-<name>`; the fast checks script runs it, and there a fix or feature branch also needs its release branch in `origin`; the `Branch name` workflow runs it on each pull request, which must go from a fix or feature branch into the release branch of the same version, or from a release branch into `master`.
-- **Results helpers** - `./scripts/sonar-results-backend.sh` and `./scripts/sonar-results-frontend.sh` are read-only reporting tools that summarize the SonarQube findings and the quality gate, with each of its conditions, of the current branch after a scan of that branch has run; `--pr <number>` reads a pull request's instead. They show a scan's details and are never a substitute for the scan. With `--fix` they also print each finding's flow (for a security finding, the path from the input to the issue) and, once per rule, SonarQube's text on why it is an issue and how to fix it. When a fix or feature branch's scan counts 0 lines while HEAD adds or modifies that project's code against its release branch (Python under `backend/`, TypeScript or JavaScript under `frontend/`, leaving out files the scanner counts as tests: a `doc`, `docs`, `mock` or `mocks` folder, a folder ending in `test` or `tests`, or a file name that starts with `test` or holds `test.` or `tests.`), they print `NOT PROVEN` and exit 3: commit the work and scan again.
-- **Optional CodeQL check** - `./scripts/codeql-scan.sh` runs the checks GitHub's code scanning runs, on the host, and lists the alerts the target branch does not have (`--all` lists every alert of the working tree instead, `--flows` adds the path from the input to each problem). Run it before a push; it is not part of the CI scripts, and GitHub runs CodeQL on each pull request itself.
-- **Exclusion checks** - `python3 scripts/check-exclusions.py --sonarqube` and `--codeql` compare SonarQube Cloud's false positive marks and GitHub's dismissed CodeQL alerts with `tests/exclusions/`, and fail on each mark, dismissal, entry or ID comment without its match. GitHub runs them as the required checks SonarQube exclusions and CodeQL exclusions; locally, run them after the CI scripts, which do not run them. The fast checks script checks each ID comment in the code against its entry, through `scripts/check-orphaned-files.sh`.
-- **CI scripts write logs to files** - Output is tee'd to the git-ignored folder `ci-output/` at the clone's root: `ci-checks.log`, `ci-backend.log`, `ci-frontend.log`, `ci-playwright.log` and `ci-playwright-targeted.log`, with the E2E artifacts in `ci-output/e2e-artifacts/` and `ci-output/e2e-targeted-artifacts/`. Each script prints the full path of its log as `Log: <path>` at its start and its end
-- **Optional license check** - `python3 scripts/check-licenses.py`, run from the clone root once per release, checks every shipped dependency (backend runtime packages, frontend runtime packages, remote host wheels) against the approved list `scripts/dependency-licenses.json` and fails on an unapproved or changed license, a GPL or AGPL license, a dependency from git, a path, a URL or a file, a `patches/` folder outside `tests/e2e/services/`, and a wheel that does not match `backend/vendor/wheels.lock`. No CI runs it
-- **Optional vulnerability audit** - `python3 scripts/audit-dependencies.py`, run from the clone root in dedicated security work, runs pip-audit (OSV) and npm audit over the backend, remote host wheel, frontend and E2E dependencies. Exit 0: nothing found; 1: advisories found; 2: a source could not be reached. No CI runs it
+  It ends with a table of every gate script: passed, failed, or skipped when the change does not need it. The container checks, 04 to 09, start the wave-ci container themselves when run alone, and run inside one container under the runner.
+- **SonarQube** - Gates 10 and 11 scan a project on SonarQube Cloud (organization `waveapphq`, projects `waveapphq_wave-backend` and `waveapphq_wave-frontend`), wait for its quality gate (`qualitygate.wait=true`), and print the results report. They fail on a failed gate condition, on an issue or hotspot on a line the branch changed, and on `NOT PROVEN` (exit 3). A coverage condition counts once the coverage report of gate 08 or 09 is on disk. They need `SONAR_TOKEN`, a branch checked out and the project's work committed, because a branch scan counts only the files the branch's commits change.
+- **Progress lines** - While the tests run, gates 08, 09 and 15 print `Progress: <N>%` (Playwright: one share per shard) every `WAVE_CI_PROGRESS_SECONDS` seconds, default 60.
+- **Required host** - The gate scripts are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. This is a hard requirement.
+- **Text checks** - `./scripts/gate/02-grammar.sh` fails on spelling that `typos.toml` does not allow (`typos`, pinned in `backend/poetry.lock`), on em and en dashes in every text file that `.gitignore` does not exclude, and on process markers in source comments, Python docstrings and the lines of `/* */` comments. Fix the text; a test string that needs a dash or a misspelling uses an escape or another misspelling.
+- **Branch name check** - `./scripts/gate/01-branch-name.sh` allows only `master`, `release/<version>`, `fix/<version>-<name>` and `feature/<version>-<name>`, and a fix or feature branch also needs its release branch in `origin`; on GitHub, job 01 runs it with `--pr` on each pull request, which must go from a fix or feature branch into the release branch of the same version, or from a release branch into `master`.
+- **Results helpers** - `./scripts/report/sonar-results-backend.sh` and `./scripts/report/sonar-results-frontend.sh` are read-only reporting tools that summarize the SonarQube findings and the quality gate, with each of its conditions, of the current branch after a scan of that branch has run; `--pr <number>` reads a pull request's instead. Gates 10 and 11 run them after their scan; they are never a substitute for the scan. With `--fix` they also print each finding's flow (for a security finding, the path from the input to the issue) and, once per rule, SonarQube's text on why it is an issue and how to fix it. When a fix or feature branch's scan counts 0 lines while HEAD adds or modifies that project's code against its release branch (Python under `backend/`, TypeScript or JavaScript under `frontend/`, leaving out files the scanner counts as tests: a `doc`, `docs`, `mock` or `mocks` folder, a folder ending in `test` or `tests`, or a file name that starts with `test` or holds `test.` or `tests.`), they print `NOT PROVEN` and exit 3: commit the work and scan again.
+- **CodeQL** - `./scripts/gate/12-codeql.sh` runs the checks GitHub's code scanning runs, on the host, for the languages the branch changes, and lists the alerts the target branch does not have (`--all` lists every alert of the working tree instead, `--flows` adds the path from the input to each problem; naming `python`, `javascript-typescript` or `actions` picks the languages). GitHub runs CodeQL on each pull request itself.
+- **Exclusion checks** - `./scripts/gate/13-sonar-exclusions.sh` and `./scripts/gate/14-codeql-exclusions.sh` run `scripts/lib/check-exclusions.py --sonarqube` and `--codeql`, which compare SonarQube Cloud's false positive marks and GitHub's dismissed CodeQL alerts with `tests/exclusions/`, and fail on each mark, dismissal, entry or ID comment without its match. Gate 03 checks each ID comment in the code against its entry.
+- **Gate scripts write logs to files** - Each gate script tees its output to the git-ignored folder `ci-output/` at the clone's root, as `ci-output/<script name>.log` (for example `ci-output/08-backend-tests.log`), and prints the full path as `Log: <path>` at its start and its end. The E2E artifacts go to `ci-output/e2e-artifacts/`, and a targeted run's log and artifacts to `ci-output/ci-playwright-targeted.log` and `ci-output/e2e-targeted-artifacts/`.
+- **Optional license check** - `python3 scripts/audit/check-licenses.py`, run from the clone root once per release, checks every shipped dependency (backend runtime packages, frontend runtime packages, remote host wheels) against the approved list `scripts/audit/dependency-licenses.json` and fails on an unapproved or changed license, a GPL or AGPL license, a dependency from git, a path, a URL or a file, a `patches/` folder outside `tests/e2e/services/`, and a wheel that does not match `backend/vendor/wheels.lock`. No CI runs it
+- **Optional vulnerability audit** - `python3 scripts/audit/audit-dependencies.py`, run from the clone root in dedicated security work, runs pip-audit (OSV) and npm audit over the backend, remote host wheel, frontend and E2E dependencies. Exit 0: nothing found; 1: advisories found; 2: a source could not be reached. No CI runs it
 - **Never re-run CI to see truncated output** - After a CI run, read or search the log file to find specific details (coverage gaps, error messages, etc.)
 - **Group changes before running CI** - Make all reasonable code and test changes first, then run CI once. Do not run CI after every small edit. Group related fixes (implementation + tests + coverage) together, then verify. CI runs take minutes - minimize the number of runs by doing more work between them.
 - **No "pre-existing" or "unrelated" excuses** - If CI fails on your branch, find the cause before you call it unrelated. A failure your change caused is fixed in that pull request. A failure that is already on `master` or on the release branch gets an issue, as Pull Request Scope says; never ignore it.
@@ -306,8 +324,16 @@ wave/
 │   └── package.json             # NPM config
 ├── tests/
 │   └── e2e/                     # Playwright E2E and visual tests
-├── scripts/                     # CI, coverage, SonarQube, container, E2E, license and audit scripts
-├── ci-output/                   # Logs and artifacts of the local CI scripts (git-ignored)
+├── scripts/
+│   ├── gate/                    # The gate scripts 01 to 15 and their runner run.sh
+│   ├── lib/                     # Scripts the gate scripts run
+│   ├── report/                  # SonarQube results reports
+│   ├── audit/                   # License check and vulnerability audit
+│   ├── e2e/                     # E2E stack, shard and targeted run scripts
+│   ├── images/                  # CI and E2E container images
+│   ├── release/                 # Version update
+│   └── dev/                     # Developer tools
+├── ci-output/                   # Logs and artifacts of the gate scripts (git-ignored)
 ├── .github/
 │   ├── workflows/               # CI and pull request checks
 │   └── scripts/                 # Logic the workflows load
@@ -324,7 +350,7 @@ poetry install
 # Run development server
 poetry run uvicorn wavecore.api.app:app --reload --reload-exclude "$PWD/data" --reload-exclude "$PWD/tests" --port 8000
 
-# Run the tests for one area while you work (the 100% coverage gate runs in ./scripts/ci-backend-local.sh)
+# Run the tests for one area while you work (the 100% coverage gate runs in ./scripts/gate/08-backend-tests.sh)
 poetry run pytest tests/<area>
 
 # Type checking
@@ -341,7 +367,7 @@ poetry run ruff check wavecore/ tests/ --fix
 
 **E2E Testing**: Run E2E specs in a container, with their own backend and data, by naming each spec path relative to `tests/e2e/` (see `CONTRIBUTING.md`):
 ```bash
-./scripts/e2e-targeted-local.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts
 ```
 Never run the Playwright configs in `tests/e2e/` straight on the host: their setup resets the data of the dev backend on port 8000.
 
@@ -366,10 +392,10 @@ npm run type-check
 npm run lint
 ```
 
-### Checks Before the Suites
+### The Gate
 ```bash
-# From the clone root: text, orphan and exclusion ID, lint, format, type and build checks in one go
-./scripts/ci-checks-local.sh
+# From the clone root: every gate script the change needs, in number order
+./scripts/gate/run.sh
 ```
 
 ## Testing Requirements
@@ -387,7 +413,7 @@ npm run lint
 - `frontend/src/app/main.tsx` - Frontend entry point
 - `backend/config/config.example.yaml` - dev config starting point
 - `tests/exclusions/README.md` - the index of the exclusion lists: frontend and backend coverage, SonarQube Cloud, CodeQL
-- `scripts/Containerfile` - Container build definition
+- `scripts/images/Containerfile` - Container build definition
 
 ## Environment Variables
 

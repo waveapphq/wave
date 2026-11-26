@@ -4,6 +4,7 @@
  * debug-run so each spec stays focused on its own scenario.
  */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Page, type APIRequestContext } from '@playwright/test'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { injectHttpHost, type ImportFixtureOptions } from '../../helpers/fixture-import'
@@ -41,7 +42,7 @@ export async function importAndNavigate(
   const baseName = (fixture as { name?: string }).name ?? 'Debug Step Test'
   const uniqueFixture = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   const createResp = await page.request.post(`http://localhost:${BACKEND_PORT}/tests`, {

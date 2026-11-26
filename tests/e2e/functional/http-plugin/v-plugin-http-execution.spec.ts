@@ -47,9 +47,10 @@
  *    `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
  * 4. Each request was a POST whose body is the uploaded file's own content
  *
- * Run manually with: ./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-execution.spec.ts
+ * Run manually with: ./scripts/e2e/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-execution.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts, getLogLines } from '../../helpers/log-reader'
 import {
@@ -83,7 +84,7 @@ function loadFixture(): Record<string, any> {
   // Override variable defaults with runtime config
   fixture.variables.backend_port.value = parseInt(BACKEND_PORT, 10)
   // Per-run key: the /retry and /timeout endpoints hold per-key state on the shared http-echo service
-  fixture.variables.run_key.value = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.variables.run_key.value = `${Date.now()}-${randomUUID().slice(0, 6)}`
   fixture.variables.ca_cert_pem.value = CA_CERT_PEM
   return fixture
 }
@@ -557,7 +558,7 @@ test.describe('HTTP Plugin E2E Execution', () => {
     page,
     request,
   }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const suffix = `${Date.now()}-${randomUUID().slice(0, 6)}`
     const bookend = `http-content-type-done-${suffix}`
     const legs: AutoTypeLeg[] = [
       {

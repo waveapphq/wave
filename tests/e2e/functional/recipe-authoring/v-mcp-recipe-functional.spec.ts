@@ -34,6 +34,7 @@
  *    disabled at the end (v-mcp-02 precedent).
  */
 
+import { randomUUID } from 'node:crypto'
 import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -123,7 +124,7 @@ test.describe('V-MCP-RECIPE-FUNCTIONAL: recipe-authored test via MCP', () => {
   }) => {
     test.setTimeout(240_000)
 
-    const uniqueName = `${BASE_NAME} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const uniqueName = `${BASE_NAME} ${Date.now()}-${randomUUID().slice(0, 6)}`
     const recipe = fs
       .readFileSync(path.resolve(__dirname, 'recipe.yaml'), 'utf-8')
       .replace(BASE_NAME, uniqueName)

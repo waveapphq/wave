@@ -2,7 +2,7 @@
 # (mTLS, per-version pins, cipher pins) echoing negotiated params as JSON, two
 # chain listeners on the chain PKI (leaf + intermediate, leaf only), plus two
 # static Helm chart-repository listeners (plain http, https + basic auth).
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e)
 FROM docker.io/library/nginx:stable
 
 COPY services/tls-lab/nginx.conf /etc/nginx/nginx.conf

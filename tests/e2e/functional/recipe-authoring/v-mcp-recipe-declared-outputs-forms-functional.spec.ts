@@ -16,7 +16,7 @@
  *    refused at `flow[0].capture.COUNT` with `UNKNOWN_CAPTURE_OUTPUT`, its fix listing only the fixed
  *    outputs and pointing at `settings.script_variables`, and a capture of the fixed `stdout` validates.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-declared-outputs-forms-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-declared-outputs-forms-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

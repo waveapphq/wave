@@ -1,5 +1,6 @@
 /** Canvas-built lanes (V-CANVAS-LANES-FUNCTIONAL): seed, build links the three user ways, save, run. */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import {
   clickNodeKebabItem,
@@ -72,7 +73,7 @@ export interface SeedSpec {
 export async function seedTest(request: APIRequestContext, spec: SeedSpec): Promise<string> {
   await ensureEnvironment(request)
   let fixture: Record<string, unknown> = {
-    name: `${spec.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${spec.name} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: spec.name,
     workflow: { nodes: spec.nodes, edges: spec.edges },

@@ -15,6 +15,7 @@
  *   2. Inner case: Halt inside Function -> Function node ``data-execution-status
  *      === "failed"`` (mapped from inner halt_status); session ends ``failed``.
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -210,7 +211,7 @@ async function openCanvas(page: Page, testId: string) {
 test.describe('V-CTRL-HALT-FAILED-STATUS-01', () => {
   test('Halt(status=failed) at root renders the Halt node as "failed"', async ({ request, page }) => {
     await ensureEnvironment(request)
-    const name = `V-CTRL-HALT-FAILED-STATUS root ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CTRL-HALT-FAILED-STATUS root ${Date.now()}-${randomUUID().slice(0, 6)}`
     const testId = await seed(request, buildRootFixture(name))
 
     await openCanvas(page, testId)
@@ -230,7 +231,7 @@ test.describe('V-CTRL-HALT-FAILED-STATUS-01', () => {
 
   test('Halt(status=failed) inside Function renders Function as "failed"', async ({ request, page }) => {
     await ensureEnvironment(request)
-    const name = `V-CTRL-HALT-FAILED-STATUS fn ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CTRL-HALT-FAILED-STATUS fn ${Date.now()}-${randomUUID().slice(0, 6)}`
     const testId = await seed(request, buildFnFixture(name))
 
     await openCanvas(page, testId)

@@ -21,7 +21,7 @@ import { randomUUID } from 'node:crypto'
 async function createBlankTest(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-SHARED-CONFIG ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-SHARED-CONFIG ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Blank Test for shared config coverage',
       workflow: { nodes: [], edges: [] },

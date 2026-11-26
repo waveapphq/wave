@@ -1,6 +1,6 @@
 """A fake SonarQube Cloud, a git work tree and the shared cases for the SonarQube results scripts.
 
-Each results script is copied with scripts/sonar-env.sh into a git work tree in tmp_path and run
+Each results script is copied with scripts/lib/sonar-env.sh into a git work tree in tmp_path and run
 from there. Its Python reads https://sonarcloud.io; a sitecustomize module on PYTHONPATH sends
 every such request to a fake server on 127.0.0.1 and refuses any other URL, so no test reaches
 the network.
@@ -36,6 +36,7 @@ HOTSPOTS_PATH = "/api/hotspots/search"
 TREE_PATH = "/api/measures/component_tree"
 DUPLICATIONS_PATH = "/api/duplications/show"
 RULES_PATH = "/api/rules/show"
+CE_TASK_PATH = "/api/ce/task"
 
 # Every read that belongs to one branch or pull request; the rule text belongs to neither.
 SCOPED_PATHS = (
@@ -89,7 +90,7 @@ class Project:
 
 
 BACKEND = Project(
-    script="scripts/sonar-results-backend.sh",
+    script="scripts/report/sonar-results-backend.sh",
     key="waveapphq_wave-backend",
     title="  WAVE Backend - SonarQube Detailed Results",
     folder="backend",
@@ -100,7 +101,7 @@ BACKEND = Project(
 )
 
 FRONTEND = Project(
-    script="scripts/sonar-results-frontend.sh",
+    script="scripts/report/sonar-results-frontend.sh",
     key="waveapphq_wave-frontend",
     title="  WAVE Frontend - SonarQube Detailed Results",
     folder="frontend",
@@ -226,7 +227,9 @@ class FakeSonarQube:
         if path == GATE_PATH:
             return 200, {"projectStatus": self.gate}
         if path == ISSUES_PATH:
-            found = self.issues.get(query.get("types", ""), [])
+            types = query.get("types", "")
+            wanted = types.split(",") if types else list(self.issues)
+            found = [issue for kind in wanted for issue in self.issues.get(kind, [])]
             return 200, {"paging": {"total": len(found)}, "issues": found if first else []}
         if path == HOTSPOTS_PATH:
             found = self.hotspots
@@ -235,6 +238,9 @@ class FakeSonarQube:
             return 200, {"paging": {"total": 0}, "components": []}
         if path == DUPLICATIONS_PATH:
             return 200, {"duplications": [], "files": {}}
+        if path == CE_TASK_PATH:
+            task = {"id": query.get("id", ""), "status": "SUCCESS", "analysisId": "analysis-1"}
+            return 200, {"task": task}
         if path == RULES_PATH:
             rule = query.get("key", "")
             return 200, {
@@ -283,7 +289,7 @@ class Tree:
         self.project = project
         self.repo = Repo(tmp_path / "repo")
         copy_from_clone(self.repo, project.script)
-        copy_from_clone(self.repo, "scripts/sonar-env.sh")
+        copy_from_clone(self.repo, "scripts/lib/sonar-env.sh")
         self.repo.write(BACKEND.code_file, ["VALUE = 1"])
         self.repo.write(FRONTEND.code_file, ["export const value = 1;"])
         self.repo.write("README.md", ["# Test tree"])

@@ -20,6 +20,7 @@
  *      body log line (the body did run, not just the wrapper).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 
@@ -27,7 +28,7 @@ const FN_NODE_ID = 'fn-scope-run-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-SCOPE-RUN ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-SCOPE-RUN ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function with body Log "fn-scope-emitted" for scoped run coverage',
     variables: {},

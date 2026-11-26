@@ -1,5 +1,6 @@
 /** Matrix 2c: a null value of every type routed by If/Else, Switch, While and Wait Until (REQ-3.1.3.25). */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { ensureEnvironment } from '../../helpers/config'
 import {
@@ -274,7 +275,7 @@ export async function seedBlankTest(
   await ensureEnvironment(request)
   const declared = Object.fromEntries(Object.entries(variables).map(([name, type]) => [name, nullVariable(type)]))
   const testId = await createValidTest(request, {
-    name: `zz-${title} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `zz-${title} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: [],
     edges: [],
     variables: declared,

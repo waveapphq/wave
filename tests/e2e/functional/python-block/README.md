@@ -41,14 +41,14 @@ pass, and the toolbar Stop; the SQL editor suite imports them too.
 
 ```bash
 # All specs, from the root of the clone
-./scripts/ci-playwright-local.sh
+./scripts/gate/15-playwright.sh full
 
 # One spec, from the root of the clone
-./scripts/e2e-targeted-local.sh functional/python-block/v-plugin-python-typed-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/python-block/v-plugin-python-typed-functional.spec.ts
 ```
 
 The suite runs inside the containerized Playwright CI
-(`./scripts/ci-playwright-local.sh`); it is registered under the
+(`./scripts/gate/15-playwright.sh full`); it is registered under the
 `functional-workflow` project.
 
 ## Validation

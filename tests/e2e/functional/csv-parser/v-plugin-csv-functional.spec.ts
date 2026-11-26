@@ -25,9 +25,10 @@
  * The serialize/schema fixtures use the UI-faithful literal variable_ref form
  * (bare variable name, no expressionFields).
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/csv-parser/v-plugin-csv-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/csv-parser/v-plugin-csv-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts, getLogLines } from '../../helpers/log-reader'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
@@ -126,6 +127,6 @@ for (const { name, node, errorText } of ABORTING) {
 
 test('CSV functional save refusal: transform-unknown-op', async ({ request }) => {
   const fixture = loadFixture('transform-unknown-op')
-  const body = { ...fixture, name: `${String(fixture.name)} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  const body = { ...fixture, name: `${String(fixture.name)} ${Date.now()}-${randomUUID().slice(0, 6)}` }
   await expectTestRefused(request, body, [['INVALID_CONDITION', "Unknown filter operator: 'bogus'"]])
 })

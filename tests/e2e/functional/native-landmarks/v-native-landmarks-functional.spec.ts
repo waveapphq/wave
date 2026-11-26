@@ -31,6 +31,7 @@
  *    criteria 5 and 6 hold in the live workbench and on that history page.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
@@ -69,7 +70,7 @@ function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8'),
   ) as Record<string, unknown>
-  fixture.name = `V-NATIVE-LANDMARKS ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `V-NATIVE-LANDMARKS ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

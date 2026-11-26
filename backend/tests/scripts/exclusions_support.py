@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from tests.scripts.script_support import Repo
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "check-exclusions.py"
+SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "lib" / "check-exclusions.py"
 
 BACKEND_KEY = "waveapphq_wave-backend"
 FRONTEND_KEY = "waveapphq_wave-frontend"

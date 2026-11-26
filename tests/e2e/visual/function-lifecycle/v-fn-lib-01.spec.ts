@@ -81,7 +81,7 @@ async function seedLibrary(page: Page): Promise<SeededFunction[]> {
 async function seedHostTest(page: Page): Promise<string> {
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-LIB-01 host ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-LIB-01 host ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Empty host Test used to open the workbench for V-FN-LIB-01.',
       workflow: { nodes: [], edges: [] },

@@ -10,7 +10,7 @@
  *   - ZIP round-trip (export then import)
  *
  * REQ: Environment Import and Export
- * Run: ./scripts/e2e-targeted-local.sh functional/import-export-env/v-env-export-import.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/import-export-env/v-env-export-import.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

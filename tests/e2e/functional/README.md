@@ -6,18 +6,18 @@ End-to-end tests that exercise real backend execution - importing fixtures, runn
 
 ```bash
 # From the root of the clone
-./scripts/ci-playwright-local.sh
+./scripts/gate/15-playwright.sh full
 
 # Run specific specs, with paths relative to tests/e2e/:
-./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-execution.spec.ts
-./scripts/e2e-targeted-local.sh functional/assert-control/v-ctrl-assert-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-execution.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/assert-control/v-ctrl-assert-functional.spec.ts
 ```
 
 Both scripts start the backend, the frontend and the service stack in their containers.
 
-External-protocol suites (HTTP, SSH, Remote Exec) target the real compose service stack - `http-echo`, `sshd`, `http-target`, and friends - managed by `scripts/e2e-stack.sh` and documented in `../services/README.md`.
+External-protocol suites (HTTP, SSH, Remote Exec) target the real compose service stack - `http-echo`, `sshd`, `http-target`, and friends - managed by `scripts/e2e/e2e-stack.sh` and documented in `../services/README.md`.
 
-**Important**: Functional tests are NOT registered in `playwright.config.ts`. They run exclusively via `playwright.functional.config.ts`. The CI script (`ci-playwright-local.sh`) runs them as a separate step.
+**Important**: Functional tests are NOT registered in `playwright.config.ts`. They run exclusively via `playwright.functional.config.ts`. The CI script (`15-playwright.sh`) runs them as a separate step.
 
 ## Execution Order
 

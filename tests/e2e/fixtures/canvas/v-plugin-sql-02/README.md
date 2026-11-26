@@ -4,7 +4,7 @@ Verify the SQL block's Edit value sheet in SQL mode: its footer, the Get tables 
 
 ## Prerequisites
 
-No seed script. The E2E PostgreSQL service must be up (`scripts/e2e-stack.sh up --wait postgres`). The spec creates a schema `v_sql02_<random>` holding 14 demo tables (among them `orders` with `id, customer_id, status, total, created_at` and `order_items` with `id, order_id, sku, qty, price`) through a tracked run, and drops it at the end. Each test imports its own Test through `POST /tests` with one SQL block on PostgreSQL (`127.0.0.1:9473`, database `wave`, user `wave`), validates it and deletes it afterwards:
+No seed script. The E2E PostgreSQL service must be up (`scripts/e2e/e2e-stack.sh up --wait postgres`). The spec creates a schema `v_sql02_<random>` holding 14 demo tables (among them `orders` with `id, customer_id, status, total, created_at` and `order_items` with `id, order_id, sku, qty, price`) through a tracked run, and drops it at the end. Each test imports its own Test through `POST /tests` with one SQL block on PostgreSQL (`127.0.0.1:9473`, database `wave`, user `wave`), validates it and deletes it afterwards:
 
 - suggest-tables and tables: Driver options `startup_params` = `{"search_path": "<schema>"}`, SQL is the wireframe's query with line 2 left at `FROM `, Parameters `customer` and `status`
 - suggest-params: the same connection, the six-line script ending on `SET search_path TO public;` with line 4 left at `  AND status = `, Parameters `customer`, `status` and `limit`

@@ -125,7 +125,7 @@ async function seedLibraryWithTwoVersions(request: APIRequestContext): Promise<S
 
 function buildTwoInstanceTest(fn: SeededFunction): Record<string, unknown> {
   return {
-    name: `V-FN-VERSION-PIN ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-VERSION-PIN ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Two instances of the same library Function pinned to v1.0.0 and v2.0.0',
     workflow: {

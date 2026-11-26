@@ -26,6 +26,7 @@
  *         footer note (TDATA-6).
  */
 
+import { randomUUID } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
@@ -104,7 +105,7 @@ test.describe('V-TESTDATA-02: Test Data sheet with nothing in it', () => {
     request,
   }) => {
     createdTestId = await createValidTest(request, {
-      name: `V-TESTDATA-02 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `V-TESTDATA-02 ${Date.now()}-${randomUUID().slice(0, 6)}`,
       nodes: [LOG_NODE],
       edges: LOG_EDGES,
     })

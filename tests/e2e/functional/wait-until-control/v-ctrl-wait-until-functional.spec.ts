@@ -29,6 +29,7 @@
  * same run that asserts "the session IS failed" (criterion 6).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogLines, getLogTexts, waitForLogText } from '../../helpers/log-reader'
 import {
@@ -49,9 +50,7 @@ function loadFixture(file: string, keyPrefix: string): Record<string, unknown> {
     fs.readFileSync(path.resolve(__dirname, file), 'utf-8'),
   ) as { variables: Record<string, { value: unknown }> }
   // Per-test key: /retry holds a counter per key on the shared http-echo service.
-  fixture.variables.run_key.value = `${keyPrefix}-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`
+  fixture.variables.run_key.value = `${keyPrefix}-${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture as unknown as Record<string, unknown>
 }
 

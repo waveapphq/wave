@@ -17,7 +17,7 @@
  * 2. `create_test_from_recipe` refuses the same recipe with the same one finding, and no Test of
  *    that name is stored.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-lane-limit-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-lane-limit-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

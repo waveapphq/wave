@@ -4,18 +4,20 @@ This doc covers how to work on WAVE itself. It says how to set up a clone, build
 
 ## Set up a clone
 
-The test suites are tuned for Ubuntu 22.04 on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. For now, this is a hard requirement. You need these tools on your machine:
+The gate scripts are tuned for Ubuntu 22.04 with its Podman 3.4, on an x86_64 machine with 16 cores, 24 GB of memory and 100 GB of free disk. This is a hard requirement.
+
+You need these tools on your machine:
 
 | What you need | What uses it |
 |---|---|
 | Python 3.12 or later | The backend. |
 | Poetry 2 or later | The backend. Poetry installs its packages and runs its commands. |
 | Node.js 22.13 or a later 22 release, or Node.js 24 or later | The frontend. |
-| Podman 3.4, the version that Ubuntu 22.04 ships | The fast checks and the three test suites, which run in containers. |
-| The `docker-compose` v2 binary, on your `PATH` | `scripts/e2e-stack.sh`, which starts the services that the E2E specs run against. |
-| `sonar-scanner`, on your `PATH`, and a SonarQube Cloud token in `SONAR_TOKEN` | The optional SonarQube scan, as [The SonarQube step](#the-sonarqube-step) says. |
-| The CodeQL CLI, `codeql`, on your `PATH` | The optional CodeQL check before a push, as [The CodeQL check](#the-codeql-check) says. |
-| `jq` | The test count at the end of `./scripts/ci-playwright-local.sh`. Without it, the count says 0. The result of the suite does not change. |
+| Podman 3.4, the version that Ubuntu 22.04 ships | The gate scripts 04 to 09 and 15, which run in containers. |
+| The `docker-compose` v2 binary, on your `PATH` | `scripts/e2e/e2e-stack.sh`, which starts the services that the E2E specs run against. |
+| `sonar-scanner`, on your `PATH`, and a SonarQube Cloud token in `SONAR_TOKEN` | The SonarQube scans, gates 10 and 11, as [The SonarQube step](#the-sonarqube-step) says. |
+| The CodeQL CLI, `codeql`, on your `PATH` | The CodeQL scan, gate 12, as [The CodeQL check](#the-codeql-check) says. |
+| `jq` | The test count at the end of `./scripts/gate/15-playwright.sh`. Without it, the count says 0. The result of the run does not change. |
 
 Run these commands to clone WAVE and install its packages:
 
@@ -37,23 +39,23 @@ Then make the config file and its secret key, as [README.md, section "2. Create 
 
 ### Build the test images
 
-The three test suites run in Podman containers. Run these commands once, from the root of the clone, to build the images that they use:
+The container checks of the gate run in Podman containers. Run these commands once, from the root of the clone, to build the images that they use:
 
 ```sh
-./scripts/build-ci-image.sh
-./scripts/build-e2e-image.sh
-./scripts/e2e-stack.sh build
+./scripts/images/build-ci-image.sh
+./scripts/images/build-e2e-image.sh
+./scripts/e2e/e2e-stack.sh build
 ```
 
 | Command | What it builds |
 |---|---|
-| `./scripts/build-ci-image.sh` | The image `wave-ci`, with Python, Poetry, Node.js and the backend packages in it. It also fetches the wheels that `backend/vendor/wheels.lock` pins into `backend/vendor/wheels/`, which the backend tests read. |
-| `./scripts/build-e2e-image.sh` | The image `wave-e2e`, which is `wave-ci` with Chromium for Playwright. It needs `wave-ci`. |
-| `./scripts/e2e-stack.sh build` | The images of the services that the E2E specs run against, such as SSH hosts, databases, Kubernetes API servers and an OpenSearch node. Building them accepts the vendor license terms in `tests/e2e/services/README.md`. |
+| `./scripts/images/build-ci-image.sh` | The image `wave-ci`, with Python, Poetry, Node.js and the backend packages in it. It also fetches the wheels that `backend/vendor/wheels.lock` pins into `backend/vendor/wheels/`, which the backend tests read. |
+| `./scripts/images/build-e2e-image.sh` | The image `wave-e2e`, which is `wave-ci` with Chromium for Playwright. It needs `wave-ci`. |
+| `./scripts/e2e/e2e-stack.sh build` | The images of the services that the E2E specs run against, such as SSH hosts, databases, Kubernetes API servers and an OpenSearch node. Building them accepts the vendor license terms in `tests/e2e/services/README.md`. |
 
-Build `wave-ci` again when the backend packages change. When the frontend or E2E packages change, run `npm ci` in `frontend/` and `tests/e2e/`. Build `wave-e2e` again after each build of `wave-ci`, and when the version of Playwright changes. Run `./scripts/e2e-stack.sh build` again when a file in `tests/e2e/services/` or `tests/e2e/simulators/https/` changes, before the next E2E run, targeted or full.
+Build `wave-ci` again when the backend packages change. When the frontend or E2E packages change, run `npm ci` in `frontend/` and `tests/e2e/`. Build `wave-e2e` again after each build of `wave-ci`, and when the version of Playwright changes. Run `./scripts/e2e/e2e-stack.sh build` again when a file in `tests/e2e/services/` or `tests/e2e/simulators/https/` changes, before the next E2E run, targeted or full.
 
-`scripts/e2e-stack.sh` reaches Podman through the API socket of your user, at `$XDG_RUNTIME_DIR/podman/podman.sock`. Start that socket before you run an E2E spec.
+`scripts/e2e/e2e-stack.sh` reaches Podman through the API socket of your user, at `$XDG_RUNTIME_DIR/podman/podman.sock`. Start that socket before you run an E2E spec.
 
 ```sh
 systemctl --user enable --now podman.socket
@@ -61,7 +63,7 @@ systemctl --user enable --now podman.socket
 
 ## Build and check the code
 
-Run each command in the folder that the table names. `./scripts/ci-checks-local.sh` runs all of these checks in one go, as [Run the tests](#run-the-tests) says.
+Run each command in the folder that the table names. The gate scripts 02 to 07 run these checks, as [Run the tests](#run-the-tests) says.
 
 | Folder | Command | What it does |
 |---|---|---|
@@ -72,41 +74,56 @@ Run each command in the folder that the table names. `./scripts/ci-checks-local.
 | `frontend/` | `npm run lint` | Lints `frontend/src/` and `frontend/tests/` with ESLint. |
 | `frontend/` | `npm run build` | Checks the types, then builds the frontend into `frontend/build/`. |
 | `tests/e2e/` | `npm run type-check` | Checks the types of the E2E specs and helpers. |
-| The root of the clone | `./scripts/check-text.sh` | Runs the text checks, as [Run the tests](#run-the-tests) says. |
+| The root of the clone | `./scripts/gate/02-grammar.sh` | Runs the text checks, as [Run the tests](#run-the-tests) says. |
 
 ## Run the tests
 
-WAVE has the fast checks and three test suites. Each has a script that runs it in Podman containers. Run the scripts one at a time, from the root of the clone, the fast checks first:
+The gate is every check a pull request must pass. Each check is a script in `scripts/gate/`, numbered in the order it runs, and each runs alone from the root of the clone. The runner runs the scripts your change needs, in number order, and stops at the first failure:
 
 ```sh
-./scripts/ci-checks-local.sh
-./scripts/ci-backend-local.sh
-./scripts/ci-frontend-local.sh
-./scripts/ci-playwright-local.sh
+./scripts/gate/run.sh
 ```
 
-| Script | What it runs |
-|---|---|
-| `./scripts/ci-checks-local.sh` | On the host: the branch name check, the text checks, and the check for orphaned files and exclusion IDs. In one `wave-ci` container: mypy over `backend/wavecore/`, `black --check` and ruff over `backend/wavecore/` and `backend/tests/`, ESLint, the frontend type check, the E2E type check and the frontend build. |
-| `./scripts/ci-backend-local.sh` | In a `wave-ci` container: every backend test with pytest, which fails below 100% coverage. |
-| `./scripts/ci-frontend-local.sh` | In a `wave-ci` container: every frontend test with Vitest, which fails below 100% coverage. |
-| `./scripts/ci-playwright-local.sh` | On the host: the frontend build and the E2E services. In 8 `wave-e2e` containers: every Playwright spec, split between the containers. Each container has its own backend, frontend and data. |
+With no area, it reads the files your branch changes against its release branch (`master` for any other branch), with your uncommitted and untracked files. Name areas to pick the scripts instead: `backend`, `frontend`, `e2e` and `scripts`. Playwright runs only when you ask for it, after every other script, with a spec list or the full suite:
 
-`./scripts/ci-checks-local.sh` runs every check, even after one fails. Its last line is `Fast checks passed.`, or `Fast checks failed:` followed by the names of the failed checks.
+```sh
+./scripts/gate/run.sh backend frontend
+./scripts/gate/run.sh --playwright full
+```
 
-The frontend tests fail below 100% coverage of lines, branches and statements. They also fail when a test writes unexpected output to stderr.
+| Script | What it checks | Runs when |
+|---|---|---|
+| `01-branch-name.sh` | The branch name, as step 3 of [Send a change](#send-a-change) says. | Always. |
+| `02-grammar.sh` | The text checks. | A text file changed. |
+| `03-orphans.sh` | Frontend files that no other file imports, and each exclusion ID comment against its list. | `frontend/src/`, `backend/wavecore/` or `tests/exclusions/` changed. |
+| `04-backend-static.sh` | In a `wave-ci` container: mypy over `backend/wavecore/`, `black --check` and ruff over `backend/wavecore/` and `backend/tests/`. | `backend/` changed. |
+| `05-frontend-static.sh` | In a `wave-ci` container: ESLint over `frontend/src/` and `frontend/tests/`, and the frontend type check. | `frontend/` changed. |
+| `06-e2e-types.sh` | In a `wave-ci` container: the E2E type check. | `tests/e2e/` changed. |
+| `07-frontend-build.sh` | In a `wave-ci` container: the frontend build. | `frontend/` changed. |
+| `08-backend-tests.sh` | In a `wave-ci` container: every backend test with pytest, which fails below 100% coverage. | `backend/` or `scripts/` changed. |
+| `09-frontend-tests.sh` | In a `wave-ci` container: every frontend test with Vitest, which fails below 100% coverage. | `frontend/` changed. |
+| `10-sonar-backend.sh` | The SonarQube scan of the backend. | `backend/` changed. |
+| `11-sonar-frontend.sh` | The SonarQube scan of the frontend. | `frontend/` changed. |
+| `12-codeql.sh` | CodeQL code scanning of the languages your branch changes. | Python, TypeScript, JavaScript or a workflow changed. |
+| `13-sonar-exclusions.sh` | SonarQube Cloud's false positive marks against their entries. | 10 or 11 ran. |
+| `14-codeql-exclusions.sh` | GitHub's dismissed CodeQL alerts against their entries. | 12 ran. |
+| `15-playwright.sh` | On the host: the frontend build and the E2E services. In up to 8 `wave-e2e` containers: the specs you name, or every Playwright spec with `full`, split between the containers. Each container has its own backend, frontend and data. | You give `--playwright`. |
 
-While the tests run, the backend, frontend and Playwright scripts print a line such as `Progress: 40%` once a minute. The Playwright line gives each container its own share, such as `Progress: shard 1/8 40%, shard 2/8 35%`. Set `WAVE_CI_PROGRESS_SECONDS` to print the line at another interval, in seconds. The frontend script also prints each failed test, with its file and its error, as soon as it fails.
+Each script prints one result line, such as `08 Backend tests: passed` or `08 Backend tests: failed (<reason>)`, and exits with 0 when it passes, 1 when it fails and 2 when it cannot run, such as without its container image. Run alone, a container check starts its own `wave-ci` container; the runner runs them all in one. Gates 04 and 05 run each of their tools, even after one fails, and the reason names each tool that failed. The runner ends with a table of every gate script and its result, `skipped: not needed` for a script your change does not need.
+
+The frontend tests fail below 100% coverage of lines, branches and statements. They also fail when a test writes a warning to stderr.
+
+While the tests run, gates 08, 09 and 15 print a line such as `Progress: 40%` once a minute. The Playwright line gives each container its own share, such as `Progress: shard 1/8 40%, shard 2/8 35%`. Set `WAVE_CI_PROGRESS_SECONDS` to print the line at another interval, in seconds. Gate 09 also prints each failed test, with its file and its error, as soon as it fails, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`.
 
 The text checks fail on spelling that `typos.toml` does not allow, on an em or en dash in any text file that `.gitignore` does not exclude, and on a reference to a roadmap, a phase, a session or a ticket in a source comment, a Python docstring or a line of a `/* */` comment. They never fail on `REQ-*`, design IDs or `COV-*`. `poetry install` in `backend/` installs `typos`, the tool of the first check, at the version that `backend/poetry.lock` pins. Its settings are in `typos.toml`. Fix each line that the checks list.
 
 ### The SonarQube step
 
-GitHub runs the SonarQube scan on each pull request, and a failed quality gate fails the pull request. The local scripts do not run it. To see the result before you push, run the scan on the host after the backend or frontend suite, which writes the coverage the scan reads:
+Gates 10 and 11 run the SonarQube scan of the backend and the frontend, wait for its quality gate and print the results of the scan. GitHub runs them on each pull request too. Run them after gates 08 and 09, which write the coverage the scan reads:
 
 ```sh
-./scripts/sonar-scan-backend.sh
-./scripts/sonar-scan-frontend.sh
+./scripts/gate/10-sonar-backend.sh
+./scripts/gate/11-sonar-frontend.sh
 ```
 
 The scan goes to SonarQube Cloud, to the project `waveapphq_wave-backend` or `waveapphq_wave-frontend` of the organization `waveapphq`. It needs these on the host:
@@ -114,12 +131,15 @@ The scan goes to SonarQube Cloud, to the project `waveapphq_wave-backend` or `wa
 - `sonar-scanner`, on your `PATH`.
 - `SONAR_TOKEN`, set to a token of your SonarQube Cloud account. The account needs scan rights on the two projects. A maintainer grants them together with collaborator access.
 - A checked-out branch. SonarQube Cloud analyzes a local scan as your current branch, and compares a fix/ or feature/ branch with its release branch.
+- Your work on the project committed, because the scan of a branch counts only the files its commits change.
 
-The scan stops when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server. The scan waits for the quality gate of its project, and fails when the gate fails.
+The scan stops when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server.
+
+The check fails on a failed condition of the quality gate, on an issue or a security hotspot on a line your branch changed, and on `NOT PROVEN`, when the scan counted no line of the code your branch changed (exit 3). A coverage condition counts only once the coverage of gate 08 or 09 is on disk.
 
 ### The CodeQL check
 
-GitHub runs CodeQL code scanning on each pull request. To see its findings before you push, run `./scripts/codeql-scan.sh` on the host; it runs the same checks and is not part of the CI scripts. It scans the files your push would carry and compares them with the branch your pull request goes into, and fails on every alert that branch does not have. It lists each such alert with its file and line; `--flows` also shows the path from the input to the problem. With `--all` it lists every alert in your files, fails when there is one, and does not scan the other branch. It needs these on the host:
+GitHub runs CodeQL code scanning on each pull request. `./scripts/gate/12-codeql.sh` runs the same checks on the host, for the languages your branch changes. It scans the files your push would carry and compares them with the branch your pull request goes into, and fails on every alert that branch does not have. It lists each such alert with its file and line; `--flows` also shows the path from the input to the problem. With `--all` it lists every alert in your files, fails when there is one, and does not scan the other branch. Name `python`, `javascript-typescript` or `actions` to scan those languages. It needs these on the host:
 
 - The CodeQL CLI bundle from the `github/codeql-action` releases, with `codeql` on your `PATH`, or `CODEQL` set to its path.
 - Room for its work files while a scan runs, several GB, by default in `~/.cache/wave-codeql`. Set `CODEQL_WORK_DIR` to put them on another disk.
@@ -129,9 +149,9 @@ A maintainer dismisses a false alarm on GitHub. With `CODEQL_GITHUB_TOKEN` set t
 
 ### The license check
 
-`python3 scripts/check-licenses.py` checks the license of every dependency that WAVE ships: the backend runtime packages, the frontend runtime packages and the remote host wheels. It runs on its own, once per release, and no CI runs it. Run it from the root of the clone, after `poetry install` in `backend/` and `./scripts/fetch-remote-wheels.sh`.
+`python3 scripts/audit/check-licenses.py` checks the license of every dependency that WAVE ships: the backend runtime packages, the frontend runtime packages and the remote host wheels. It runs on its own, once per release, and no CI runs it. Run it from the root of the clone, after `poetry install` in `backend/` and `./scripts/lib/fetch-remote-wheels.sh`.
 
-It compares each package with its entry in `scripts/dependency-licenses.json`, the approved list. It fails on a package that has no entry, on a license that differs from its entry, and on a GPL or AGPL license. It also fails when a dependency comes from git, a path, a URL or a file, when the clone holds a `patches/` folder outside `tests/e2e/services/`, and when a wheel in `backend/vendor/wheels/` is not in `wheels.lock` or does not match its sha256.
+It compares each package with its entry in `scripts/audit/dependency-licenses.json`, the approved list. It fails on a package that has no entry, on a license that differs from its entry, and on a GPL or AGPL license. It also fails when a dependency comes from git, a path, a URL or a file, when the clone holds a `patches/` folder outside `tests/e2e/services/`, and when a wheel in `backend/vendor/wheels/` is not in `wheels.lock` or does not match its sha256.
 
 It prints one line for each problem, then `License check failed:` and the count, and exits with 1. When all is well, it prints `License check passed:` and the number of packages, and exits with 0.
 
@@ -139,7 +159,7 @@ To approve a new package, read its license files, and add its entry to the list 
 
 ### The vulnerability audit
 
-`python3 scripts/audit-dependencies.py` looks up the known vulnerabilities of the backend, frontend and E2E packages and the remote host wheels. It runs on its own, and no CI runs it. Run it from the root of the clone, after `poetry install` in `backend/`. It installs pip-audit in a temporary folder; set `WAVE_PIP_AUDIT` to the path of a pip-audit you have, to use that one.
+`python3 scripts/audit/audit-dependencies.py` looks up the known vulnerabilities of the backend, frontend and E2E packages and the remote host wheels. It runs on its own, and no CI runs it. Run it from the root of the clone, after `poetry install` in `backend/`. It installs pip-audit in a temporary folder; set `WAVE_PIP_AUDIT` to the path of a pip-audit you have, to use that one.
 
 It prints one line for each group, such as `frontend runtime: 0 critical, 1 high, 0 moderate, 0 low, 0 unknown`, then one line for each advisory, with the package, its version, the advisory ID, the severity and the version that fixes it.
 
@@ -155,7 +175,7 @@ Every check that WAVE skips is listed in public with its reason in [tests/exclus
 
 Fix the code first. When your change needs an exclusion, add its entry to the right list and its ID in a comment at the spot, in the same pull request, and say why in the pull request description. A maintainer reviews the reason, then marks the issue or dismisses the alert in SonarQube Cloud or CodeQL.
 
-`./scripts/ci-checks-local.sh` checks that each ID comment in the code has its entry. Two required checks, SonarQube exclusions and CodeQL exclusions, fail when a mark or a dismissal does not match its entry. Each failure line says what to add or change. Run them locally after the CI scripts with `python3 scripts/check-exclusions.py --sonarqube` and `python3 scripts/check-exclusions.py --codeql`.
+Gate 03 checks that each ID comment in the code has its entry. Gates 13 and 14, SonarQube exclusions and CodeQL exclusions, fail when a mark or a dismissal does not match its entry. Each failure line says what to add or change. Run them after gates 10 and 11 with `./scripts/gate/13-sonar-exclusions.sh` and `./scripts/gate/14-codeql-exclusions.sh`.
 
 ### Run a part of the tests
 
@@ -176,32 +196,29 @@ npx vitest run tests/lib/api.test.ts
 To run one E2E spec, name its path relative to `tests/e2e/`. You can name more than one spec.
 
 ```sh
-./scripts/e2e-targeted-local.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts
 ```
 
-`./scripts/e2e-targeted-local.sh` runs the specs in one `wave-e2e` container, with its own backend and data. It starts the E2E services, and stops them when it ends. Set `WAVE_E2E_KEEP_STACK=1` to keep the services running between runs.
+`./scripts/e2e/e2e-targeted-local.sh` runs the specs in one `wave-e2e` container, with its own backend and data. It starts the E2E services, and stops them when it ends. Set `WAVE_E2E_KEEP_STACK=1` to keep the services running between runs.
 
-To run many specs faster, name them to `./scripts/ci-playwright-local.sh`. It splits them between up to 8 containers, one spec or more each:
+To run many specs faster, name them to `./scripts/gate/15-playwright.sh`. It splits them between up to 8 containers, one spec or more each:
 
 ```sh
-./scripts/ci-playwright-local.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts visual/dashboard/v-dash-01.spec.ts
+./scripts/gate/15-playwright.sh functional/secret-leak-canary/v-secret-leak-canary-functional.spec.ts visual/dashboard/v-dash-01.spec.ts
 ```
 
-A path that does not exist stops the run with `Spec not found:` and the path, before any container starts. So does a file that neither Playwright config picks up, with `Not in any Playwright config:` and the path.
+`./scripts/gate/15-playwright.sh full` runs every spec. It checks every listed path before it starts or deletes anything. A path that does not exist stops the run with `Spec not found:` and the path, and the last run's artifacts stay. So does a file that neither Playwright config picks up, with `Not in any Playwright config:` and the path.
 
 Never run the Playwright configs in `tests/e2e/` straight on the host, such as with `npx playwright test`. Their setup resets the data of the backend on port 8000. That is the port of your dev backend.
 
 ### Log files
 
-Each script writes its whole output to a log file in `ci-output/`, at the root of the clone, which git ignores. It prints the full path of its log file as `Log:` at its start and its end. Read the log file after a run, in place of running the suite again.
+Each gate script writes its whole output to a log file in `ci-output/`, at the root of the clone, which git ignores. The log is named after the script, such as `ci-output/08-backend-tests.log` for `./scripts/gate/08-backend-tests.sh`. Each script prints the full path of its log file as `Log:` at its start and its end. Read the log file after a run, in place of running the check again.
 
-| Script | Log file |
+| Script | Other files |
 |---|---|
-| `./scripts/ci-checks-local.sh` | `ci-output/ci-checks.log` |
-| `./scripts/ci-backend-local.sh` | `ci-output/ci-backend.log` |
-| `./scripts/ci-frontend-local.sh` | `ci-output/ci-frontend.log` |
-| `./scripts/ci-playwright-local.sh` | `ci-output/ci-playwright.log`, and `ci-output/e2e-artifacts/shard-<n>.log` for each container |
-| `./scripts/e2e-targeted-local.sh` | `ci-output/ci-playwright-targeted.log`, and the backend log and traces in `ci-output/e2e-targeted-artifacts/` |
+| `./scripts/gate/15-playwright.sh` | `ci-output/e2e-artifacts/shard-<n>.log` for each container, with its reports and traces in `ci-output/e2e-artifacts/shard-<n>/` |
+| `./scripts/e2e/e2e-targeted-local.sh` | Its log `ci-output/ci-playwright-targeted.log`, and the backend log and traces in `ci-output/e2e-targeted-artifacts/` |
 
 ## Code rules
 
@@ -269,7 +286,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
    If no release branch fits the change, ask in its issue which release the change is for. Go on to step 3 when the command lists the release branch.
 
-3. From that release branch, make a branch for one change. `<version>` is the version of that release branch, and `<branch>` is the name of the new branch. Name a bug fix or a cleanup `fix/<version>-` followed by a short name, such as `fix/1.0.0-ssh-timeout`. Name a feature or an enhancement `feature/<version>-` followed by a short name, such as `feature/1.0.0-csv-export`. The short name has only lowercase letters, digits and single hyphens. A check enforces these names when you run the fast checks and on each pull request. A `fix/` branch holds bug fixes and cleanup only; a change that adds behavior goes on a `feature/` branch.
+3. From that release branch, make a branch for one change. `<version>` is the version of that release branch, and `<branch>` is the name of the new branch. Name a bug fix or a cleanup `fix/<version>-` followed by a short name, such as `fix/1.0.0-ssh-timeout`. Name a feature or an enhancement `feature/<version>-` followed by a short name, such as `feature/1.0.0-csv-export`. The short name has only lowercase letters, digits and single hyphens. Gate 01 enforces these names, on your machine and on each pull request. A `fix/` branch holds bug fixes and cleanup only; a change that adds behavior goes on a `feature/` branch.
 
    ```sh
    git fetch origin
@@ -299,20 +316,17 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
    git switch -c <branch> --no-track origin/release/<version>
    ```
 
-6. Run the fast checks and the three suites, one at a time:
+6. Run the gate, with the full Playwright suite:
 
    ```sh
-   ./scripts/ci-checks-local.sh
-   ./scripts/ci-backend-local.sh
-   ./scripts/ci-frontend-local.sh
-   ./scripts/ci-playwright-local.sh
+   ./scripts/gate/run.sh --playwright full
    ```
 
-   All four must pass on your machine before you ask for review. There is one exception: a suite that also fails on the release branch. To see the SonarQube result before the pull request, run the scan as [The SonarQube step](#the-sonarqube-step) says.
+   Every script your change needs must pass on your machine before you ask for review. There is one exception: a check that also fails on the release branch.
 
-   If your change makes a suite fail, fix the code in your branch. Change a test only as the code rules in [CLAUDE.md](CLAUDE.md) allow. Never change the CI files to make a suite pass. These are the CI scripts `scripts/ci-*.sh` and the scripts they run, such as `scripts/run-coverage-backend.sh`, `scripts/run-e2e-shard.sh`, `scripts/check-orphaned-files.sh` and `scripts/check-text.sh`; the exclusion check `scripts/check-exclusions.py`; the settings of the text checks in `typos.toml`; the SonarQube scripts `scripts/sonar-*.sh` and settings `backend/sonar-project.properties` and `frontend/sonar-project.properties`; and the GitHub workflows in `.github/workflows/` with `.github/CODEOWNERS`. A maintainer rejects a pull request that changes these files, unless fixing them is the purpose of its issue.
+   If your change makes a check fail, fix the code in your branch. Change a test only as the code rules in [CLAUDE.md](CLAUDE.md) allow. Never change the CI files to make a check pass. These are the gate scripts in `scripts/gate/` and the scripts they run in `scripts/lib/`, `scripts/report/`, `scripts/e2e/` and `scripts/images/`; the settings of the text checks in `typos.toml`; the SonarQube settings `backend/sonar-project.properties` and `frontend/sonar-project.properties`; and the GitHub workflows in `.github/workflows/`, the scripts they load in `.github/scripts/` and `.github/CODEOWNERS`. A maintainer rejects a pull request that changes these files, unless fixing them is the purpose of its issue.
 
-   A maintainer keeps the fast checks and all three suites passing on `master` and on each release branch. If a suite also fails on the release branch, do not fix it in your branch. Open an issue for it, and link that issue in the description of your pull request. A maintainer fixes it before any other work.
+   A maintainer keeps the gate passing on `master` and on each release branch. If a check also fails on the release branch, do not fix it in your branch. Open an issue for it, and link that issue in the description of your pull request. A maintainer fixes it before any other work.
 
 7. Push the branch:
 
@@ -328,7 +342,7 @@ A check blocks the merge of each pull request until it ticks "No docs change nee
 
 A pull request that changes a CI file needs the approval of the code owner that `.github/CODEOWNERS` names.
 
-GitHub runs the backend and frontend checks, the SonarQube analysis, CodeQL code scanning and the two exclusion checks on each pull request. It never runs the Playwright suite.
+GitHub runs the gate on each pull request, each script as the job of the same name, such as `08 Backend tests`, and skips a job your change does not need. CodeQL code scanning runs as GitHub's own check in place of gate 12. GitHub never runs the Playwright suite.
 
 Only a maintainer merges, even when every check on a pull request is green. The maintainer reviews the pull request, then merges it into its release branch and deletes the branch.
 
@@ -350,7 +364,7 @@ A contribution needs no sign-off line and no contributor agreement, as [License]
 | `backend/wavecore/storage/` | The loading of plugin definitions from the data folder. |
 | `backend/tests/` | The backend tests, which run with pytest. |
 | `backend/config/` | The example config file, `config.example.yaml`, and its README. |
-| `backend/vendor/` | `wheels.lock`, which pins the wheels that Remote Execution carries to a remote host. `./scripts/build-ci-image.sh` fetches them into `wheels/`. |
+| `backend/vendor/` | `wheels.lock`, which pins the wheels that Remote Execution carries to a remote host. `./scripts/images/build-ci-image.sh` fetches them into `wheels/`. |
 | `frontend/src/` | The frontend, a React app. |
 | `frontend/src/app/` | The entry point, the routes and the page layouts. |
 | `frontend/src/features/` | One folder for each area of the app, such as `workbench/`, `tests/` and `settings/`. |
@@ -364,7 +378,7 @@ A contribution needs no sign-off line and no contributor agreement, as [License]
 | `frontend/tests/` | The frontend tests, which run with Vitest. |
 | `tests/e2e/` | The Playwright specs in `functional/` and `visual/`, their helpers, and the services in `services/` that the specs run against. |
 | `tests/exclusions/` | The public lists of every check that WAVE skips, with the reason for each. |
-| `scripts/` | The scripts that build the test images, run the checks and the suites, check the dependencies and set the version. |
+| `scripts/` | The gate scripts in `scripts/gate/` and the scripts they run, and the scripts that build the test images, check the dependencies and set the version. |
 | `.github/` | The GitHub workflows and the scripts they load, the pull request template and the code owners. |
 | `LICENSES/` | The license texts of the third-party work that `NOTICE` lists. |
 

@@ -25,6 +25,7 @@
  * Phase: functional (serial). Seeds via API; no UI interaction needed.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT } from '../../helpers/config'
 import fs from 'fs'
@@ -36,7 +37,7 @@ function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, 'fixture-scoped-run.json'), 'utf-8'),
   )
-  return { ...fixture, name: `V-CANVAS-FN-RUN-SCOPED-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  return { ...fixture, name: `V-CANVAS-FN-RUN-SCOPED-01 ${Date.now()}-${randomUUID().slice(0, 6)}` }
 }
 
 async function seedFixture(request: APIRequestContext): Promise<string> {

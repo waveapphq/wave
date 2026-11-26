@@ -20,7 +20,7 @@ REQ-3.3.2.6, REQ-5.1.2; OS-11 to OS-13).
   WAVE Test CA). Nothing listens on 9479.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait opensearch
+  ./scripts/e2e/e2e-stack.sh up --wait opensearch
   ```
 
 - The fixture carries the host-mode address `https://127.0.0.1:9477`; the
@@ -51,7 +51,7 @@ REQ-3.3.2.6, REQ-5.1.2; OS-11 to OS-13).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/opensearch-editor/v-plugin-opensearch-editor-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/opensearch-editor/v-plugin-opensearch-editor-functional.spec.ts`.
 2. Each test replaces `__TOKEN__`, checks that every secret and PEM row is
    blank and that each block logs in as a stack user, fills the password and
    the CA, puts the slow query in place of `__SLOW_QUERY__`, imports

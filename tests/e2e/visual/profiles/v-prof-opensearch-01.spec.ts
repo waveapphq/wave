@@ -20,6 +20,7 @@
  * 6. The url field's Edit value sheet has no Format control; the username field's keeps it.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { resolveEnvironmentId } from '../../helpers/k8s-run'
@@ -78,7 +79,7 @@ const secretBox = (dialog: Locator, field: OpenSearchField): Locator =>
 const createButton = (dialog: Locator): Locator => dialog.getByRole('button', { name: 'Create', exact: true })
 
 const uniqueName = (label: string): string =>
-  `V-PROF-OPENSEARCH-01 ${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  `V-PROF-OPENSEARCH-01 ${label} ${Date.now()}-${randomUUID().slice(0, 6)}`
 
 async function renderedNames(dialog: Locator): Promise<string[]> {
   return dialog

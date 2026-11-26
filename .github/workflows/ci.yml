@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    # Edited covers a change of the base branch, which job 01 checks.
+    types: [opened, edited, synchronize, reopened]
     branches: [master, 'release/**']
   push:
     branches: [master, 'release/**']
@@ -10,14 +12,81 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
-    name: Backend Tests
+  changes:
+    name: 00 Changes
     runs-on: ubuntu-latest
+    outputs:
+      grammar: ${{ steps.areas.outputs.grammar }}
+      orphans: ${{ steps.areas.outputs.orphans }}
+      backend: ${{ steps.areas.outputs.backend }}
+      frontend: ${{ steps.areas.outputs.frontend }}
+      e2e: ${{ steps.areas.outputs.e2e }}
+      backend-tests: ${{ steps.areas.outputs.backend-tests }}
+      codeql: ${{ steps.areas.outputs.codeql }}
 
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find the changed areas
+        id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # The same rules as scripts/gate/run.sh; a push runs every job.
+        run: |
+          outputs=(grammar orphans backend frontend e2e backend-tests codeql)
+          if [ "$EVENT" != "pull_request" ]; then
+            for name in "${outputs[@]}"; do echo "$name=true" >> "$GITHUB_OUTPUT"; done
+            exit 0
+          fi
+          mapfile -t files < <(git diff --name-only "$BASE_SHA" HEAD)
+          printf '%s\n' "${files[@]}"
+          text=false
+          for f in "${files[@]}"; do
+            if [ -f "$f" ] && grep -Iq '' "$f"; then text=true; fi
+          done
+          any() { if printf '%s\n' "${files[@]}" | grep -qE "$1"; then echo true; else echo false; fi; }
+          {
+            echo "grammar=$text"
+            echo "orphans=$(any '^(frontend/src|backend/wavecore|tests/exclusions)/')"
+            echo "backend=$(any '^backend/')"
+            echo "frontend=$(any '^frontend/')"
+            echo "e2e=$(any '^tests/e2e/')"
+            echo "backend-tests=$(any '^(backend|scripts)/')"
+            echo "codeql=$(any '^(backend|frontend|tests/e2e|\.github/scripts|\.github/workflows)/|^scripts/.*\.(py|mjs)$')"
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+  branch-name:
+    name: 01 Branch name
+    needs: [changes]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check the branch names
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+        run: ./scripts/gate/01-branch-name.sh --pr "$HEAD" "$BASE"
+
+  grammar:
+    name: 02 Grammar and Comments
+    needs: [changes]
+    if: needs.changes.outputs.grammar == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -33,53 +102,65 @@ jobs:
         working-directory: ./backend
         run: poetry install
 
-      - name: Text checks
-        run: ./scripts/check-text.sh
+      - name: Check the text
+        run: ./scripts/gate/02-grammar.sh
 
-      - name: Restore remote-host wheels
-        uses: actions/cache@v6
-        with:
-          path: backend/vendor/wheels/
-          key: remote-host-wheels-${{ hashFiles('backend/vendor/wheels.lock') }}
-
-      - name: Fetch remote-host wheels
-        run: ./scripts/fetch-remote-wheels.sh
-
-      - name: Run tests with coverage
-        run: ./scripts/run-coverage-backend.sh --clean -n logical
-
-      - name: Type check with mypy
-        working-directory: ./backend
-        run: poetry run mypy wavecore/
-
-      - name: Check code formatting with black
-        working-directory: ./backend
-        run: poetry run black --check wavecore/ tests/
-
-      - name: Lint with ruff
-        working-directory: ./backend
-        run: poetry run ruff check wavecore/ tests/
-
-      - name: Install SonarScanner CLI
-        run: |
-          curl -sSfLo "$RUNNER_TEMP/sonar-scanner.zip" https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-8.3.1.16491-linux-x64.zip
-          echo "0f304e4c5982f0cfbd06762306d6e60e6ed9c8e3853629ae3b8ec2f4dc9bdc04  $RUNNER_TEMP/sonar-scanner.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/sonar-scanner.zip" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/sonar-scanner-8.3.1.16491-linux-x64/bin" >> "$GITHUB_PATH"
-
-      - name: SonarQube scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./scripts/sonar-scan-backend.sh
-
-  frontend-tests:
-    name: Frontend Tests
+  orphans:
+    name: 03 Orphaned files and exclusion IDs
+    needs: [changes]
+    if: needs.changes.outputs.orphans == 'true'
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for orphaned files and exclusion IDs
+        run: ./scripts/gate/03-orphans.sh
+
+  backend-static:
+    name: 04 Backend static
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    env:
+      WAVE_IN_CI_CONTAINER: '1'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 -
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: poetry install
+
+      - name: Check types, format and lint
+        run: ./scripts/gate/04-backend-static.sh
+
+  frontend-static:
+    name: 05 Frontend static
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    env:
+      WAVE_IN_CI_CONTAINER: '1'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -92,43 +173,21 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Type check
-        working-directory: ./frontend
-        run: npm run type-check
+      - name: Lint and type check
+        run: ./scripts/gate/05-frontend-static.sh
 
-      - name: ESLint
-        working-directory: ./frontend
-        run: npm run lint
-
-      - name: Run tests with the coverage gate
-        working-directory: ./frontend
-        run: npm run test:coverage
-
-      - name: Check for orphaned files
-        run: ./scripts/check-orphaned-files.sh
-
-      - name: Build
-        working-directory: ./frontend
-        run: npm run build
-
-      - name: Install SonarScanner CLI
-        run: |
-          curl -sSfLo "$RUNNER_TEMP/sonar-scanner.zip" https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-8.3.1.16491-linux-x64.zip
-          echo "0f304e4c5982f0cfbd06762306d6e60e6ed9c8e3853629ae3b8ec2f4dc9bdc04  $RUNNER_TEMP/sonar-scanner.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/sonar-scanner.zip" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/sonar-scanner-8.3.1.16491-linux-x64/bin" >> "$GITHUB_PATH"
-
-      - name: SonarQube scan
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./scripts/sonar-scan-frontend.sh
-
-  e2e-type-check:
-    name: E2E Type Check
+  e2e-types:
+    name: 06 E2E types
+    needs: [changes]
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
+    env:
+      WAVE_IN_CI_CONTAINER: '1'
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -144,18 +203,188 @@ jobs:
         run: npm ci
 
       - name: Type check
-        working-directory: ./tests/e2e
-        run: npm run type-check
+        run: ./scripts/gate/06-e2e-types.sh
 
-  sonarqube-exclusions:
-    name: SonarQube exclusions
-    needs: [backend-tests, frontend-tests]
+  frontend-build:
+    name: 07 Frontend build
+    needs: [changes, branch-name, grammar, orphans, backend-static, frontend-static, e2e-types]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      WAVE_IN_CI_CONTAINER: '1'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build
+        run: ./scripts/gate/07-frontend-build.sh
+
+  backend-tests:
+    name: 08 Backend tests
+    needs: [changes, branch-name, grammar, orphans, backend-static, frontend-static, e2e-types]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.changes.outputs.backend-tests == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      WAVE_IN_CI_CONTAINER: '1'
+      CI_PYTEST_WORKERS: logical
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 -
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: poetry install
+
+      - name: Restore remote-host wheels
+        uses: actions/cache@v6
+        with:
+          path: backend/vendor/wheels/
+          key: remote-host-wheels-${{ hashFiles('backend/vendor/wheels.lock') }}
+
+      - name: Fetch remote-host wheels
+        run: ./scripts/lib/fetch-remote-wheels.sh
+
+      - name: Run the tests with the coverage gate
+        run: ./scripts/gate/08-backend-tests.sh
+
+      - name: Keep the coverage for the SonarQube scan
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+
+  frontend-tests:
+    name: 09 Frontend tests
+    needs: [changes, branch-name, grammar, orphans, backend-static, frontend-static, e2e-types]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      WAVE_IN_CI_CONTAINER: '1'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run the tests with the coverage gate
+        run: ./scripts/gate/09-frontend-tests.sh
+
+      - name: Keep the coverage for the SonarQube scan
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+
+  sonar-backend:
+    name: 10 SonarQube backend
+    needs: [changes, backend-tests]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Get the coverage of the tests
+        uses: actions/download-artifact@v8
+        with:
+          name: backend-coverage
+          path: backend
+
+      - name: Install SonarScanner CLI
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/sonar-scanner.zip" https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-8.3.1.16491-linux-x64.zip
+          echo "0f304e4c5982f0cfbd06762306d6e60e6ed9c8e3853629ae3b8ec2f4dc9bdc04  $RUNNER_TEMP/sonar-scanner.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/sonar-scanner.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/sonar-scanner-8.3.1.16491-linux-x64/bin" >> "$GITHUB_PATH"
+
+      - name: SonarQube scan and results
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: ./scripts/gate/10-sonar-backend.sh ${PR:+--pr "$PR"}
+
+  sonar-frontend:
+    name: 11 SonarQube frontend
+    needs: [changes, frontend-tests]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Get the coverage of the tests
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+      - name: Install SonarScanner CLI
+        run: |
+          curl -sSfLo "$RUNNER_TEMP/sonar-scanner.zip" https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-8.3.1.16491-linux-x64.zip
+          echo "0f304e4c5982f0cfbd06762306d6e60e6ed9c8e3853629ae3b8ec2f4dc9bdc04  $RUNNER_TEMP/sonar-scanner.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/sonar-scanner.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/sonar-scanner-8.3.1.16491-linux-x64/bin" >> "$GITHUB_PATH"
+
+      - name: SonarQube scan and results
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: ./scripts/gate/11-sonar-frontend.sh ${PR:+--pr "$PR"}
+
+  sonar-exclusions:
+    name: 13 SonarQube exclusions
+    needs: [sonar-backend, sonar-frontend]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && (needs.sonar-backend.result == 'success' || needs.sonar-frontend.result == 'success') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -163,10 +392,12 @@ jobs:
           python-version: '3.12'
 
       - name: Check SonarQube exclusions
-        run: python3 scripts/check-exclusions.py --sonarqube
+        run: ./scripts/gate/13-sonar-exclusions.sh
 
   codeql-exclusions:
-    name: CodeQL exclusions
+    name: 14 CodeQL exclusions
+    needs: [changes]
+    if: needs.changes.outputs.codeql == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -177,6 +408,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -186,4 +418,4 @@ jobs:
       - name: Check CodeQL exclusions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/check-exclusions.py --codeql
+        run: ./scripts/gate/14-codeql-exclusions.sh

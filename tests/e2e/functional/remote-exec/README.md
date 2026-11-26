@@ -4,7 +4,7 @@ Proves the Remote Execution container's mixed-locus body against the real-servic
 (`tests/e2e/services/`): the pushed pure-Python bundle really runs under the sshd host's python3.
 
 ## Pre-requisites
-- Backend + frontend E2E stacks up; real-service stack up (`scripts/e2e-stack.sh up --wait`):
+- Backend + frontend E2E stacks up; real-service stack up (`scripts/e2e/e2e-stack.sh up --wait`):
   `sshd` (:9445) and the internal `http-target` service.
 - Shared env `E2E Execution Env`.
 

@@ -49,9 +49,10 @@
  * 12. The suite variable grid takes the same rules through its own answers.
  *
  * Phase: functional-workflow (each test seeds its own Test / Suite through the API).
- * Run: ./scripts/e2e-targeted-local.sh functional/element-config-value-editor/v-parent-child-save-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/element-config-value-editor/v-parent-child-save-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import {
   test,
   expect,
@@ -709,7 +710,7 @@ test.describe('V-PARENT-CHILD-SAVE: a config surface owns the editors opened fro
   // -------------------------------------------------------------------------
   test('T5: the suite variable grid takes the same rules', async ({ page, request }) => {
     const suiteId = await createEntity(request, '/suites', {
-      name: `PCS Suite ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `PCS Suite ${Date.now()}-${randomUUID().slice(0, 6)}`,
       variables: {
         note: { type: 'string', value: 'grid-seed', secret: false },
         other: { type: 'string', value: 'other-seed', secret: false },

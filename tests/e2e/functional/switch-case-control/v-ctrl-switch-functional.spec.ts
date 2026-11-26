@@ -33,6 +33,7 @@
  * REQ: REQ-3.5.1.20 (Switch/Case multi-branch decisions)
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts, getLogLines, waitForLogText } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -68,7 +69,7 @@ function loadFixtureFile(file: string): Record<string, unknown> {
 function loadFixture(): Record<string, unknown> {
   return {
     ...loadFixtureFile('fixture.json'),
-    name: `Switch/Case Control E2E ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `Switch/Case Control E2E ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 }
 

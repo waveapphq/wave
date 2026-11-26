@@ -28,9 +28,10 @@
  *     back the exact uploaded bytes, into the bound variables and onto the
  *     console.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/tests-create/v-tests-clone-testdata.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/tests-create/v-tests-clone-testdata.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { createValidTest, openTest, releaseWorkbenchOwnership, validateTest } from '../../helpers/fn-seed'
@@ -45,7 +46,7 @@ import {
   uploadTestData,
 } from '../../helpers/testdata'
 
-const SUFFIX = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const SUFFIX = `${Date.now()}-${randomUUID().slice(0, 6)}`
 const SOURCE_NAME = `Clone Test Data ${SUFFIX}`
 const CLONE_NAME = `${SOURCE_NAME} (Copy)`
 

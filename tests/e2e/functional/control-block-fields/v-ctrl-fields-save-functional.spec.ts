@@ -42,6 +42,7 @@
  * 16. A For `step` given null: `INVALID_SETTING_VALUE` `Setting 'step' of block 'for' cannot be null`.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { openConditionBody, referenceToggle } from '../../helpers/condition-builder'
@@ -76,7 +77,7 @@ const STATUS = {
   errors: { type: 'array', value: [], scope: 'test', elementTypes: [] },
 }
 
-const token = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const token = (): string => `${Date.now()}-${randomUUID().slice(0, 6)}`
 
 function controlNode(elementType: string, values: Json, data: Json = {}, nodeType = 'control'): Json {
   return {
@@ -457,7 +458,7 @@ test.describe('V-CTRL-FIELDS-SAVE: control Blocks the save check refuses', () =>
   })
 
   test('9. a Function save with a blank {x} Setter row is refused', async ({ request }) => {
-    const name = `zz-ctrl-fields-save-9-${Math.random().toString(16).slice(2, 10)}`
+    const name = `zz-ctrl-fields-save-9-${randomUUID().slice(0, 8)}`
     const body = functionBody(name, {
       outputs: [{ name: 'out', type: 'string' }],
       workflow: {

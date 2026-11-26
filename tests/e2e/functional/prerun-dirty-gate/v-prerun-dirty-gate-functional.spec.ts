@@ -22,6 +22,7 @@
  * applied before a run).
  */
 
+import { randomUUID } from 'node:crypto'
 import {
   test,
   expect,
@@ -58,7 +59,7 @@ const ANNOUNCE_TEXT = 'prerun gate ready'
 const SECOND_TEXT = 'second block ran'
 
 const uniqueName = (label: string): string =>
-  `V-PRERUN-DIRTY-GATE ${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  `V-PRERUN-DIRTY-GATE ${label} ${Date.now()}-${randomUUID().slice(0, 6)}`
 
 /** The fn-seed Block builders carry no `disabled` flag (only sharedNode does). */
 function seedDisabled(node: SeedNode): SeedNode {

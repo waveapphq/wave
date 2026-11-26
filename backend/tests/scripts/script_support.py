@@ -240,6 +240,10 @@ class Stubs:
         path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
         return path
 
+    def file(self, path: Path, tool: str, body: str) -> Path:
+        """A stub at any path, recording its calls under the given tool name."""
+        return self._write(path, tool, body)
+
     def tool(self, name: str, body: str = "sys.exit(0)\n") -> Path:
         """A stub tool on PATH."""
         return self._write(self.bin / name, name, body)
@@ -316,16 +320,20 @@ class Run:
 
 def run(repo: Repo, command: list[str], env: dict[str, str], timeout: float = 45) -> Run:
     """Run a command in the work tree, stderr merged into stdout."""
-    done = subprocess.run(
-        command,
-        cwd=repo.root,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        timeout=timeout,
-        check=False,
-    )
+    try:
+        done = subprocess.run(
+            command,
+            cwd=repo.root,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except FileNotFoundError:
+        # A script missing from the clone is not copied, so the run fails as a shell would.
+        return Run(127, [f"{command[0]}: No such file or directory"])
     return Run(done.returncode, done.stdout.splitlines())
 
 
@@ -336,3 +344,13 @@ def log_lines(run_result: Run, log: Path) -> list[str]:
 
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def terminated(lines: list[str]) -> list[str]:
+    """The lines where the shell reports a killed background job as Terminated."""
+    return [line for line in lines if "Terminated" in line]
+
+
+def file_lines(path: Path) -> list[str]:
+    """The lines of a text file."""
+    return path.read_text(encoding="utf-8").splitlines()

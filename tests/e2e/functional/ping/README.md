@@ -18,7 +18,7 @@ the documentation half of PING-11, which a unit test covers).
   execution environment (`ensureEnvironment` creates it if absent).
 - Unprivileged ICMP open to the container's own user. Every container WAVE runs
   in carries `net.ipv4.ping_group_range=1000 1000`: the two podman run sites
-  (`scripts/ci-playwright-local.sh`, `scripts/e2e-targeted-local.sh`) and the
+  (`scripts/gate/15-playwright.sh`, `scripts/e2e/e2e-targeted-local.sh`) and the
   `sshd` compose service. Without it every ping fails with the privilege message.
 - The real-service stack (see `tests/e2e/services/README.md`), for the remote
   spec only:
@@ -29,7 +29,7 @@ the documentation half of PING-11, which a unit test covers).
     proof.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd netcat-target
+  ./scripts/e2e/e2e-stack.sh up --wait sshd netcat-target
   ```
 
 - No service stands up for ICMP itself. The three targets are the dialing side's
@@ -41,7 +41,7 @@ the documentation half of PING-11, which a unit test covers).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ping/v-plugin-ping-local-functional.spec.ts functional/ping/v-plugin-ping-remote-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ping/v-plugin-ping-local-functional.spec.ts functional/ping/v-plugin-ping-remote-functional.spec.ts`.
 2. Load the fixture, check it against the harness targets, and point the one
    gateway block at `PING_GATEWAY_HOST`.
 3. Clear the workbench draft, import via `POST /tests`, and open the test in the

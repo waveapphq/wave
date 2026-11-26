@@ -33,6 +33,7 @@
  *    detail and the FATAL verdict in the log excerpt.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
@@ -41,7 +42,7 @@ import { resetOwnership } from '../../helpers/ownership'
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 async function pollTerminal(

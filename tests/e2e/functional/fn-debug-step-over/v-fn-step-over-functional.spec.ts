@@ -19,6 +19,7 @@
  *   3. Continue -> session passes; C logs.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { getLogTexts } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -47,7 +48,7 @@ function logNode(id: string, label: string, message: string, x: number): Record<
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-STEP-OVER ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-STEP-OVER ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function body A -> B -> C for step-over coverage',
     variables: {},

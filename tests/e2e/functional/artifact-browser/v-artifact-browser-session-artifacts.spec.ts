@@ -22,7 +22,7 @@
  * 6. Copy path on the sheet row puts artifact://data/output.json on the clipboard
  *    and shows the copied cue with its screen-reader announcement.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/artifact-browser/v-artifact-browser-session-artifacts.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/artifact-browser/v-artifact-browser-session-artifacts.spec.ts
  */
 
 import fs from 'fs'

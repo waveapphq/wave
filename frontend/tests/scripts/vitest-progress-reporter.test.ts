@@ -20,6 +20,7 @@ interface FakeModule {
   state: () => string
   ok: () => boolean
   errors: () => FakeError[]
+  children?: { allTests: (state?: string) => Generator<FakeTestCase, void, void> }
 }
 
 interface FakeTestCase {
@@ -64,6 +65,65 @@ function fakeModule(relativePath: string, errors: FakeError[] = []): FakeModule 
     ok: () => errors.length === 0,
     errors: () => errors,
   }
+}
+
+type TestStateName = 'passed' | 'failed' | 'skipped'
+
+interface FakeRun {
+  modules: FakeModule[]
+  cases: FakeTestCase[]
+}
+
+// Test files with their test cases; each module also lists its cases the way vitest's TestModule does.
+function fakeRun(files: Record<string, TestStateName[]>): FakeRun {
+  const modules: FakeModule[] = []
+  const cases: FakeTestCase[] = []
+  for (const [relativePath, states] of Object.entries(files)) {
+    const own: FakeTestCase[] = []
+    const testModule: FakeModule = {
+      ...fakeModule(relativePath),
+      children: {
+        *allTests(state?: string) {
+          for (const testCase of own) {
+            if (state === undefined || testCase.result().state === state) yield testCase
+          }
+        },
+      },
+    }
+    states.forEach((state, index) => {
+      own.push(fakeStateCase(testModule, `case ${index + 1}`, state))
+    })
+    modules.push(testModule)
+    cases.push(...own)
+  }
+  return { modules, cases }
+}
+
+function fakeStateCase(module: FakeModule, name: string, state: TestStateName): FakeTestCase {
+  const errors = state === 'failed' ? [fakeError(`${name} failed`)] : []
+  return {
+    type: 'test',
+    name,
+    fullName: `math > ${name}`,
+    module,
+    ok: () => state !== 'failed',
+    result: () => ({ state, errors }),
+  }
+}
+
+async function finishRun(reporter: ProgressReporter, run: FakeRun): Promise<void> {
+  for (const testCase of run.cases) {
+    await reporter.onTestCaseResult(testCase)
+  }
+  for (const testModule of run.modules) {
+    await reporter.onTestModuleEnd(testModule)
+  }
+  const failed = run.cases.some((testCase) => testCase.result().state === 'failed')
+  await reporter.onTestRunEnd(run.modules, [], failed ? 'failed' : 'passed')
+}
+
+function countLines(): string[] {
+  return lines().filter((line) => line.startsWith('Tests:'))
 }
 
 function fakeSpecification(relativePath: string) {
@@ -296,5 +356,106 @@ describe('vitest progress reporter', () => {
     expect(output).not.toContain('adds two numbers')
     expect(output).not.toContain('subtracts two numbers')
     expect(output).not.toContain('.')
+  })
+})
+
+describe('vitest progress reporter, test count line', () => {
+  it('prints the passed, failed and skipped counts and the file count once the run ends', async () => {
+    const run = fakeRun({
+      [FILES[0]]: ['passed', 'passed', 'failed'],
+      [FILES[1]]: ['skipped', 'passed'],
+      [FILES[2]]: ['skipped'],
+    })
+    const reporter = await startRun(FILES.slice(0, 3))
+
+    await finishRun(reporter, run)
+
+    expect(countLines()).toEqual(['Tests: 3 passed, 1 failed, 2 skipped (3 files)'])
+  })
+
+  it('prints zero failed and zero skipped for an all green run', async () => {
+    const run = fakeRun({ [FILES[0]]: ['passed', 'passed'], [FILES[1]]: ['passed', 'passed'] })
+    const reporter = await startRun(FILES.slice(0, 2))
+
+    await finishRun(reporter, run)
+
+    expect(countLines()).toEqual(['Tests: 4 passed, 0 failed, 0 skipped (2 files)'])
+  })
+
+  it('counts every failed test, across files', async () => {
+    const run = fakeRun({
+      [FILES[0]]: ['failed', 'failed'],
+      [FILES[1]]: ['passed'],
+      [FILES[2]]: ['failed'],
+      [FILES[3]]: ['passed', 'skipped'],
+    })
+    const reporter = await startRun()
+
+    await finishRun(reporter, run)
+
+    expect(countLines()).toEqual(['Tests: 2 passed, 3 failed, 1 skipped (4 files)'])
+  })
+
+  it('prints no count line before the run ends', async () => {
+    const run = fakeRun({ [FILES[0]]: ['passed'], [FILES[1]]: ['failed'] })
+    const reporter = await startRun(FILES.slice(0, 2))
+    for (const testCase of run.cases) {
+      await reporter.onTestCaseResult(testCase)
+    }
+    for (const testModule of run.modules) {
+      await reporter.onTestModuleEnd(testModule)
+    }
+
+    await vi.advanceTimersByTimeAsync(120_000)
+
+    expect(countLines()).toEqual([])
+  })
+
+  it('prints the count line as the last line of the run', async () => {
+    const run = fakeRun({ [FILES[0]]: ['passed'], [FILES[1]]: ['failed'] })
+    const reporter = await startRun(FILES.slice(0, 2))
+
+    await finishRun(reporter, run)
+
+    expect(lines().filter((line) => line !== '').at(-1)).toBe('Tests: 1 passed, 1 failed, 0 skipped (2 files)')
+  })
+
+  it('prints the count line after an unhandled error too', async () => {
+    const run = fakeRun({ [FILES[0]]: ['passed', 'skipped'], [FILES[1]]: ['passed'] })
+    const reporter = await startRun(FILES.slice(0, 2))
+    for (const testCase of run.cases) {
+      await reporter.onTestCaseResult(testCase)
+    }
+    for (const testModule of run.modules) {
+      await reporter.onTestModuleEnd(testModule)
+    }
+
+    await reporter.onTestRunEnd(run.modules, [fakeError('a timer threw after the test')], 'failed')
+
+    expect(countLines()).toEqual(['Tests: 2 passed, 0 failed, 1 skipped (2 files)'])
+  })
+
+  it('prints exactly one count line, also when progress lines keep coming', async () => {
+    const run = fakeRun({ [FILES[0]]: ['passed'], [FILES[1]]: ['passed'] })
+    const reporter = await startRun(FILES.slice(0, 2))
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    await finishRun(reporter, run)
+    await vi.advanceTimersByTimeAsync(300_000)
+
+    expect(countLines()).toHaveLength(1)
+  })
+
+  it('starts counting again for each run in the same process', async () => {
+    const first = fakeRun({ [FILES[0]]: ['passed', 'failed'] })
+    const second = fakeRun({ [FILES[1]]: ['passed'], [FILES[2]]: ['skipped'] })
+    const reporter = await startRun(FILES.slice(0, 1))
+    await finishRun(reporter, first)
+    output = ''
+
+    await reporter.onTestRunStart(FILES.slice(1, 3).map(fakeSpecification))
+    await finishRun(reporter, second)
+
+    expect(countLines()).toEqual(['Tests: 1 passed, 0 failed, 1 skipped (2 files)'])
   })
 })

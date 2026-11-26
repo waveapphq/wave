@@ -5,7 +5,7 @@
 # instances share this image: kwok (published 127.0.0.1:9460) and
 # kwok-internal (network-only).
 #
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/kwok)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e/services/kwok)
 
 # metrics-server binary taken from the pinned upstream image at BUILD time;
 # the cluster never downloads at runtime.

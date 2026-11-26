@@ -14,6 +14,7 @@
  *      entry point succeeds silently.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 
@@ -191,7 +192,7 @@ test.describe('V-SUITE-DELETE-RUNNING-01: Suite delete blocked by running execut
     await ensureEnvironment(request)
     const environmentId = await getEnvironmentId(request)
 
-    const suiteName = `V-SUITE-DEL-RUN-LIST ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const suiteName = `V-SUITE-DEL-RUN-LIST ${Date.now()}-${randomUUID().slice(0, 5)}`
     const testId = await importTest(request, `${suiteName} body`)
     const suiteId = await createSuite(request, suiteName, [testId])
     const executionId = await startSuiteTrackedExecution(request, suiteId, environmentId)
@@ -263,7 +264,7 @@ test.describe('V-SUITE-DELETE-RUNNING-01: Suite delete blocked by running execut
     await ensureEnvironment(request)
     const environmentId = await getEnvironmentId(request)
 
-    const suiteName = `V-SUITE-DEL-RUN-DETAIL ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const suiteName = `V-SUITE-DEL-RUN-DETAIL ${Date.now()}-${randomUUID().slice(0, 5)}`
     const testId = await importTest(request, `${suiteName} body`)
     const suiteId = await createSuite(request, suiteName, [testId])
     const executionId = await startSuiteTrackedExecution(request, suiteId, environmentId)

@@ -15,7 +15,7 @@
  * A second test proves that a stored inverted min/max + an unknown cipher is
  * rejected before any byte leaves WAVE, with the exact runtime-guard messages.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-tls/v-http-tls-versions-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/http-tls/v-http-tls-versions-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
@@ -149,7 +149,7 @@ test.describe('HTTP TLS version pins (real wire)', () => {
     await ensureEnvironment(page.request)
     const seeded = {
       id: randomUUID(),
-      name: `TLS Seed Reject ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `TLS Seed Reject ${Date.now()}-${randomUUID().slice(0, 6)}`,
       version: '1.0.0',
       description: '',
       workflow: {

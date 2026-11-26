@@ -1,4 +1,4 @@
-"""Tests for scripts/audit-dependencies.py with a stub pip-audit and a stub npm."""
+"""Tests for scripts/audit/audit-dependencies.py with a stub pip-audit and a stub npm."""
 
 import json
 import re
@@ -10,7 +10,7 @@ import pytest
 
 from tests.scripts.script_support import Call, Repo, Run, Stubs, copy_from_clone, run, stub_env
 
-SCRIPT = "scripts/audit-dependencies.py"
+SCRIPT = "scripts/audit/audit-dependencies.py"
 GROUPS = [
     "backend runtime",
     "backend dev",

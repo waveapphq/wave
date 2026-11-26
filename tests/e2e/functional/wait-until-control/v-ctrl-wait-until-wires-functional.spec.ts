@@ -18,6 +18,7 @@
  *    `then` and lists no repair; the canvas draws it from the `then` dot and a run reaches the Log.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
@@ -109,7 +110,7 @@ function variant(mode: WaitMode, opts: VariantOptions): WiresFixture {
 }
 
 function uniqueName(base: string, tag: string): string {
-  return `${base} ${tag} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${tag} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 /** Pick a Wait Mode in the Wait Until's window and Save the window. */

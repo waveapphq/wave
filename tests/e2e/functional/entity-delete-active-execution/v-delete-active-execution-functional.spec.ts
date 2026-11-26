@@ -17,6 +17,7 @@
  *      not deleted) - the delete only removes the entity, not its history.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import fs from 'fs'
@@ -219,7 +220,7 @@ test.describe('F-DELETE-ACTIVE-EXEC-409-01: entity delete guard (HTTP)', () => {
     }) => {
       await ensureEnvironment(request)
       const environmentId = await getEnvironmentId(request)
-      const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+      const suffix = `${Date.now()}-${randomUUID().slice(0, 5)}`
       const { entityId } = await scenario.setup(request, suffix)
 
       const executionId = await startExecution(

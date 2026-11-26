@@ -21,6 +21,7 @@
  *    backend unit tests pin.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { openTest } from '../../helpers/fn-seed'
@@ -102,7 +103,7 @@ test.describe('V-NULL-START-RECIPE: a recipe declaration with no value holds nul
       expect(text, 'the old value-or-expr rule is gone').not.toContain(OLD_GUIDE_SENTENCE)
     })
 
-    const name = `Null Start Recipe ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `Null Start Recipe ${Date.now()}-${randomUUID().slice(0, 6)}`
     let testId = ''
 
     await test.step('NULL-START: the write accepts both forms; only the SECRET raises an action item', async () => {

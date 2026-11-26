@@ -1,5 +1,6 @@
 /** Seed for the OpenSearch config-sheet specs: one OpenSearch block on a Test, opened with its sheet up (REQ-3.4.1.15). */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { importExpectingErrors } from '../../helpers/fixture-import'
 import { createValidTest, openTest, validateTest } from '../../helpers/fn-seed'
@@ -104,7 +105,7 @@ export async function seedTest(request: APIRequestContext, fixture: Record<strin
     variables?: Record<string, unknown>
   }
   const testId = await createValidTest(request, {
-    name: `${source.name ?? 'OpenSearch'} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${source.name ?? 'OpenSearch'} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: source.workflow.nodes,
     edges: source.workflow.edges,
     variables: source.variables ?? {},

@@ -38,7 +38,7 @@ its own section at the end of this file.
   it).
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait http-proxy http-proxy-auth http-target tls-lab kwok-internal opensearch
+  ./scripts/e2e/e2e-stack.sh up --wait http-proxy http-proxy-auth http-target tls-lab kwok-internal opensearch
   ```
 
 - The proxies are dialed at `HTTP_TARGET_HOST`. The proxy-only targets are
@@ -184,7 +184,7 @@ SHELL-10, MCP-7; REQ-4.7.14, REQ-4.7.16, REQ-5.2.1.50, REQ-3.1.3.5).
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/network-proxy/v-network-proxy-pages-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/network-proxy/v-network-proxy-pages-functional.spec.ts`.
 2. Test 1: open Proxy Setup, turn "Use a proxy" on, choose Custom, type an address
    and a port, choose "WAVE host's settings" again, press Cancel.
 3. Test 2: Custom with an address and a port; add `https://intranet.example.test`,

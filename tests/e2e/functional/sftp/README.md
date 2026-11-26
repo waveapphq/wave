@@ -55,7 +55,7 @@ headless cleanup runs every spec starts from its `afterAll` through `runCleanup`
     trusted hosts list.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd sshd-no-sftp sshd-no-fwd
+  ./scripts/e2e/e2e-stack.sh up --wait sshd sshd-no-sftp sshd-no-fwd
   ```
 
 - Host keys: Strict only against `<host>` port 9445 and the far host `sshd` port 22 (tunnel
@@ -80,5 +80,5 @@ headless cleanup runs every spec starts from its `afterAll` through `runCleanup`
 ## Running
 
 ```bash
-./scripts/e2e-targeted-local.sh functional/sftp/v-plugin-sftp-dropzone-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/sftp/v-plugin-sftp-dropzone-functional.spec.ts
 ```

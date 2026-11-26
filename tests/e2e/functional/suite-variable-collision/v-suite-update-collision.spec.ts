@@ -5,7 +5,7 @@
  * The UI calls PUT /suites/{id} for both variable edits and test
  * membership changes, NOT the dedicated composition endpoints.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/suite-variable-collision/v-suite-update-collision.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/suite-variable-collision/v-suite-update-collision.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

@@ -19,6 +19,7 @@
  *      the Outer Function node reappears at depth 0.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -86,7 +87,7 @@ function buildSeed(): Record<string, unknown> {
     { id: 'e-outer', source: 'start-node', target: 'fn-middle' },
   ])
   return {
-    name: `V-CANVAS-FN-NESTED-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CANVAS-FN-NESTED-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Outer > Middle > Inner local Functions, each declaring one local variable.',
     variables: {},

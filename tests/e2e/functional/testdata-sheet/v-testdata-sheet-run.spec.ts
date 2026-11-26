@@ -20,7 +20,7 @@
  * 5. Once the run ends the same action succeeds and the folder appears in the
  *    listing.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-run.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-run.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

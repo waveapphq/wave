@@ -36,6 +36,7 @@
  *         The stored login is removed again after the test.
  */
 
+import { randomUUID } from 'node:crypto'
 import {
   test,
   expect,
@@ -213,7 +214,7 @@ async function refusedInstalls(page: Page): Promise<string[]> {
 /** Remove the registry login from the WAVE host in a headless run of a one-Block Test. */
 async function logOutOfRegistry(request: APIRequestContext): Promise<void> {
   const fixture = {
-    name: `Helm OCI Registry Logout ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `Helm OCI Registry Logout ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: '',
     workflow: {

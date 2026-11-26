@@ -14,6 +14,7 @@
  *      entry point succeeds silently.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 
@@ -207,7 +208,7 @@ test.describe('V-REGRESSION-DELETE-RUNNING-01: Regression delete blocked by runn
     await ensureEnvironment(request)
     const environmentId = await getEnvironmentId(request)
 
-    const regressionName = `V-REG-DEL-RUN-LIST ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const regressionName = `V-REG-DEL-RUN-LIST ${Date.now()}-${randomUUID().slice(0, 5)}`
     const testId = await importTest(request, `${regressionName} body`)
     const suiteId = await createSuite(request, `${regressionName} suite`, [testId])
     const regressionId = await createRegression(request, regressionName, [suiteId])
@@ -284,7 +285,7 @@ test.describe('V-REGRESSION-DELETE-RUNNING-01: Regression delete blocked by runn
     await ensureEnvironment(request)
     const environmentId = await getEnvironmentId(request)
 
-    const regressionName = `V-REG-DEL-RUN-DETAIL ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const regressionName = `V-REG-DEL-RUN-DETAIL ${Date.now()}-${randomUUID().slice(0, 5)}`
     const testId = await importTest(request, `${regressionName} body`)
     const suiteId = await createSuite(request, `${regressionName} suite`, [testId])
     const regressionId = await createRegression(request, regressionName, [suiteId])

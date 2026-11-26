@@ -20,6 +20,7 @@
  *    FILLED secret still masks and still reveals.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { getActiveSessionId, getSessionVariables, sessionValue } from '../../helpers/fixture-import'
@@ -119,7 +120,7 @@ function testPayload(name: string): Record<string, unknown> {
 /** Create the test through the ordinary write path, assert it is accepted and validates. */
 async function seedTest(page: Page): Promise<string> {
   await ensureEnvironment(page.request)
-  const name = `V-NULL-START ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `V-NULL-START ${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, { data: testPayload(name) })
   const raw = await resp.text()
   expect(

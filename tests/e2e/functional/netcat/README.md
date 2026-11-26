@@ -21,7 +21,7 @@ Fail the block (REQ-3.3.4.3, REQ-3.4.1.9).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/netcat/v-plugin-netcat-local-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/netcat/v-plugin-netcat-local-functional.spec.ts`.
 2. The spec clears the workbench draft, imports `fixture.json` via `POST /tests`
    with `injectSsh` and opens it in the workbench.
 3. It uploads `netcat-payload.txt` to the root of the test's Test Data, then
