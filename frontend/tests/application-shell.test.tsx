@@ -161,10 +161,7 @@ vi.mock('@/features/tests/api/export-import', () => ({
   importTests: vi.fn(),
 }))
 
-// ============================================================================
-// Lazy routes load inside act, so React reports no suspended resource
-// finishing outside it.
-// ============================================================================
+// Lazy routes load inside act, so React reports no stray suspense.
 
 async function renderSettled(ui: React.ReactElement): Promise<ReturnType<typeof render>> {
   let view: ReturnType<typeof render> | undefined

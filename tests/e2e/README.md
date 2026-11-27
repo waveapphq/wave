@@ -171,9 +171,9 @@ node scripts/e2e/e2e-shard-plan.mjs --shards 4 --artifacts ci-output/plan \
 ### Targeted Runs (fail-first iteration)
 
 `./scripts/e2e/e2e-targeted-local.sh` runs exactly the spec files you name in one
-isolated container - the same image, service stack and ephemeral DB as a full
-CI shard. Use it to watch a new spec fail before the fix and pass after; the
-merge gate is still the full `15-playwright.sh full` run. For many specs,
+isolated container - the same image, service stack and ephemeral DB as a shard
+of gate 15. Use it to watch a new spec fail before the fix and pass after; the
+merge gate is the full `15-playwright.sh full` run. For many specs,
 `15-playwright.sh <spec> ...` splits them across containers instead.
 
 ```bash

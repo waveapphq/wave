@@ -64,7 +64,7 @@ The full suite runs through the gate script `./scripts/gate/08-backend-tests.sh`
 poetry run pytest tests/<area>
 ```
 
-From the root of the clone, `./scripts/gate/08-backend-tests.sh` runs every test and fails below 100% coverage. `./scripts/gate/run.sh backend` runs every gate check a backend change needs, in order, and stops at the first failure.
+From the root of the clone, `./scripts/gate/08-backend-tests.sh` runs every test and fails below 100% coverage. Gate 08 runs `scripts/lib/run-coverage-backend.sh` inside the container. `./scripts/gate/run.sh backend` runs every gate check a backend change needs, in order, and stops at the first failure.
 
 ### Code Quality
 

@@ -1,10 +1,4 @@
-"""A fake SonarQube Cloud, a git work tree and the shared cases for the SonarQube results scripts.
-
-Each results script is copied with scripts/lib/sonar-env.sh into a git work tree in tmp_path and run
-from there. Its Python reads https://sonarcloud.io; a sitecustomize module on PYTHONPATH sends
-every such request to a fake server on 127.0.0.1 and refuses any other URL, so no test reaches
-the network.
-"""
+"""A fake SonarQube Cloud, a git work tree and the shared cases of the SonarQube results scripts."""
 
 import json
 import re
@@ -396,9 +390,7 @@ def not_proven(project: Project, head: str, count: int) -> str:
     )
 
 
-# Paths relative to the project folder that SonarQube counts as tests while sonar.tests is not
-# set: a directory named doc, docs, test, tests, mock or mocks or ending in test or tests, or a
-# file name that starts with test or contains "test." or "tests.". {s} is the project's code ending.
+# Paths SonarQube counts as tests when sonar.tests is not set.
 TEST_FILE_VARIANTS = [
     "doc/example{s}",
     "docs/example{s}",
@@ -480,7 +472,7 @@ class SonarResultsCases:
     def tree(self, tmp_path: Path, project: Project) -> Tree:
         return Tree(tmp_path, project)
 
-    # --- The run as it was: findings, --fix and exit codes 0, 1 and 2 ---
+    # --- A branch run: findings, --fix and exit codes 0, 1 and 2 ---
 
     def test_branch_run_prints_summary_findings_and_dashboard_and_exits_0(
         self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project

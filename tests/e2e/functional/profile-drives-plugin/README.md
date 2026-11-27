@@ -163,7 +163,7 @@ spec's `test.describe` title, so a failure names the profile type that broke.
   referencing cannot be deleted) and then asserts the profile is gone. No
   existing profile is reused or mutated.
 - `importFixtureTest` uniquifies every test name, and runs execute in the
-  workbench session the worker fixture frees afterwards.
+  workbench session the worker fixture frees afterward.
 - The suites only READ: `/echo` and the tls-lab listener hold no per-request
   state, the kubernetes suite reads `/version` only, so it creates no
   cluster object and needs no per-test namespace, and the database suite reads

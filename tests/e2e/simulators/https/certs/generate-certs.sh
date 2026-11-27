@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test-only self-signed CA and server certificates for the HTTPS simulator; writes ca.key, ca.pem, server.key, server.crt here.
+# Test-only CA and server certificates for the HTTPS simulator, written here.
 
 set -euo pipefail
 

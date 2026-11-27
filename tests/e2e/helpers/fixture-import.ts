@@ -1,4 +1,4 @@
-/** Fixture import helpers: unique name, the zero-error validate gate, and opening the Test in the workbench. */
+/** Fixture import: a unique name, the zero-error validate gate, opening the workbench. */
 
 import { randomUUID } from 'node:crypto'
 import { expect, type Locator, type Page } from './playwright-fixtures'
@@ -50,7 +50,7 @@ export function injectServiceHost(
   return walk(fixture) as Record<string, unknown>
 }
 
-/** Rewrite ://127.0.0.1:<port> to HTTP_TARGET_HOST for ports 9449-9461, 9477-9478 and 9480-9481 only, deep and immutable. */
+/** Rewrite ://127.0.0.1:<port> to HTTP_TARGET_HOST for the stack's published ports. */
 export function injectHttpHost(
   fixture: Record<string, unknown>,
   targetHost: string = HTTP_TARGET_HOST,
@@ -121,7 +121,7 @@ export async function importFixtureTest(
   return testId
 }
 
-/** Clear the draft session, import and validate the fixture, and open it in the workbench. Returns the test id. */
+/** Clear the draft, import, validate and open the fixture; returns the test id. */
 export async function importValidateAndNavigate(
   page: Page,
   fixture: Record<string, unknown>,

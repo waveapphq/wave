@@ -1,4 +1,4 @@
-// The docs check of a pull request: the template's ticked "No docs change needed" line, or its ticked docs link.
+// Passes a ticked "No docs change needed" line, or a ticked docs link line to a merged docs pull request.
 const NO_DOCS_LINE = /^\s*[-*]\s*\[[xX]\]\s*No docs change needed\s*$/m
 const DOCS_LINK_LINE =
   /^\s*[-*]\s*\[[xX]\]\s*Docs pull request link:\s*https:\/\/github\.com\/waveapphq\/wave-docs\/pull\/(\d+)\s*$/gim

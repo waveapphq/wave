@@ -1,4 +1,4 @@
-/** Test fixtures: retried API reads, and a free workbench slot before every test, since a second tab only watches. */
+/** Test fixtures: retried API reads and a free workbench slot before every test. */
 
 import { test as base, expect, type APIRequestContext } from '@playwright/test'
 import { BACKEND_URL } from './config'

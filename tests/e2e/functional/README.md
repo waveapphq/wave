@@ -17,7 +17,7 @@ Both scripts start the backend, the frontend and the service stack in their cont
 
 External-protocol suites (HTTP, SSH, Remote Exec) target the real compose service stack - `http-echo`, `sshd`, `http-target`, and friends - managed by `scripts/e2e/e2e-stack.sh` and documented in `../services/README.md`.
 
-**Important**: Functional tests are NOT registered in `playwright.config.ts`. They run exclusively via `playwright.functional.config.ts`. The CI script (`15-playwright.sh`) runs them as a separate step.
+**Important**: Functional tests are NOT registered in `playwright.config.ts`. They run exclusively via `playwright.functional.config.ts`. Gate 15 (`15-playwright.sh`) runs them as a separate step.
 
 ## Execution Order
 

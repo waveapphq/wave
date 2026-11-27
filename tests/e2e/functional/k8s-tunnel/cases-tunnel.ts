@@ -1,4 +1,4 @@
-/** The tunneled-write workflow as data: one run holds a K8s Session through an SSH tunnel and one direct, on the same namespace name. */
+/** The tunneled-write workflow: one K8s Session through an SSH tunnel and one direct. */
 
 import {
   chainEdges,
@@ -26,7 +26,7 @@ import {
   SSH_STACK_USER,
 } from '../../helpers/config'
 
-/** The published cluster's URL, which `injectHttp` rewrites; the tunneled URL is outside its allowlist and stays literal. */
+/** The published cluster's URL, rewritten by `injectHttp`; the tunneled URL stays literal. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
 /** The tunneled URL: the backend's own loopback plus the port the tunnel Block bound. */
@@ -62,7 +62,7 @@ export interface TunnelContext {
   namespace: string
 }
 
-/** The build-time material a fixture carries; the checked-in golden holds empty strings for the PEM and token bytes. */
+/** A fixture's build-time material; the golden holds empty PEM and token strings. */
 export interface TunnelMaterial extends TunnelContext {
   caCert: string
   adminToken: string
@@ -244,7 +244,7 @@ function assertRoster(nodes: readonly WorkflowNode[]): void {
   }
 }
 
-/** Build the whole run: the SSH leg, the two Connects, the writes and reads, the marker, the teardown and the bookend. */
+/** The whole run: SSH leg, two Connects, writes, reads, marker, teardown and bookend. */
 export function buildTunnelFixture(material: TunnelMaterial): Record<string, unknown> {
   const ctx: TunnelContext = { suffix: material.suffix, namespace: material.namespace }
   const names = tunnelNames(ctx)

@@ -168,7 +168,7 @@ function blockOf(fixture: Fixture, description: string): FixtureNode {
   return found[0]
 }
 
-/** Each Search carries the 127.0.0.1 address its case names and stores no secret; the fills come from config. */
+/** Each Search uses its case's 127.0.0.1 address and stores no secret; config fills it. */
 function prepareFixture(fixture: Fixture, key: OpenSearchApiToken): Fixture {
   const searches = fixture.workflow.nodes.filter((node) => node.data.elementType === 'opensearch')
   expect(searches.map((node) => node.data.description), 'one Search per case, in case order').toEqual(

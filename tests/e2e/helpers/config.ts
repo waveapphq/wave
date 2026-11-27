@@ -22,7 +22,7 @@ export const STORAGE_BASE_PATH = path.join(os.tmpdir(), 'wave-shard-data')
 /** The slirp gateway, where a shard container reaches the host-published compose service ports. */
 const SHARD_GATEWAY_HOST = '10.0.2.2'
 
-/** Host of the HTTP-side compose services: the slirp gateway; injectHttpHost rewrites the fixture sentinel to it. */
+/** Host of the HTTP-side compose services: the slirp gateway. */
 export const HTTP_TARGET_HOST = process.env.HTTP_TARGET_HOST || SHARD_GATEWAY_HOST
 
 /** The host value HTTP fixtures carry by default, rewritten to HTTP_TARGET_HOST at import. */
@@ -73,7 +73,7 @@ export const PROXY_AUTH_PORT = '9459'
 export const PROXY_AUTH_USER = 'wave'
 export const PROXY_AUTH_SECRET = 'proxy-secret'
 
-/** Host of the kwok Kubernetes API: the slirp gateway; the injectHttp import option rewrites the fixture URLs to it. */
+/** Host of the kwok Kubernetes API: the slirp gateway. */
 export const K8S_API_HOST = process.env.K8S_API_HOST || SHARD_GATEWAY_HOST
 
 /** kwok published secure API port */
@@ -100,7 +100,7 @@ export const K8S_IMPERSONATE_USER = 'wave-reader'
 export const K8S_IMPERSONATE_GROUP = 'wave-readers'
 export const K8S_IMPERSONATE_NOBODY = 'wave-nobody'
 
-/** Host of the published K8s fault-injection stub (service `k8s-stub`) as WAVE reaches it: the slirp gateway. */
+/** Host of the published K8s fault-injection stub (`k8s-stub`): the slirp gateway. */
 export const K8S_STUB_HOST = process.env.K8S_STUB_HOST || SHARD_GATEWAY_HOST
 
 /** k8s-stub published TLS port */
@@ -135,7 +135,7 @@ export const K8S_CLIENT_KEY_PEM = fs.readFileSync(
   'utf-8'
 )
 
-/** Host of the compose SSH stack: the slirp gateway; injectServiceHost rewrites the fixture sentinel to it. */
+/** Host of the compose SSH stack: the slirp gateway. */
 export const SSH_TARGET_HOST = process.env.SSH_TARGET_HOST || SHARD_GATEWAY_HOST
 
 /** The host value SSH fixtures carry by default, rewritten to SSH_TARGET_HOST at import. */
@@ -215,7 +215,7 @@ export const PING_UNRESOLVABLE_HOST = 'ping-no-such-host.invalid'
 /** A local address the WAVE server does not hold, so binding to it is refused. */
 export const PING_FOREIGN_SOURCE = '192.0.2.9'
 
-/** Host of the database services: the slirp gateway; injectServiceHost rewrites the fixture sentinel to it. */
+/** Host of the database services: the slirp gateway. */
 export const SQL_TARGET_HOST = process.env.SQL_TARGET_HOST || SHARD_GATEWAY_HOST
 
 /** Published database ports (each container keeps its native port inside the network) */

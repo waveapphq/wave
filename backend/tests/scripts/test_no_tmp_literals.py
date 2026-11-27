@@ -1,8 +1,4 @@
-"""Static checks of the CI scripts and the E2E infrastructure files.
-
-No file names the host's shared temp folder, no script under scripts/ turns a shellcheck warning
-off, and neither Playwright config starts a web server of its own on the host.
-"""
+"""No CI or E2E file names the shared temp folder, turns shellcheck off or starts its own server."""
 
 import re
 
@@ -11,8 +7,7 @@ import pytest
 from tests.scripts.gate_support import GATES, RUNNER, gate_path
 from tests.scripts.script_support import CLONE, SHARED_TEMP, SHARED_TEMP_PATTERN
 
-# The gate scripts and the runner, the E2E scripts, the three E2E config files and the five
-# Containerfiles.
+# The CI scripts, E2E config files and Containerfiles.
 FILES = [
     *[gate_path(number) for number in GATES],
     RUNNER,

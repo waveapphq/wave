@@ -1,4 +1,4 @@
-/** Resets the shard backend's DB and network settings once before all tests; the reset trusts the stack's SSH hosts. */
+/** Resets the shard backend's DB and network settings once before all tests. */
 
 import { execSync } from 'child_process'
 import path from 'path'

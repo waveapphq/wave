@@ -786,7 +786,7 @@ scripts/e2e/e2e-stack.sh status         # compose ps
 scripts/e2e/e2e-stack.sh down           # stop + remove containers and volumes (keeps the network)
 ```
 
-- CI (`scripts/gate/15-playwright.sh`) brings the stack up before shards and tears it
+- Gate 15 (`scripts/gate/15-playwright.sh`) brings the stack up before shards and tears it
   down on exit.
 - Local targeted runs (`e2e-targeted-local.sh`) bring the stack up and down
   around the run (`WAVE_E2E_KEEP_STACK=1` to persist it between iterations).

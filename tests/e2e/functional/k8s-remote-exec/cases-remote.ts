@@ -1,4 +1,4 @@
-/** The remote K8s workflows as data: compose DNS names resolve only in the stack network, so a passing Connect ran on the SSH host. */
+/** The remote K8s workflows as data: a passing Connect ran on the SSH host. */
 
 import { expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogEntries } from '../../helpers/log-reader'
@@ -249,7 +249,7 @@ export const WRITE_SECRETS_MARKER = '[KR-9]'
 export const EXEC_MARKER = '[KR-10]'
 export const COPY_MARKER = '[KR-11]'
 
-/** The build-time material every leg carries; the checked-in golden holds empty strings for the PEM and token bytes. */
+/** Every leg's build-time material; the golden holds empty PEM and token strings. */
 export interface RemoteMaterial {
   suffix: string
   caCert: string
@@ -592,7 +592,7 @@ const ROW_STEP = 70
 const HEAD_X = -75
 const BODY_X = 120
 
-/** Build one remote workflow: the SSH open, the container with its body and then branch, the bookend and the shared variables. */
+/** One remote workflow: SSH open, the container with body and then branch, the bookend. */
 function remoteWorkflow(spec: RemoteWorkflowSpec): Record<string, unknown> {
   const variables: Record<string, FixtureVariable> = {
     ssh_pwd: secretVar(SSH_STACK_PASSWORD),
@@ -695,7 +695,7 @@ export function nodeIds(fixture: Record<string, unknown>): string[] {
   return (fixture as FixtureShape).workflow.nodes.map((node) => node.id)
 }
 
-/** The Blocks inside the container: everything its body handle reaches over plain edges, as the canvas paints the locus badge. */
+/** The Blocks the container's body handle reaches over plain edges. */
 export function remoteBodyIds(fixture: Record<string, unknown>): string[] {
   const { edges } = (fixture as FixtureShape).workflow
   const members: string[] = []
@@ -875,7 +875,7 @@ export function buildReadFixture(
   })
 }
 
-/** KR-2: one Get of the seeded Secret; the whole result rides the summary line, where it must come back masked. */
+/** KR-2: one Get of the seeded Secret; its summary line must come back masked. */
 export function buildSecretsFixture(
   material: RemoteMaterial & { namespace: string; holdMs: number },
 ): Record<string, unknown> {
@@ -1301,7 +1301,7 @@ function getSecret(
   })
 }
 
-/** KR-8: every write Block in one container: Apply and read back, a dated manifest, a Delete and its miss, Scale and Rollout Status. */
+/** KR-8: every write Block in one container, each read back or checked. */
 export function buildWriteFixture(
   material: RemoteMaterial & { namespace: string },
 ): Record<string, unknown> {
@@ -1508,7 +1508,7 @@ export function buildWriteFixture(
   })
 }
 
-/** KR-9: one planted value written as a Secret through the form and through a manifest, read back both times. */
+/** KR-9: one value written as a Secret through the form and a manifest, read back. */
 export function buildWriteSecretsFixture(
   material: RemoteMaterial & { namespace: string; canary: string; holdMs: number },
 ): Record<string, unknown> {
@@ -1985,7 +1985,7 @@ export async function expectLocusBadges(
   await expect(page.locator(LOCUS_BADGE), 'one badge per body member').toHaveCount(body.length)
 }
 
-/** A recorded read failure: the core outputs, one WARN line in the cluster's words, the Block amber, the run passed. */
+/** A recorded read failure: core outputs, one WARN line, the Block amber, the run passed. */
 export async function expectRecordedRead(
   page: Page,
   vars: SessionVariables,

@@ -1,10 +1,4 @@
-/**
- * Metadata Sidebar Tests
- *
- * Covers the status label of the shared Details section: known statuses use
- * their fixed label, any other status shows its own name with a capital first
- * letter.
- */
+/** The Details status label: fixed labels for known statuses, else the name capitalized. */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'

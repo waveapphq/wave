@@ -1,8 +1,4 @@
-"""Tests for the SonarQube results scripts when no branch is known, as on a GitHub Actions runner.
-
-There the scripts read the project with no branch and no pull request on any read, and a detached
-HEAD does not stop them.
-"""
+"""The SonarQube results scripts with no branch known, as on a GitHub Actions runner."""
 
 from collections.abc import Iterator
 from pathlib import Path

@@ -1,4 +1,4 @@
-/** The K8s exec suite's case tables, fixture builder and shared assertions; each leg names the `KE-` ids it proves (matrix in the suite README). */
+/** The K8s exec suite's cases, fixture builder and assertions; each leg names its `KE-` ids. */
 
 import { expect, type Page } from '../../helpers/playwright-fixtures'
 import { type LogEntry } from '../../helpers/log-reader'
@@ -68,7 +68,7 @@ export const EXEC_TARGET = {
   [CONTAINER_SIDECAR]: 'sidecar-container',
 } as const
 
-/** The run-specific names the legs need; every shard shares the one kwok filesystem, so every pod-side path carries the run suffix. */
+/** Run-specific names; every pod-side path carries the run suffix, as shards share kwok. */
 export interface ExecContext {
   namespace: string
   suffix: string
@@ -142,7 +142,7 @@ type LegBase = {
   what: string
   /** The Block's own Name, for a leg whose engine line a spec reads (EXEC-26). */
   name?: string
-  /** The Block records its failure instead of raising, binds error and reason too, and is expected to paint amber. */
+  /** The Block records its failure, binds error and reason, and paints amber. */
   records?: boolean
   /** Overrides the marker expression. */
   marker?: string
@@ -276,7 +276,7 @@ export const TOO_MANY_REASON = 'ArchiveTooManyEntries'
 /** The apiserver's own sentence for a pod that is not there. */
 export const podNotFound = (pod: string): string => `pods "${pod}" not found`
 
-/** The reason the cluster gives for a pod its exec fixture does not cover; the message differs per transport, so it is not asserted. */
+/** The cluster's reason for a pod the exec fixture does not cover; not asserted. */
 export const NO_EXEC_REASON = 'InternalError'
 
 /** K8s Exec's own INFO line. */
@@ -429,7 +429,7 @@ export function hardFailLegs(): ExecLeg[] {
   ]
 }
 
-/** KE-11 to KE-14: two interpreters, a non-zero exit and a recorded refusal, in the second exec-fixture pod. */
+/** KE-11 to KE-14: two interpreters, a non-zero exit and a recorded refusal. */
 export function scriptLegs(): ExecLeg[] {
   const base = { pod: EXEC_POD_B, container: CONTAINER_APP }
   return [
@@ -471,7 +471,7 @@ export function scriptLegs(): ExecLeg[] {
   ]
 }
 
-/** KE-15 to KE-17: a file and a directory out of the pod, and a missing source path; each follows the Exec leg that wrote it. */
+/** KE-15 to KE-17: a file and a directory out of the pod, and a missing source path. */
 export function pullLegs(ctx: ExecContext): ExecLeg[] {
   const dir = podDir(ctx)
   const seedDir = [

@@ -160,8 +160,7 @@ run_container() { # run_container <number>...: the needed container checks in on
     RESULT[$1]="failed (CI image $IMAGE not found)"
     return 1
   fi
-  # keep-id maps the host user to ciuser, so the container writes files the host user owns.
-  # cat ends only when a script's log tee has written its last line; the container's end kills it.
+  # keep-id: container files belong to the host user; cat ends with the log tee.
   podman run --rm --userns=keep-id -v "$ROOT:/workspace" -w /workspace \
     -e WAVE_IN_CI_CONTAINER=1 -e WAVE_CI_PROGRESS_SECONDS -e CI_PYTEST_WORKERS "$IMAGE" \
     bash -c 'for script in "$@"; do /workspace/scripts/gate/"$script" 2>&1 | cat; code=${PIPESTATUS[0]}; [ "$code" -eq 0 ] || exit "$code"; done' \

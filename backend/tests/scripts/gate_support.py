@@ -1,11 +1,4 @@
-"""The gate scripts under scripts/gate/, a copy of one in a work tree, and the checks they share.
-
-Every gate script prints one result line, `<NN> <Check name>: passed` or
-`<NN> <Check name>: failed (<reason>)`, names its log under ci-output/ as `Log: <path>` at start
-and end, and exits 0 when it passes, 1 when it fails and 2 on a usage or setup error. The
-container checks, 04 to 09, start the wave-ci container themselves when run alone and run
-directly when WAVE_IN_CI_CONTAINER=1 is set.
-"""
+"""The gate scripts under scripts/gate/, a work tree copy of one, and their shared checks."""
 
 import re
 import subprocess
@@ -155,11 +148,7 @@ def with_origin(repo: Repo, tmp_path: Path, branches: dict[str, str]) -> None:
 
 
 class GateContract:
-    """The result line, the log line and the exit codes every gate script shares.
-
-    A test module subclasses it as a Test class, sets NUMBER and gives three fixtures: passing,
-    failing and usage_error, each a GateRun.
-    """
+    """The result line, log line and exit codes every gate script shares."""
 
     NUMBER = 0
 
@@ -203,11 +192,7 @@ class GateContract:
 
 
 class ContainerContract:
-    """Where a container check (04 to 09) runs: its own wave-ci container, or directly.
-
-    A test module subclasses it as a Test class and gives the fixtures passing (run alone),
-    inside (run with WAVE_IN_CI_CONTAINER=1) and no_image (run alone with no CI image).
-    """
+    """Where a container check (04 to 09) runs: its own wave-ci container, or directly."""
 
     NUMBER = 0
 

@@ -200,7 +200,7 @@ export async function getActiveSessionId(
   return sessionId as string
 }
 
-/** Arm http-echo's timeout endpoint for a key: the next /timeout call delays once, so the Repeat is instant. */
+/** Arm http-echo's timeout endpoint for a key: the next /timeout call delays once. */
 export async function armHttpsTimeout(
   request: APIRequestContext,
   key: string,

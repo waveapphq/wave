@@ -6,10 +6,10 @@
 #   --flows also prints each alert's path from input to problem.
 #   --all reports every alert of the working tree, with no target branch scan; no language means all three.
 # Needs the CodeQL CLI on PATH, or CODEQL pointing at it.
-#   CODEQL_BASE          branch to compare with (default origin/release/<version> for a fix or feature branch, else origin/master)
+#   CODEQL_BASE          target (origin/release/<version> for fix and feature branches, else origin/master)
 #   CODEQL_WORK_DIR      scratch space, several GB while a scan runs (default ~/.cache/wave-codeql)
 #   CODEQL_RAM           MB of memory CodeQL may use (default 6000)
-#   CODEQL_GITHUB_TOKEN  a token that reads code scanning alerts: leaves out alerts dismissed on GitHub and reads the target branch's GitHub analysis
+#   CODEQL_GITHUB_TOKEN  reads code scanning alerts: skips dismissed ones, reads the target's analysis
 set -euo pipefail
 
 NUMBER="12"

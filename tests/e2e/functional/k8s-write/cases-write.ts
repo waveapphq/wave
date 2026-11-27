@@ -1,4 +1,4 @@
-/** The K8s write suite's case tables, fixture builder and shared assertions; each leg names the `KW-` ids it proves (matrix in the suite README). */
+/** The K8s write suite's cases, fixture builder and assertions; each leg names its `KW-` ids. */
 
 import { expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { expectNodeStatus, getNodeStatuses } from '../../helpers/k8s-run'
@@ -41,7 +41,7 @@ export const MAX_BLOCK_NAME = 64
 /** The image the kwok cluster runs, matching the seeded workloads. */
 const POD_IMAGE = 'busybox:1.36'
 
-/** Which credential a leg runs under; the limited one has the read-only role, so the cluster refuses its writes. */
+/** A leg's credential; the limited one is read-only, so the cluster refuses its writes. */
 export type WriteSession = 'admin' | 'limited'
 
 export const SESSION_VARIABLE: Record<WriteSession, string> = {
@@ -97,7 +97,7 @@ type LegBase = {
   what: string
   /** Defaults to `admin`. */
   session?: WriteSession
-  /** The Block records its failure instead of raising, binds the core outputs and is expected to paint amber. */
+  /** The Block records its failure, binds the core outputs and paints amber. */
   records?: boolean
   /** The Block is expected to raise: a Try/Catch wraps it and the then branch carries the caught message. */
   guarded?: boolean
@@ -391,7 +391,7 @@ export function secretLegs(ctx: WriteContext): WriteLeg[] {
   ]
 }
 
-/** KW-08 to KW-12: one Deployment through apply, scale, restart, status and a cascading delete, each leg on the last one's result. */
+/** KW-08 to KW-12: one Deployment through apply, scale, restart, status and delete. */
 export function deploymentLegs(ctx: WriteContext): WriteLeg[] {
   return [
     {
@@ -777,7 +777,7 @@ function defaultMarker(leg: WriteLeg): WorkflowNode {
   })
 }
 
-/** A Try/Catch-wrapped leg: the catch branch stamps its marker and the then branch prints the caught message. */
+/** A Try/Catch leg: catch stamps its marker, then prints the caught message. */
 function guardedNodes(
   leg: WriteLeg,
   block: WorkflowNode,

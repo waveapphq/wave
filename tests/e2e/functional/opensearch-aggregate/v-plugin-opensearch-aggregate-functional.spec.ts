@@ -192,7 +192,7 @@ function blockOf(fixture: Fixture, description: string): FixtureNode {
   return found[0]
 }
 
-/** Each Aggregate carries the 127.0.0.1 address, logs in as `wave` and stores no secret; the password and CA come from config. */
+/** Each Aggregate uses 127.0.0.1 and user `wave`, storing no secret; config fills the rest. */
 function prepareFixture(fixture: Fixture): Fixture {
   const blocks = fixture.workflow.nodes.filter((node) => node.data.elementType === 'opensearch')
   expect(blocks.map((node) => node.data.description), 'one Aggregate per case, in case order').toEqual(

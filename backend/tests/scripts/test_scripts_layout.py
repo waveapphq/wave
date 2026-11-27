@@ -1,4 +1,4 @@
-"""The folders under scripts/: each file in its folder, and no old path left in the clone."""
+"""Each scripts/ file sits in its folder; no file names a script path that does not exist."""
 
 import fnmatch
 import re
@@ -37,9 +37,8 @@ LAYOUT = {
 }
 OWNED_FOLDERS = ["gate", "lib", "report", "e2e", "images"]
 
-# Scripts whose work a gate script took over under another name. Built at run time, so this
-# file names none of them.
-RETIRED = [
+# Script names no file may use; built at run time so this file holds none.
+FORBIDDEN = [
     "check-" + "branch-name.sh",
     "check-" + "text.sh",
     "check-" + "orphaned-files.sh",
@@ -51,7 +50,7 @@ RETIRED = [
     "sonar-" + "scan-backend.sh",
     "sonar-" + "scan-frontend.sh",
 ]
-MOVED = [name for folder, names in LAYOUT.items() if folder != "gate" for name in names]
+LAID_OUT = [name for folder, names in LAYOUT.items() if folder != "gate" for name in names]
 
 
 def entries(folder: Path) -> list[str]:
@@ -109,21 +108,21 @@ class TestFolders:
         assert done.returncode == 0
 
 
-class TestNoOldPath:
-    """No file of the clone names a script by a path that no longer exists."""
+class TestNoMissingPath:
+    """No file of the clone names a script by a path that does not exist."""
 
-    @pytest.mark.parametrize("name", RETIRED)
-    def test_no_file_names_a_retired_script(self, name: str) -> None:
+    @pytest.mark.parametrize("name", FORBIDDEN)
+    def test_no_file_names_a_forbidden_script(self, name: str) -> None:
         assert files_naming(re.compile(re.escape(name))) == []
 
-    @pytest.mark.parametrize("name", MOVED)
-    def test_no_file_names_the_old_path_of_a_moved_file(self, name: str) -> None:
-        old = re.compile(r"(?<![\w/.-])scripts/" + re.escape(name) + r"\b")
+    @pytest.mark.parametrize("name", LAID_OUT)
+    def test_no_file_names_a_script_outside_its_folder(self, name: str) -> None:
+        flat = re.compile(r"(?<![\w/.-])scripts/" + re.escape(name) + r"\b")
 
-        assert files_naming(old) == []
+        assert files_naming(flat) == []
 
-    @pytest.mark.parametrize("name", RETIRED)
-    def test_no_retired_script_is_left(self, name: str) -> None:
+    @pytest.mark.parametrize("name", FORBIDDEN)
+    def test_no_forbidden_script_exists(self, name: str) -> None:
         assert list(SCRIPTS.rglob(name)) == []
 
 

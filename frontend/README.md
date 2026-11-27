@@ -79,7 +79,7 @@ WAVE_ADMIN_ALLOWED=true poetry run uvicorn wavecore.api.app:app --reload --reloa
 npx vitest run tests/lib/api.test.ts
 ```
 
-From the root of the clone, `./scripts/gate/09-frontend-tests.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions, and on any warning a test prints. It prints `Progress: <N>%` of test files done about once a minute (`WAVE_CI_PROGRESS_SECONDS` sets the interval), each failed test as it happens, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`. `./scripts/gate/run.sh frontend` runs every gate check a frontend change needs, in number order.
+From the root of the clone, `./scripts/gate/09-frontend-tests.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions, and when a test writes anything to stderr. It prints `Progress: <N>%` of test files done about once a minute (`WAVE_CI_PROGRESS_SECONDS` sets the interval), each failed test as it happens, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`. These lines come from `scripts/vitest-progress-reporter.mjs`. `./scripts/gate/run.sh frontend` runs every gate check a frontend change needs, in number order.
 
 ### Running E2E/Visual Tests (Playwright)
 

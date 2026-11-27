@@ -29,7 +29,7 @@ export const POSTED_REASONS = [
   SEEDED.warningReason,
 ] as const
 
-/** Everything a scoped read of the kubelet-events pod returns; the seeder waits for all four Stage events first. */
+/** What a scoped read of the kubelet-events pod returns, after all four Stage events. */
 export const KUBELET_REASONS: readonly string[] = [...STAGE_REASONS, ...POSTED_REASONS]
 
 /** Newest first, the order `_seen_at` must produce; the 1.5 s settle before the POSTs fixes the head. */
@@ -50,7 +50,7 @@ export const MALFORMED_SELECTOR_TOKEN = 'bogus'
 /** A field selector value the apiserver cannot parse: the comma opens a clause with no operator. */
 export const MALFORMED_REASON = `${SEEDED.warningReason},${MALFORMED_SELECTOR_TOKEN}`
 
-/** Which credential a leg runs under; `anon` and `junk` are hand-written kubeconfigs that K8s Connect cannot build. */
+/** A leg's credential; `anon` and `junk` are kubeconfigs K8s Connect cannot build. */
 export type EventsSession = 'admin' | 'anon' | 'junk'
 
 const SESSION_VARIABLE: Record<EventsSession, string> = {
@@ -440,7 +440,7 @@ function connectNode(material: EventsSweepMaterial): WorkflowNode {
   })
 }
 
-/** Build the whole sweep: one Connect, one Events Block and marker per leg, the guarded empty-session leg, the bookend. */
+/** The whole sweep: one Connect, an Events Block and marker per leg, and the bookend. */
 export function buildEventsSweepFixture(
   material: EventsSweepMaterial,
 ): Record<string, unknown> {

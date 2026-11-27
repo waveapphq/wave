@@ -70,7 +70,7 @@ sealed on every surface (REQ-5.1.1, REQ-3.4.1.5, REQ-4.5.1, REQ-4.6.3).
 ## Isolation
 
 - `importFixtureTest` uniquifies every test name; runs execute in the
-  workbench session and the worker fixture frees it afterwards.
+  workbench session and the worker fixture frees it afterward.
 - The specs only READ from the cluster (`/version`) and mint short-lived
   tokens for the dedicated `wave-tests` service account - no cluster-scoped
   mutations, and the `restricted` namespace is never written.

@@ -101,7 +101,7 @@ With no area, it reads the files your branch changes against its release branch 
 | `06-e2e-types.sh` | In a `wave-ci` container: the E2E type check. | `tests/e2e/` changed. |
 | `07-frontend-build.sh` | In a `wave-ci` container: the frontend build. | `frontend/` changed. |
 | `08-backend-tests.sh` | In a `wave-ci` container: every backend test with pytest, which fails below 100% coverage. | `backend/` or `scripts/` changed. |
-| `09-frontend-tests.sh` | In a `wave-ci` container: every frontend test with Vitest, which fails below 100% coverage. | `frontend/` changed. |
+| `09-frontend-tests.sh` | In a `wave-ci` container: every frontend test with Vitest, which fails below 100% coverage of lines, branches and statements, or 96% of functions. | `frontend/` changed. |
 | `10-sonar-backend.sh` | The SonarQube scan of the backend. | `backend/` changed. |
 | `11-sonar-frontend.sh` | The SonarQube scan of the frontend. | `frontend/` changed. |
 | `12-codeql.sh` | CodeQL code scanning of the languages your branch changes. | Python, TypeScript, JavaScript or a workflow changed. |
@@ -111,7 +111,7 @@ With no area, it reads the files your branch changes against its release branch 
 
 Each script prints one result line, such as `08 Backend tests: passed` or `08 Backend tests: failed (<reason>)`, and exits with 0 when it passes, 1 when it fails and 2 when it cannot run, such as without its container image. Run alone, a container check starts its own `wave-ci` container; the runner runs them all in one. Gates 04 and 05 run each of their tools, even after one fails, and the reason names each tool that failed. The runner ends with a table of every gate script and its result, `skipped: not needed` for a script your change does not need.
 
-The frontend tests fail below 100% coverage of lines, branches and statements. They also fail when a test writes a warning to stderr.
+The frontend tests fail below 100% coverage of lines, branches and statements, or below 96% of functions. They also fail when a test writes anything to stderr.
 
 While the tests run, gate 08 prints a line such as `Progress: 40%` each time pytest's percentage changes, and gates 09 and 15 print one once a minute. The Playwright line gives each container its own share, such as `Progress: shard 1/8 40%, shard 2/8 35%`. Set `WAVE_CI_PROGRESS_SECONDS` to print the line at another interval, in seconds. Gate 09 also prints each failed test, with its file and its error, as soon as it fails, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`.
 
@@ -175,7 +175,7 @@ Every check that WAVE skips is listed in public with its reason in [tests/exclus
 
 Fix the code first. When your change needs an exclusion, add its entry to the right list and its ID in a comment at the spot, in the same pull request, and say why in the pull request description. A maintainer reviews the reason, then marks the issue or dismisses the alert in SonarQube Cloud or CodeQL.
 
-Gate 03 checks that each ID comment in the code has its entry. Gates 13 and 14, SonarQube exclusions and CodeQL exclusions, fail when a mark or a dismissal does not match its entry. Each failure line says what to add or change. Run them after gates 10 and 11 with `./scripts/gate/13-sonar-exclusions.sh` and `./scripts/gate/14-codeql-exclusions.sh`.
+Gate 03 checks that each ID comment in the code has its entry. Gates 13 and 14, SonarQube exclusions and CodeQL exclusions, fail when a mark or a dismissal does not match its entry. Each failure line says what to add or change. Run gate 13 after gates 10 and 11 with `./scripts/gate/13-sonar-exclusions.sh`, and gate 14 after CodeQL (gate 12, or GitHub's CodeQL on the pushed commit) with `./scripts/gate/14-codeql-exclusions.sh`.
 
 ### Run a part of the tests
 
@@ -338,7 +338,7 @@ Only collaborators can open pull requests. To become one, ask in an issue. A mai
 
 9. If the change needs a docs change, push the docs branch with `git push -u origin <branch>`. Open `https://github.com/waveapphq/wave-docs/compare/release/<version>...<branch>?expand=1`, and click 'Create pull request'. The page opens with `release/<version>` as the base branch. In the description of your WAVE pull request, tick the box "Docs pull request link:" and put the full link of that pull request after it, in place of the template's `NUMBER` link. If the change needs no docs change, tick the box "No docs change needed" in the description. The check reads only these two lines of the template; a docs link anywhere else counts for nothing.
 
-A check blocks the merge of each pull request until it ticks "No docs change needed" or ticks the docs link line with a merged pull request of the docs repo with the same branch name. While the linked docs pull request is open, the check waits and the merge stays blocked. When the docs pull request is merged, re-run the check. The check fails when the description ticks no box, or when the linked docs pull request is on a branch with another name, was closed without a merge, or does not exist.
+A check blocks the merge of each pull request until it ticks "No docs change needed" or ticks the docs link line with a merged pull request of the docs repo with the same branch name. While the linked docs pull request is open, the check waits and the merge stays blocked. When the docs pull request is merged, re-run the check. The check fails when the description ticks no box, or when the linked docs pull request is on a branch with another name, was closed without a merge, or does not exist. The check is `.github/scripts/docs-check.cjs`, run by `.github/workflows/docs-check.yml`.
 
 A pull request that changes a CI file needs the approval of the code owner that `.github/CODEOWNERS` names.
 

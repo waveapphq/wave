@@ -1,4 +1,4 @@
-/** The workflow behind STOPPED-READ-SILENT: a Parallel lane with a short time limit holding a K8s Get the stub answers late. */
+/** STOPPED-READ-SILENT: a short Parallel lane holding a K8s Get the stub answers late. */
 
 import {
   chainEdges,
@@ -24,7 +24,7 @@ const STUB_BASE = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_STUB_PORT}`
 /** Seconds the stub sits on the resource read before answering. */
 export const READ_DELAY_SECONDS = 8
 
-/** Milliseconds the reader lane is allowed: enough for Connect and discovery, far short of the read's answer. */
+/** The reader lane's time limit: enough for Connect, far short of the read's answer. */
 export const BRANCH_LIMIT_MS = 2500
 
 /** The read's own timeout, above the stub delay, so the read succeeds late and still writes its INFO line. */

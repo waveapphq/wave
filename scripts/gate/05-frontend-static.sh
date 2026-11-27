@@ -20,8 +20,7 @@ if [ "${WAVE_IN_CI_CONTAINER:-}" != "1" ]; then
     echo "$NUMBER $CHECK: failed (CI image $IMAGE not found)"
     exit 2
   fi
-  # --userns=keep-id maps the host user to ciuser, so the container writes files the host user owns.
-  # cat ends only when the script's log tee has written its last line; the container's end kills it.
+  # keep-id: container files belong to the host user; cat ends with the log tee.
   podman run --rm --userns=keep-id -v "$ROOT:/workspace" -w /workspace \
     -e WAVE_IN_CI_CONTAINER=1 "$IMAGE" bash -c '"$0" 2>&1 | cat; exit "${PIPESTATUS[0]}"' "/workspace/$SCRIPT" 2>&1 \
     | sed -u "s#^Log: /workspace/#Log: $ROOT/#"

@@ -26,8 +26,7 @@ vi.mock('@/components/ui/toast', async (importOriginal) => ({
   }),
 }))
 
-// The history tests check the router only: every page read stays pending, so each page
-// shows its loading state and calls no backend.
+// Router only: every page read stays pending, so no backend call.
 const { pendingReads } = vi.hoisted(() => ({
   pendingReads: (mod: Record<string, unknown>) =>
     Object.fromEntries(

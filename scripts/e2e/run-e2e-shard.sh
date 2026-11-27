@@ -1,5 +1,5 @@
 #!/bin/bash
-# One E2E shard in a wave-e2e container: its own backend and frontend, then the functional and visual dark tests.
+# One E2E shard in a wave-e2e container: own backend and frontend, then functional and dark visual specs.
 #
 # Callers: scripts/gate/15-playwright.sh and scripts/e2e/e2e-targeted-local.sh.
 # Required env vars:

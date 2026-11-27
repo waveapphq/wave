@@ -1,9 +1,4 @@
-"""The cases both SonarQube gate scripts (10 and 11) share, run against the fake SonarQube Cloud.
-
-Each test file binds its own project fixture, number and coverage report. The work tree is a fix
-branch whose one commit adds line 2 of the project's code file, with the release branch on
-origin; the scanner is a stub, curl and wget reach only the fake, and no test reaches the network.
-"""
+"""The cases both SonarQube gate scripts (10 and 11) share, against a fake SonarQube Cloud."""
 
 from collections.abc import Iterator
 from pathlib import Path

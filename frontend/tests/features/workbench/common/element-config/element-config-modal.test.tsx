@@ -559,8 +559,7 @@ describe('ElementConfigModal Component', () => {
       const descriptionInput = screen.getByTestId('element-description-input')
       await user.type(descriptionInput, 'Changed Description')
 
-      // Press Escape - should show confirmation dialog, not close. The dialog suspends while it
-      // opens, so the key press is awaited inside act until its focus trap and layers settle.
+      // Escape opens the confirmation, awaited in act while the dialog settles.
       await act(async () => {
         fireEvent.keyDown(descriptionInput, { key: 'Escape', code: 'Escape' })
       })

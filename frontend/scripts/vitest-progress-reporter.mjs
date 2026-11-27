@@ -16,7 +16,7 @@ function describeError(error) {
   return parts.join('\n');
 }
 
-/** Prints a `Progress: <N>%` line at a fixed interval, each failure as it happens and the test counts at the end. */
+/** Prints progress on a timer, each failure as it happens and the counts at the end. */
 export default class VitestProgressReporter {
   root = process.cwd();
   total = 0;
@@ -47,7 +47,7 @@ export default class VitestProgressReporter {
     this.write(`FAIL ${this.path(testCase.module.moduleId)} > ${testCase.fullName}\n${errors}\n`);
   }
 
-  // The local frontend CI's stderr gate reads a test's console output, so pass it through unchanged.
+  // Gate 09's stderr check reads a test's console output, so pass it through unchanged.
   onUserConsoleLog(log) {
     const stream = log.type === 'stderr' ? process.stderr : process.stdout;
     stream.write(log.content.endsWith('\n') ? log.content : `${log.content}\n`);

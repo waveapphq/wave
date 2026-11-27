@@ -273,8 +273,7 @@ STOP_CASES = [
 ]
 STOP_IDS = ["green", "failing-tests"]
 
-# The real pkill, then a pause: a shell that reports a killed job always has time to print it,
-# as on a busy machine, so the report shows up on every run and not only when the race is lost.
+# The real pkill, then a pause, so the shell always prints its job report.
 REAL_PKILL = shutil.which("pkill")
 SLOW_PKILL = f"""
 real = {REAL_PKILL!r}

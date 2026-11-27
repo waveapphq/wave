@@ -1,4 +1,4 @@
-/** The Helm suite's legs, fixture builder and shared assertions; each leg names the `HL-` ids it proves (matrix in the suite README). */
+/** The Helm suite's legs, fixture builder and assertions; each leg names its `HL-` ids. */
 
 import { expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { expectNodeStatus, finishRun, finishRunAnyVerdict, getNodeStatuses, startRun } from '../../helpers/k8s-run'
@@ -346,7 +346,7 @@ function defaultMarker(leg: HelmLeg): WorkflowNode {
   })
 }
 
-/** A Try/Catch-wrapped leg: the catch branch stamps its marker and the then branch prints the caught message. */
+/** A Try/Catch leg: catch stamps its marker, then prints the caught message. */
 function guardedNodes(
   leg: HelmLeg,
   block: WorkflowNode,

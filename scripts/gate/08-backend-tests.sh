@@ -24,8 +24,7 @@ if [ "${WAVE_IN_CI_CONTAINER:-}" != "1" ]; then
   CONTAINER="wave-gate-08-$$"
   CODE_FILE=$(mktemp)
   trap 'podman stop -t 2 "$CONTAINER" > /dev/null 2>&1; STOPPED=1' INT TERM
-  # --userns=keep-id maps the host user to ciuser, so the container writes files the host user owns.
-  # cat ends only when the script's log tee has written its last line; the container's end kills it.
+  # keep-id: container files belong to the host user; cat ends with the log tee.
   {
     podman run --rm --name "$CONTAINER" --userns=keep-id -v "$ROOT:/workspace" -w /workspace \
       -e WAVE_IN_CI_CONTAINER=1 -e CI_PYTEST_WORKERS \

@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * The unit test run's console policy: every console line a test does not assert on reaches
- * the run's output, so the local frontend CI fails on it.
- */
+/** Every console line a test does not assert on reaches the run's output. */
 
 import { describe, it, expect } from 'vitest'
 import config from '../vite.config'

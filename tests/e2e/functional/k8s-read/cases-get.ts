@@ -1,4 +1,4 @@
-/** Every K8s Get option the sweep proves, as data: the Kind sweep and the shape legs; the id families are in the suite README. */
+/** Every K8s Get option the sweep proves, as data: the Kind sweep and the shape legs. */
 
 import {
   chainEdges,
@@ -40,7 +40,7 @@ export const SECRET_TABLE_COLUMNS = ['Name', 'Type', 'Data', 'Age'] as const
 /** A kind no cluster serves, for the discovery miss. */
 export const MISSING_KIND = 'widgets'
 
-/** Which credential a leg runs under; `junk` and `empty` are hand-written session variables K8s Connect cannot produce. */
+/** A leg's credential; `junk` and `empty` are session variables Connect cannot produce. */
 export type GetSession = 'admin' | 'limited' | 'anon' | 'junk' | 'empty'
 
 export const SESSION_VARIABLE: Record<GetSession, string> = {
@@ -51,7 +51,7 @@ export const SESSION_VARIABLE: Record<GetSession, string> = {
   empty: 'sess_empty',
 }
 
-/** The `result` type the Output Format and Search by pair declares; the pre-run gate refuses a mismatch, so a started run proves it. */
+/** The `result` type an Output Format and Search by pair declares; a started run proves it. */
 export type ResultType = 'map' | 'array' | 'table' | 'string'
 
 /** The plugin's own success line: `Read {n} {kind} object(s) from {path}`. */
@@ -490,7 +490,7 @@ export const MISSING_POD_YAML = 'wave-nope-yaml'
 /** A field label no Pod carries. The cluster answers 400 with its own text. */
 export const BAD_FIELD_SELECTOR = 'spec.bogus=1'
 
-/** The eight empty-shape cells with their error wordings, plus the amber row, kept apart for the runtime budget. */
+/** The eight empty-shape cells with their error wordings, plus the amber row. */
 export function failureLegs(): GetLeg[] {
   return [
     {

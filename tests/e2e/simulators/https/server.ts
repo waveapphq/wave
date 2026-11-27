@@ -1,4 +1,4 @@
-/** HTTPS simulator for E2E tests: the HTTPS endpoints below, and an HTTP health server for the compose health check. */
+/** HTTPS simulator for E2E tests, plus an HTTP health server for compose. */
 
 import https from 'node:https'
 import http from 'node:http'
@@ -99,7 +99,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     })
   }
 
-  // --- /retry?key=<key>&fail_count=<n>&fail_status=<code>: fail_status (default 502) fail_count times per key, then 200 ---
+  // --- /retry: fail_status (default 502) fail_count times per key, then 200 ---
   if (url.pathname === '/retry') {
     const key = url.searchParams.get('key') || 'default'
     const failCount = parseInt(url.searchParams.get('fail_count') || '2', 10)
@@ -136,7 +136,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return jsonResponse(res, 200, { message: 'Timeout armed', key })
   }
 
-  // --- /timeout?key=<key>&delay=<seconds>: delays once when armed, and disarms at once so the retry is instant ---
+  // --- /timeout: delays once when armed, then disarms so the retry is instant ---
   if (url.pathname === '/timeout') {
     const key = url.searchParams.get('key') || 'default'
     const delay = parseFloat(url.searchParams.get('delay') || '10')
