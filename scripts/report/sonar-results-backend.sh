@@ -3,6 +3,7 @@
 # Provides actionable detail for all issue categories: bugs, vulnerabilities,
 # code smells, security hotspots, duplications, and the quality gate with its conditions.
 # Requires SONAR_TOKEN. SONAR_URL is optional and defaults to SonarQube Cloud.
+# A GitHub push run reads the pushed branch (GITHUB_REF_NAME).
 # Usage: sonar-results-backend.sh [--fix] [--pr <number>]
 #   --fix          also print each finding's flow and, once per rule, why it is an issue and how to fix it
 #   --pr <number>  read that pull request's results and gate instead of the current branch's
@@ -42,7 +43,9 @@ from html.parser import HTMLParser
 
 SQ_URL = os.environ["SONAR_URL"]
 PROJECT_KEY = os.environ["PROJECT_KEY"]
-BRANCH = os.environ["SONAR_BRANCH"]
+# sonar-env.sh names only a local branch; a GitHub push run reads the pushed one.
+PUSHED = os.environ.get("GITHUB_REF_NAME", "") if os.environ.get("GITHUB_EVENT_NAME") == "push" else ""
+BRANCH = os.environ["SONAR_BRANCH"] or PUSHED
 TARGET = os.environ["SONAR_BRANCH_TARGET"]
 PULL_REQUEST = os.environ["SONAR_RESULTS_PR"]
 TOKEN = os.environ["SONAR_TOKEN"]
