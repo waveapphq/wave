@@ -18,6 +18,7 @@
  * 5. Breadcrumb pops are guarded the same way (drill OUT also changes scope).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { popToBreadcrumbSegment } from '../../helpers/workbench'
 import {
@@ -53,7 +54,7 @@ async function pressDelete(page: Page, nodeId: string) {
 }
 
 function seedName(tag: string): string {
-  return `V-SHEET-03-${tag} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  return `V-SHEET-03-${tag} ${Date.now()}-${randomUUID().slice(0, 4)}`
 }
 
 test.describe('V-SHEET-03: config sheet lifecycle', () => {

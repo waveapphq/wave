@@ -1369,7 +1369,7 @@ describe('BackupRestoreTab', () => {
       const fiberKey = Object.keys(input).find((k) => k.startsWith('__reactFiber'))
       let refObject: { current: HTMLInputElement | null } | null = null
       if (fiberKey) {
-        let fiber = (input as unknown as Record<string, unknown>)[fiberKey] as {
+        const fiber = (input as unknown as Record<string, unknown>)[fiberKey] as {
           ref?: { current: HTMLInputElement | null }
           return?: unknown
         }

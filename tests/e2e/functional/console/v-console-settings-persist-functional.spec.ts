@@ -16,6 +16,7 @@
  *    console (single shared store, all surfaces).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import fs from 'fs'
@@ -25,7 +26,7 @@ const STORAGE_KEY = 'wave-console-display-settings'
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8'))
-  fixture.name = `Console Settings Persist ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `Console Settings Persist ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

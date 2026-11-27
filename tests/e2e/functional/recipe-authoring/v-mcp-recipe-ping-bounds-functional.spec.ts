@@ -18,7 +18,7 @@
  * 6. Pass when not At least N replies, an expression on Minimum replies and an expression on Count
  *    validate clean; a Count that fails its own floor shows only Count's finding.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-ping-bounds-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-ping-bounds-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

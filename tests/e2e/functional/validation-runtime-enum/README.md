@@ -25,16 +25,14 @@ save check that refuses the same value written as a literal.
 
 ## Pre-requisites
 
-- Backend + frontend running (the functional config spawns them in
-  host-mode, or `WAVE_E2E_EXTERNAL_SERVICES=1` re-uses container-managed
-  services).
+- Backend + frontend running (the shard container starts them).
 - The shared E2E environment (`E2E_ENV_NAME`) exists. The test calls
   `ensureEnvironment(page.request)` which idempotently creates it.
 
 ## Run
 
 ```bash
-./scripts/e2e-targeted-local.sh functional/validation-runtime-enum/v-validate-runtime-enum-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/validation-runtime-enum/v-validate-runtime-enum-functional.spec.ts
 ```
 
 ## Files

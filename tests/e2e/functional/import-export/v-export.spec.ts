@@ -7,7 +7,7 @@
  *   - Secret values mode: mask / encrypted / plaintext
  *
  * REQ: REQ-5.2.4.9 Test Import and Export
- * Run: ./scripts/e2e-targeted-local.sh functional/import-export/v-export.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/import-export/v-export.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

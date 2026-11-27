@@ -11,8 +11,8 @@ Test with a single inner Log:
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 - The shared E2E execution environment (created by the spec if missing).
 
 ## Execution Steps
@@ -53,8 +53,8 @@ external service is used: the URL in the fixtures is only printed.
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 - The shared E2E execution environment (created by the spec if missing).
 
 ## Execution Steps

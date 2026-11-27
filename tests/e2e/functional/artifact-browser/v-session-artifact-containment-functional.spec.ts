@@ -16,7 +16,7 @@
  * 3. Two links that point at each other are an invalid path, not a missing file.
  * 4. A link that stays inside the folder is still served with its target's bytes.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/artifact-browser/v-session-artifact-containment-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/artifact-browser/v-session-artifact-containment-functional.spec.ts
  */
 
 import fs from 'fs'

@@ -9,8 +9,8 @@ either value view; a live Current float value set in the window propagates downs
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 
 ## Execution Steps
 

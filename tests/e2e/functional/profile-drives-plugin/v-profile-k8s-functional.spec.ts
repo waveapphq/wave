@@ -28,9 +28,10 @@
  * REQ: REQ-4.7.4, REQ-4.7.10, REQ-5.1.1, REQ-3.4.1.5
  * Design decisions: K8SPROF-9 (a profile must be proven to drive a plugin)
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/profile-drives-plugin/v-profile-k8s-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/profile-drives-plugin/v-profile-k8s-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogCopyTexts } from '../../helpers/log-reader'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
@@ -71,7 +72,7 @@ async function createProfile(
   environmentId: string,
 ): Promise<{ id: string; name: string }> {
   const profile = loadProfile()
-  profile.name = `${profile.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  profile.name = `${profile.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   profile.environment_values = { [environmentId]: profile.config }
   const resp = await page.request.post(`${BACKEND_URL}/profiles`, { data: profile })
   const body = await resp.json().catch(() => null)

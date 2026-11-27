@@ -12,7 +12,7 @@ Variable-Setter value affordances.
 
 ## Execution
 
-`./scripts/e2e-targeted-local.sh functional/profile-value-editor/<spec>.spec.ts` from the root of the clone, or via `./scripts/ci-playwright-local.sh`.
+`./scripts/e2e/e2e-targeted-local.sh functional/profile-value-editor/<spec>.spec.ts` from the root of the clone, or via `./scripts/gate/15-playwright.sh full`.
 
 ## What it validates
 

@@ -14,6 +14,7 @@
  * UI check after the run. V-FN-SCOPE-RUN holds the full WS-stream check.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -23,7 +24,7 @@ const BOUND_VALUE = 'Hello-RuntimeValue'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-INPUT-VALUE ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-INPUT-VALUE ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Function input some_text bound to a literal; verifies runtime visibility',
     variables: {},

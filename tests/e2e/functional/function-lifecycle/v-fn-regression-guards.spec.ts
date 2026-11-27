@@ -34,7 +34,7 @@ test.describe('V-FN-REGRESSION-GUARDS', () => {
   }) => {
     // POST /tests with a duplicate name maps to 409 with a deterministic,
     // anchored message so the FE can surface a friendly error.
-    const name = `V-FN-REGRESSION dup ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const name = `V-FN-REGRESSION dup ${Date.now()}-${randomUUID().slice(0, 4)}`
     const seed = {
       name,
       version: '1.0.0',
@@ -103,7 +103,7 @@ test.describe('V-FN-REGRESSION-GUARDS', () => {
     // works wherever focus is.
     const seedResp = await request.post(`${BASE}/tests`, {
       data: {
-        name: `V-FN-REGRESSION delete ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: `V-FN-REGRESSION delete ${Date.now()}-${randomUUID().slice(0, 4)}`,
         version: '1.0.0',
         description: 'regression guard - Ctrl+A + Delete',
         workflow: { nodes: [], edges: [] },

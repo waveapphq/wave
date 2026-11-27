@@ -39,11 +39,11 @@ cd backend
 poetry install
 
 # 5. Fetch the prebuilt driver wheels Remote Execution carries to a remote host
-../scripts/fetch-remote-wheels.sh
+../scripts/lib/fetch-remote-wheels.sh
 
 # Only when updating the OpenSearch editor's Query DSL vocabulary: clone
 # https://github.com/opensearch-project/opensearch-api-specification, then (from the repository root)
-#   node scripts/opensearch-api-spec-extract.mjs --spec-dir <clone> --commit <the clone's HEAD sha>
+#   node scripts/dev/opensearch-api-spec-extract.mjs --spec-dir <clone> --commit <the clone's HEAD sha>
 # It rewrites wavecore/api/services/opensearch_tools/api-spec-extract.json, which records the sha
 # under "source"; put the same sha in the repository's NOTICE.
 
@@ -53,7 +53,7 @@ poetry run pytest tests/secrets/test_key_provider.py
 # All set! ✅
 ```
 
-The full suite runs through `./scripts/ci-backend-local.sh`, from the root of the clone, on the required host that CONTRIBUTING states. Some of its tests load the Linux wheels from step 5 for this interpreter. They fail when the wheels are missing; they never skip.
+The full suite runs through the gate script `./scripts/gate/08-backend-tests.sh`, from the root of the clone, on the required host that CONTRIBUTING states. Some of its tests load the Linux wheels from step 5 for this interpreter. They fail when the wheels are missing; they never skip.
 
 ## Development Workflow
 
@@ -64,20 +64,22 @@ The full suite runs through `./scripts/ci-backend-local.sh`, from the root of th
 poetry run pytest tests/<area>
 ```
 
-From the root of the clone, `./scripts/ci-backend-local.sh` runs every test and fails below 100% coverage.
+From the root of the clone, `./scripts/gate/08-backend-tests.sh` runs every test and fails below 100% coverage. Gate 08 runs `scripts/lib/run-coverage-backend.sh` inside the container. `./scripts/gate/run.sh backend` runs every gate check a backend change needs, in order, and stops at the first failure.
 
 ### Code Quality
 
 ```bash
 # Format code
-poetry run black wavecore/
+poetry run black wavecore/ tests/
 
 # Lint and auto-fix
-poetry run ruff check wavecore/ --fix
+poetry run ruff check wavecore/ tests/ --fix
 
 # Type checking
 poetry run mypy wavecore/
 ```
+
+From the root of the clone, `./scripts/gate/04-backend-static.sh` runs these three checks together, reports each one, and ends with `04 Backend static: passed` or `04 Backend static: failed (<reason>)`.
 
 ### Running the Server
 
@@ -109,10 +111,7 @@ CORS is pre-configured for ports 3000 and 3001 in `config/config.example.yaml`.
 
 **Coverage Requirements:**
 - **100% code coverage** is required for all modules
-- `./scripts/ci-backend-local.sh`, run from the root of the clone, writes the coverage reports to:
-  - Terminal (with missing line numbers)
-  - HTML format: `htmlcov/index.html`
-  - JSON format: `coverage.json`
+- `./scripts/gate/08-backend-tests.sh`, run from the root of the clone, prints the coverage report with the missing line numbers and writes `coverage.xml` for SonarQube
 - Tests must pass AND coverage must be 100% before committing
 
 ## Project Structure

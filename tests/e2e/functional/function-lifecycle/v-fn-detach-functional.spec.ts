@@ -75,7 +75,7 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<{ id: st
 async function seedHostTest(request: APIRequestContext, functionId: string): Promise<string> {
   const resp = await request.post(`${BASE}/tests`, {
     data: {
-      name: `V-FN-DETACH ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-DETACH ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'V-FN-DETACH host: one shared Function reference.',
       workflow: {
@@ -113,7 +113,7 @@ async function seedHostTest(request: APIRequestContext, functionId: string): Pro
 async function seedEmptyHostTest(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BASE}/tests`, {
     data: {
-      name: `V-FN-DETACH host ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-DETACH host ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Empty host Test (used to exercise the in-memory detach path).',
       workflow: { nodes: [], edges: [] },

@@ -26,6 +26,7 @@
  *    edge on the branch it was wired to
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -67,7 +68,7 @@ function logNode(id: string, message: string, x: number, y: number): Record<stri
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-PARALLEL-01-CFG ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-PARALLEL-01-CFG ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'One Parallel at the two-branch minimum, each lane wired.',
     workflow: {

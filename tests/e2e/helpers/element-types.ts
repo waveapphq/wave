@@ -6,6 +6,7 @@
  * numeric-looking text stays text, nested leaves keep their JSON types.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { expect, type APIRequestContext, type Locator, type Page } from './playwright-fixtures'
@@ -239,7 +240,7 @@ export function substitute<T>(value: T, placeholders: Record<string, string>): T
 
 /** A token unique to this run, for entity names. */
 export function runToken(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 /** Create a Test through POST /tests under a per-run name and prove it validates clean. */

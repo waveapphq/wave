@@ -4,14 +4,14 @@
 # The compose service selects a config variant via its command; hostname is set
 # per service in compose.yaml.
 #
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/sshd)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e/services/sshd)
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # openssh-server + the five interpreters the SSH Session Script suite exercises
 # (sh + bash are in the base image; add python3, perl, node). Node 22 via
-# nodesource to match scripts/Containerfile's node convention.
+# nodesource to match scripts/images/Containerfile's node convention.
 RUN apt-get update -qq && \
     apt-get install -y -qq --no-install-recommends \
         openssh-server \
@@ -37,25 +37,26 @@ RUN arch="$(dpkg --print-architecture)" && \
         arm64) sha="${HELM_SHA256_ARM64}" ;; \
         *) echo "unsupported architecture for helm: ${arch}" >&2; exit 1 ;; \
     esac && \
-    curl -fsSLo /tmp/helm.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" && \
-    echo "${sha}  /tmp/helm.tar.gz" | sha256sum -c - && \
-    tar -xzf /tmp/helm.tar.gz -C /tmp "linux-${arch}/helm" && \
-    install -m 0755 "/tmp/linux-${arch}/helm" /usr/local/bin/helm && \
-    rm -rf /tmp/helm.tar.gz "/tmp/linux-${arch}" && \
+    work="$(mktemp -d)" && \
+    curl -fsSLo "${work}/helm.tar.gz" "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" && \
+    echo "${sha}  ${work}/helm.tar.gz" | sha256sum -c - && \
+    tar -xzf "${work}/helm.tar.gz" -C "${work}" "linux-${arch}/helm" && \
+    install -m 0755 "${work}/linux-${arch}/helm" /usr/local/bin/helm && \
+    rm -rf "${work}" && \
     helm version --short
 
 # The test user: password auth (wave / wave-secret) AND key auth (authorized_keys
 # from the committed client public key and the passphrase-protected one). Both
 # WAVE SSH auth paths hit this user.
-COPY keys/client_ed25519.pub keys/wave_ed25519_passphrase.pub /tmp/
+COPY keys/client_ed25519.pub keys/wave_ed25519_passphrase.pub /wave-keys/
 RUN useradd -m -s /bin/bash wave && \
     echo 'wave:wave-secret' | chpasswd && \
     mkdir -p /home/wave/.ssh && \
-    cat /tmp/client_ed25519.pub /tmp/wave_ed25519_passphrase.pub > /home/wave/.ssh/authorized_keys && \
+    cat /wave-keys/client_ed25519.pub /wave-keys/wave_ed25519_passphrase.pub > /home/wave/.ssh/authorized_keys && \
     chown -R wave:wave /home/wave/.ssh && \
     chmod 700 /home/wave/.ssh && \
     chmod 600 /home/wave/.ssh/authorized_keys && \
-    rm /tmp/client_ed25519.pub /tmp/wave_ed25519_passphrase.pub
+    rm -r /wave-keys
 
 # SFTP-only account (dropzone / dropzone-secret), chrooted by sshd_config. Every
 # chroot path component must be root-owned and not group/world writable.

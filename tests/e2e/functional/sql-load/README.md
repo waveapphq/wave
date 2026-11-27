@@ -32,7 +32,7 @@ SQL-5, SQL-7, SQL-8, SQL-9).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/sql-load/v-plugin-sql-load-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/sql-load/v-plugin-sql-load-functional.spec.ts`.
 2. The spec makes a token, fills the fixture's connection rows, imports it via
    `POST /tests` and opens it in the workbench.
 3. It uploads `sql-load-overwrite.csv` to the root of the test's Test Data, then

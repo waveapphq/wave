@@ -11,6 +11,7 @@
  * REQ: REQ-3.5.1.20 (Switch/Case multi-branch decisions)
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -66,7 +67,7 @@ function caseBranch(id: string, label: string, reference: string) {
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-SWITCH-THEN-EDGE-SAVE ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-SWITCH-THEN-EDGE-SAVE ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Switch with two wired cases and a wired then egress.',
     workflow: {

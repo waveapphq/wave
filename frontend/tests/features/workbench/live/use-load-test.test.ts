@@ -711,6 +711,10 @@ describe('useLoadTest', () => {
       expect(block?.detail.status).toBe(500)
       expect(actions.setNodes).not.toHaveBeenCalled()
       expect(actions.markSaved).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load test:',
+        expect.objectContaining({ message: 'Server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -742,6 +746,10 @@ describe('useLoadTest', () => {
       expect(mockFetchTest).toHaveBeenCalledTimes(2)
       expect(actions.setNodes).toHaveBeenCalled()
       expect(actions.markSaved).toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load test:',
+        expect.objectContaining({ message: 'Server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -770,6 +778,10 @@ describe('useLoadTest', () => {
 
       expect(usePageBlockStore.getState().block?.detail.message).toBe('Still down')
       expect(actions.setNodes).not.toHaveBeenCalled()
+      expect(consoleSpy.mock.calls).toEqual([
+        ['Failed to load test:', expect.objectContaining({ message: 'Server error' })],
+        ['Failed to load test:', expect.objectContaining({ message: 'Still down' })],
+      ])
       consoleSpy.mockRestore()
     })
 
@@ -794,6 +806,10 @@ describe('useLoadTest', () => {
       expect(usePageBlockStore.getState().block?.title).toBe('Could not load test')
       expect(actions.requestFitView).toHaveBeenCalledWith({ padding: 0.2, duration: 0 })
       expect(result.current.isLoadingTest).toBe(false)
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load test:',
+        expect.objectContaining({ message: 'Server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -817,6 +833,10 @@ describe('useLoadTest', () => {
       const block = usePageBlockStore.getState().block
       expect(block?.title).toBe('Could not load test')
       expect(block?.detail.message).toBe('Test store down')
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load test:',
+        expect.objectContaining({ message: 'Test store down' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -838,6 +858,10 @@ describe('useLoadTest', () => {
       })
 
       expect(usePageBlockStore.getState().block?.title).toBe('Could not load test')
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load test:',
+        expect.objectContaining({ message: 'Server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -849,7 +873,6 @@ describe('useLoadTest', () => {
       mockFetchTest.mockImplementation(
         () => new Promise((_resolve, reject) => { failTest = reject })
       )
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       setupStore()
       const cbs = defaultCallbackParams()
 
@@ -870,7 +893,6 @@ describe('useLoadTest', () => {
       })
 
       expect(usePageBlockStore.getState().block).toBeNull()
-      consoleSpy.mockRestore()
     })
   })
 
@@ -1557,7 +1579,6 @@ describe('useLoadTest', () => {
     it('raises no card for a test that was closed before its read failed', async () => {
       setupSuccessfulApiMocks()
       const reads = deferTestReads()
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const actions = setupClosableStore()
       const { result } = renderLoader()
 
@@ -1575,7 +1596,6 @@ describe('useLoadTest', () => {
 
       expect(usePageBlockStore.getState().block).toBeNull()
       expect(actions.setNodes).not.toHaveBeenCalled()
-      consoleSpy.mockRestore()
     })
 
     it('raises no deleted-test dialog for a test that was closed before its read came back', async () => {
@@ -1672,6 +1692,10 @@ describe('useLoadTest', () => {
 
       expect(usePageBlockStore.getState().block?.title).toBe('Could not load test')
       expect(actions.setEditingTest).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load test:',
+        expect.objectContaining({ message: 'Server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -1792,7 +1816,6 @@ describe('useLoadTest', () => {
     it('asks the next visit to show the canvas when the test read failed after the Workbench left', async () => {
       setupSuccessfulApiMocks()
       const reads = deferTestReads()
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const actions = setupClosableStore()
       const { result, unmount } = renderLoader()
 
@@ -1810,7 +1833,6 @@ describe('useLoadTest', () => {
 
       expect(usePageBlockStore.getState().block).toBeNull()
       expect(actions.requestFitView).toHaveBeenCalledWith({ padding: 0.2, duration: 0 })
-      consoleSpy.mockRestore()
     })
 
     it('asks for no fit when the canvas already shows again after the Workbench left', async () => {

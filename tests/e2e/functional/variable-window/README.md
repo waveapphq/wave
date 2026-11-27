@@ -9,7 +9,7 @@ zero errors, drives the window through the UI, and reads every result back from 
 
 ## Pre-requisites
 
-- Backend and frontend on the per-worker ports (Playwright fixtures).
+- Backend and frontend on the shard's ports (Playwright fixtures).
 - The shared E2E execution environment (`ensureEnvironment`, created by the import helper).
 - No other services.
 - Containerized only (see `tests/e2e/README.md`); the folder runs in the `functional-workflow`

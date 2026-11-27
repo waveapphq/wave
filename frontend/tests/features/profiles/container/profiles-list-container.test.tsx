@@ -173,8 +173,6 @@ function changeDescription() {
 describe('ProfilesListContainer', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    // Silence console.error for expected error handling tests
-    vi.spyOn(console, 'error').mockImplementation(() => {})
     mockFetchProfiles.mockResolvedValue(mockProfilesResponse)
     mockFetchProfileTypes.mockResolvedValue(mockProfileTypes)
     mockFetchProfileTypeSchema.mockResolvedValue({
@@ -314,7 +312,9 @@ describe('ProfilesListContainer', () => {
       const { userEvent } = await import('@testing-library/user-event')
       const user = userEvent.setup()
 
-      mockDuplicateProfile.mockRejectedValue(new Error('Duplicate failed'))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const failure = new Error('Duplicate failed')
+      mockDuplicateProfile.mockRejectedValue(failure)
       renderProfilesListContainer()
 
       await waitFor(() => {
@@ -340,12 +340,14 @@ describe('ProfilesListContainer', () => {
       await waitFor(() => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument()
       })
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Failed to duplicate profile:', failure)
     })
 
     it('handles duplicate error with non-Error object', async () => {
       const { userEvent } = await import('@testing-library/user-event')
       const user = userEvent.setup()
 
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       mockDuplicateProfile.mockRejectedValue('String error')
       renderProfilesListContainer()
 
@@ -365,8 +367,12 @@ describe('ProfilesListContainer', () => {
       await user.click(duplicateOption)
 
       await waitFor(() => {
-        expect(mockDuplicateProfile).toHaveBeenCalledWith('profile-1')
+        expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+          'Failed to duplicate profile:',
+          'String error'
+        )
       })
+      expect(mockDuplicateProfile).toHaveBeenCalledWith('profile-1')
     })
   })
 
@@ -878,6 +884,7 @@ describe('ProfilesListContainer', () => {
           })
         )
       })
+      expect(await screen.findByText('Production Database')).toBeInTheDocument()
     })
 
     it('initializes page and pageSize from URL search params', async () => {
@@ -899,6 +906,7 @@ describe('ProfilesListContainer', () => {
           })
         )
       })
+      expect(await screen.findByText('Production Database')).toBeInTheDocument()
     })
   })
 
@@ -984,6 +992,7 @@ describe('ProfilesListContainer', () => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument()
       })
 
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Failed to load profile for edit:', 'String error')
       consoleSpy.mockRestore()
     })
   })
@@ -1284,6 +1293,7 @@ describe('ProfilesListContainer', () => {
         expect(mockCreateProfile).toHaveBeenCalled()
       })
 
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Failed to save profile:', 'String error')
       consoleSpy.mockRestore()
     })
 
@@ -1377,7 +1387,7 @@ describe('ProfilesListContainer', () => {
       })
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalled()
+        expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Failed to delete profile:', 'String error for delete')
       })
 
       consoleSpy.mockRestore()
@@ -1392,10 +1402,9 @@ describe('ProfilesListContainer', () => {
 
       renderProfilesListContainer()
 
-      await waitFor(() => {
-        // No profiles - show empty state
-        expect(mockFetchProfiles).toHaveBeenCalled()
-      })
+      // No profiles - show empty state
+      expect(await screen.findByTestId('empty-state')).toBeInTheDocument()
+      expect(mockFetchProfiles).toHaveBeenCalled()
 
       // The delete handler won't do anything if profile not found
       // This tests the early return in handleDeleteProfile
@@ -1410,6 +1419,7 @@ describe('ProfilesListContainer', () => {
       await waitFor(() => {
         expect(mockFetchEnvironments).toHaveBeenCalled()
       })
+      expect(await screen.findByText('Production Database')).toBeInTheDocument()
     })
 
     it('shows warning when trying to create profile without environments', async () => {
@@ -1671,7 +1681,6 @@ describe('ProfilesListContainer', () => {
     it('creates custom profile with wrapped config format', async () => {
       const { userEvent } = await import('@testing-library/user-event')
       const user = userEvent.setup()
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       renderProfilesListContainer()
 
@@ -1716,7 +1725,6 @@ describe('ProfilesListContainer', () => {
         expect(mockCreateProfile).toHaveBeenCalled()
       })
 
-      consoleSpy.mockRestore()
     })
 
     it('updates custom profile with wrapped config including type metadata', async () => {
@@ -2339,7 +2347,6 @@ describe('ProfilesListContainer', () => {
     it('handles bulk duplicate error gracefully', async () => {
       const { userEvent } = await import('@testing-library/user-event')
       const user = userEvent.setup()
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       mockDuplicateProfile.mockRejectedValue(new Error('Duplicate failed'))
 
@@ -2371,13 +2378,11 @@ describe('ProfilesListContainer', () => {
       expect(await screen.findByText('Duplicate Failed')).toBeInTheDocument()
       expect(screen.getByText('Duplicate failed')).toBeInTheDocument()
 
-      consoleSpy.mockRestore()
     })
 
     it('handles bulk delete error gracefully', async () => {
       const { userEvent } = await import('@testing-library/user-event')
       const user = userEvent.setup()
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       mockDeleteProfile.mockRejectedValue(new Error('Delete failed'))
 
@@ -2409,7 +2414,6 @@ describe('ProfilesListContainer', () => {
       expect(await screen.findByText('Delete Failed')).toBeInTheDocument()
       expect(screen.getByText('Delete failed')).toBeInTheDocument()
 
-      consoleSpy.mockRestore()
     })
   })
 })

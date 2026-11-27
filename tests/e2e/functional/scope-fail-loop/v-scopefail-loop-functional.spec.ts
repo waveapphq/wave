@@ -22,6 +22,7 @@
  *    ("Assertion failed: 1 of 3 assertions failed" + the expression line).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { selectEnvironment } from '../../helpers/workbench'
@@ -32,7 +33,7 @@ import path from 'path'
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8'))
-  fixture.name = `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

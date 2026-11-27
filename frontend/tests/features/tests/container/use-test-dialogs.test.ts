@@ -444,7 +444,7 @@ describe('useTestDialogs - save before switching test', () => {
 
   it('reports the reason and does not switch when the save fails', async () => {
     vi.mocked(updateTest).mockRejectedValue(new Error('Suite variable collision'))
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const deps = createDeps('test-2')
     const { result } = renderHook(() => useTestDialogs(deps), { wrapper })
 
@@ -456,11 +456,15 @@ describe('useTestDialogs - save before switching test', () => {
     expect(mockNavigate).not.toHaveBeenCalled()
     expect(deps.setSwitchTestDialogOpen).not.toHaveBeenCalled()
     expect(result.current.isSavingBeforeNewTest).toBe(false)
+    expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+      'Failed to save before creating new test:',
+      expect.objectContaining({ message: 'Suite variable collision' })
+    )
   })
 
   it('reports a generic reason when the rejection is not an Error', async () => {
     vi.mocked(updateTest).mockRejectedValue('not an error object')
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const deps = createDeps('test-2')
     const { result } = renderHook(() => useTestDialogs(deps), { wrapper })
 
@@ -469,6 +473,10 @@ describe('useTestDialogs - save before switching test', () => {
     })
 
     expect(deps.setError).toHaveBeenCalledWith('Failed to save test')
+    expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+      'Failed to save before creating new test:',
+      'not an error object'
+    )
   })
 })
 

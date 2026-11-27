@@ -29,7 +29,7 @@
  * 5. V-BACKUP-UP-5: leaving the Backup page for another Settings section sends
  *    DELETE /api/backup/uploads/<id> for the kept upload.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/backup-restore/v-backup-upload-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/backup-restore/v-backup-upload-functional.spec.ts
  */
 
 import { randomUUID } from 'node:crypto'

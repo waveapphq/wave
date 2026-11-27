@@ -46,6 +46,7 @@
  *         (TDATA-7).
  */
 
+import { randomUUID } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 import {
   test,
@@ -276,7 +277,7 @@ test.describe('V-TESTDATA-01: Test Data chip, sheet and file-reference picker', 
     const envId = await environmentId(request)
 
     seededTestId = await createValidTest(request, {
-      name: `V-TESTDATA-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `V-TESTDATA-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
       nodes: SEED_NODES,
       edges: SEED_EDGES,
     })

@@ -1,17 +1,4 @@
-/**
- * The tunneled-write workflow, as data.
- *
- * One chained run holds two K8s Sessions at once. Session A reaches the
- * unpublished cluster through an SSH tunnel; session B reaches the published
- * cluster directly. The two are separate apiservers, so both sides use the
- * SAME namespace name and the only thing that differs between an A block and
- * a B block is the session it reads.
- *
- * The test process has no route to the tunneled cluster, so session A creates
- * and removes its own namespace from inside the workflow. Every object it
- * writes carries the run suffix, so a run that dies before its Delete leaves
- * nothing another run can collide with.
- */
+/** The tunneled-write workflow: one K8s Session through an SSH tunnel and one direct. */
 
 import {
   chainEdges,
@@ -39,13 +26,10 @@ import {
   SSH_STACK_USER,
 } from '../../helpers/config'
 
-/** The published cluster's fixture-side URL. `injectHttp` rewrites it in
- *  container-shard mode; the tunneled URL below is deliberately outside that
- *  allowlist and stays literal. */
+/** The published cluster's URL, rewritten by `injectHttp`; the tunneled URL stays literal. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
-/** The tunneled URL: the backend's own loopback plus the port the tunnel Block
- *  bound. Nothing else joins the tunnel to Connect. */
+/** The tunneled URL: the backend's own loopback plus the port the tunnel Block bound. */
 export const TUNNELED_API_URL = "f'https://127.0.0.1:{lport}'"
 
 /** kwok is pinned to Kubernetes 1.33 - every version read starts with this. */
@@ -72,22 +56,19 @@ export const TUNNEL_FIXTURE_NAME = 'K8s Tunneled Write E2E Test'
 export const GOLDEN_SUFFIX = 'golden00'
 export const GOLDEN_NAMESPACE = `wave-e2e-${GOLDEN_SUFFIX}`
 
-/** What a run needs to name its objects. `namespace` is the same string on
- *  both clusters: two apiservers, so the name is free on each. */
+/** What a run needs to name its objects; `namespace` is the same on both clusters. */
 export interface TunnelContext {
   suffix: string
   namespace: string
 }
 
-/** The build-time material a fixture carries. PEM and token bytes are never
- *  committed, so the checked-in golden holds empty strings here. */
+/** A fixture's build-time material; the golden holds empty PEM and token strings. */
 export interface TunnelMaterial extends TunnelContext {
   caCert: string
   adminToken: string
 }
 
-/** The three ConfigMaps: one only the tunneled cluster holds, one only the
- *  published cluster holds, and one both hold under the same name. */
+/** The three ConfigMaps: one per cluster, and one both hold under the same name. */
 export interface TunnelNames {
   tunnelOnly: string
   publishedOnly: string
@@ -102,14 +83,12 @@ export function tunnelNames(ctx: TunnelContext): TunnelNames {
   }
 }
 
-/** The `data` map a side writes: the side that wrote it, and the run it came
- *  from, so a read back proves the exact bytes. */
+/** The `data` map a side writes, naming the side and the run so a read back proves the exact bytes. */
 export function originData(ctx: TunnelContext, origin: string): Record<string, string> {
   return { [ORIGIN_KEY]: origin, run: ctx.suffix }
 }
 
-/** The namespace document session A applies. Namespace is cluster-scoped, so
- *  it takes no namespace segment and no Block namespace. */
+/** The namespace document session A applies; cluster-scoped, so no namespace segment. */
 export function namespaceManifest(namespace: string): string {
   return `apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ${namespace}\n`
 }
@@ -136,8 +115,7 @@ export const notFoundMessage = (kind: string, name: string, namespace: string): 
 export const configMapPath = (namespace: string, name: string): string =>
   `/api/v1/namespaces/${namespace}/configmaps/${name}`
 
-/** A cluster-scoped delete takes no namespace segment; the cascade is always
- *  on the query. */
+/** A cluster-scoped delete takes no namespace segment; the cascade is always on the query. */
 export const namespaceDeletePath = (name: string): string =>
   `/api/v1/namespaces/${name}?propagationPolicy=Background`
 
@@ -169,12 +147,10 @@ export const TUNNEL_NODE_IDS = [
   'log-done',
 ] as const
 
-/** The Blocks that record a failure instead of raising: each paints amber and
- *  leaves the run passed. */
+/** The Blocks that record a failure instead of raising: each paints amber and leaves the run passed. */
 export const RECORDING_NODE_IDS = ['get-b-miss', 'get-a-miss'] as const
 
-/** Every Apply in the run. Each writes exactly one object, so the console
- *  carries one `Applied 1 object(s)` line per entry. */
+/** Every Apply in the run; each prints one `Applied 1 object(s)` line. */
 export const APPLY_NODE_IDS = [
   'ns-a',
   'apply-a-solo',
@@ -239,8 +215,7 @@ function getConfigMap(
 /** The applied-object type the roundtrip Apply declares for `result`. */
 const APPLIED_RESULT_TYPE = k8sApplyResultType({ define_with: 'form', output_format: 'map' })
 
-/** The three exported rosters are what the spec addresses Blocks by, so they
- *  have to keep matching the chain the builder emits. */
+/** The spec addresses Blocks by the exported rosters, so they must match the chain the builder emits. */
 function assertRoster(nodes: readonly WorkflowNode[]): void {
   const same = (a: readonly string[], b: readonly string[]): boolean =>
     a.length === b.length && a.every((entry, index) => entry === b[index])
@@ -269,8 +244,7 @@ function assertRoster(nodes: readonly WorkflowNode[]): void {
   }
 }
 
-/** Build the whole run: the SSH leg, the two Connects, the interleaved writes
- *  and reads, the marker, the namespace teardown and the bookend. */
+/** The whole run: SSH leg, two Connects, writes, reads, marker, teardown and bookend. */
 export function buildTunnelFixture(material: TunnelMaterial): Record<string, unknown> {
   const ctx: TunnelContext = { suffix: material.suffix, namespace: material.namespace }
   const names = tunnelNames(ctx)
@@ -501,8 +475,7 @@ export function buildTunnelFixture(material: TunnelMaterial): Record<string, unk
         name: ctx.namespace,
         ignore_not_found: true,
         cascade: 'background',
-        // The namespace goes to Terminating and its contents drain after the
-        // run, so the Block must not sit on the poll.
+        // The namespace drains after the run, so the Block must not wait for it.
         wait_until_gone: false,
         on_error: 'fail',
       },

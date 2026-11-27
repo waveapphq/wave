@@ -1059,33 +1059,21 @@ describe('Dropdown Component', () => {
 
   describe('Context Error Handling', () => {
     it('throws error when DropdownTrigger is used outside Dropdown', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       expect(() => {
         render(<DropdownTrigger>Click me</DropdownTrigger>)
       }).toThrow('Dropdown components must be used within a Dropdown')
-
-      consoleSpy.mockRestore()
     })
 
     it('throws error when DropdownMenu is used outside Dropdown', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       expect(() => {
         render(<DropdownMenu><DropdownItem>Item</DropdownItem></DropdownMenu>)
       }).toThrow('Dropdown components must be used within a Dropdown')
-
-      consoleSpy.mockRestore()
     })
 
     it('throws error when DropdownItem is used outside Dropdown', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       expect(() => {
         render(<DropdownItem>Item</DropdownItem>)
       }).toThrow('Dropdown components must be used within a Dropdown')
-
-      consoleSpy.mockRestore()
     })
   })
 

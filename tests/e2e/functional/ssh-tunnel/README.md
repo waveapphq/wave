@@ -17,13 +17,13 @@ Target is on (REQ-3.4.1.3 / REQ-5.1.5; SSHTUN-6, SSHTUN-7, SSHTUN-8, SSH-10).
   time and stopped by `timeout 120`.
 - `fixture.json` is imported via `POST /tests` and validated via
   `POST /tests/{id}/validate?context=run` (zero errors) before the run. SSH
-  hosts carry the `127.0.0.1` sentinel, rewritten by `injectServiceHost` per mode.
+  hosts carry the `127.0.0.1` sentinel, rewritten by `injectServiceHost`.
   `{ssh_host}` below is that injected value (`SSH_TARGET_HOST`); `{p}` is a
   tunnel's Local Port output.
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-ssh-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-ssh-tunnel-functional.spec.ts`.
 2. The spec checks the fixture's destinations against the `helpers/config.ts`
    constants, imports `fixture.json` and validates it (zero errors).
 3. Secret round-trip guard: `GET` then `PUT` the test so the masked secret
@@ -102,12 +102,12 @@ database, and that its TLS name check uses the far host (REQ-3.4.1.6, REQ-5.1.4;
 - The spec replaces `__TOKEN__` in the fixture with a per-run token, so the table it creates
   (`sqltun_<token>`) is its own; the fixture drops it. The CA variable `ca_pem` is filled from
   `CA_CERT_PEM` and every SQL block's blank Password from `SQL_STACK_PASSWORD`. The SSH block and the direct read-back block carry the `127.0.0.1` sentinel
-  the import rewrites per mode; every tunneled SQL block dials `localhost`, or the expression
+  the import rewrites; every tunneled SQL block dials `localhost`, or the expression
   `'127.0.0.1'`, which the rewrite never touches. Every tunnel takes an auto-assigned Local Port.
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-sql-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-sql-tunnel-functional.spec.ts`.
 2. The spec checks the fixture's targets against the `helpers/config.ts` constants, clears the
    workbench draft, imports and validates the fixture (zero errors), and opens it.
 3. It selects the shared E2E environment, presses Run and waits for `sql-tunnel-e2e-done`.
@@ -159,12 +159,12 @@ host (REQ-5.1.2, REQ-3.4.1.15, REQ-5.1.5; OS-14, OS-11, OS-10).
 - `beforeAll` seeds F-LOGS into `wave-e2e-<token>-app-logs` on the direct leg; `afterAll`
   deletes `wave-e2e-<token>-*` and the imported Test. The spec replaces `__TOKEN__` and fills
   every Search's blank Password and CA Certificate from `OPENSEARCH_PASSWORD` and `CA_CERT_PEM`.
-  The SSH block carries the `127.0.0.1` sentinel the import rewrites per mode; each Cluster URL is
+  The SSH block carries the `127.0.0.1` sentinel the import rewrites; each Cluster URL is
   an expression on the Local Port (`url` in `expressionFields`), which the rewrite never touches.
 
 ### Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-opensearch-tunnel-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/ssh-tunnel/v-plugin-opensearch-tunnel-functional.spec.ts`.
 2. The spec checks the fixture against the `helpers/config.ts` constants, imports and validates
    it (no repairs, zero errors and warnings), opens it and sets the console to DEBUG.
 3. It selects the shared E2E environment, presses Run and waits for `os-tunnel-done`.

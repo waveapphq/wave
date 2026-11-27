@@ -96,7 +96,7 @@ test.describe('V-SHEET-02: library sheet on the DraggableSheet primitive', () =>
       name: `sheet02_${randomUUID().slice(0, 6)}`,
     })
     const testId = await createValidTest(request, {
-      name: `V-SHEET-02 ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-SHEET-02 ${Date.now()}-${randomUUID().slice(0, 4)}`,
       nodes: [
         sharedNode('fn-1', {
           functionId: fn.functionId,

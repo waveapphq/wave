@@ -123,6 +123,30 @@ describe('Regressions CRUD API', () => {
       expect(result.suites[1].avgDuration).toBeNull()
       expect(result.suites[1].tags).toEqual([])
     })
+
+    it('falls back to empty suites, null last run, empty tags and empty variables when the detail omits them', async () => {
+      const { suites: _suites, last_run: _lastRun, tags: _tags, variables: _variables, ...rest } = mockDetail
+      const detailWithoutOptionalFields = rest as unknown as RegressionDetailApiResponse
+      vi.mocked(apiClient.get)
+        .mockResolvedValueOnce({
+          data: detailWithoutOptionalFields,
+          meta: { requestId: '' },
+          status: 200,
+        })
+        .mockResolvedValueOnce({
+          data: [],
+          meta: { requestId: '' },
+          status: 200,
+        })
+
+      const result = await fetchRegressionDetail('reg-1')
+
+      expect(result.regression.suiteIds).toEqual([])
+      expect(result.regression.lastRun).toBeNull()
+      expect(result.regression.tags).toEqual([])
+      expect(result.regression.variables).toEqual({})
+      expect(result.suites).toEqual([])
+    })
   })
 
   describe('createRegression', () => {

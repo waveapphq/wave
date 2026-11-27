@@ -9,7 +9,7 @@ UI-side fact (the DEBUG connect trace, harvested via `data-copy-text`).
 
 ## Pre-requisites
 - Backend + frontend E2E stacks up; real-service stack up
-  (`scripts/e2e-stack.sh up --wait`): the `tls-lab` service (listeners 9451-9457).
+  (`scripts/e2e/e2e-stack.sh up --wait`): the `tls-lab` service (listeners 9451-9457).
 - Shared env `E2E Execution Env`.
 - The console is switched to DEBUG in each spec so the connect trace renders.
 

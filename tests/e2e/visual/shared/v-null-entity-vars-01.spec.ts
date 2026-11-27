@@ -29,6 +29,7 @@
  *    variables is left (GET /variables/system).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 import {
@@ -40,7 +41,7 @@ import {
   variablesDialog,
 } from '../../helpers/entity-variables'
 
-const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+const RUN = `${Date.now().toString(36)}${randomUUID().slice(0, 4)}`
 const NULL_CHIP_TOOLTIP = 'Click to enter a value'
 const SAVE_BLOCKED_NOTE = 'Save is disabled: the variables have errors'
 

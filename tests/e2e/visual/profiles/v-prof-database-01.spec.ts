@@ -27,6 +27,7 @@
  *    no row message and no settings-errors note.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import {
@@ -235,7 +236,7 @@ test.describe('V-PROF-DATABASE-01: database profile form', () => {
     page,
   }) => {
     const dialog = await openDatabaseProfileForm(page)
-    const name = `V-PROF-DATABASE-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-PROF-DATABASE-01 ${Date.now()}-${randomUUID().slice(0, 6)}`
 
     await dialog.locator('#name').fill(name)
     await expect(createButton(dialog)).toBeEnabled()

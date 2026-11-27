@@ -1,9 +1,6 @@
-/**
- * Shared helpers for the Debug Step specs (Step Over / Step Into / Repeat
- * Step / Skip Block routing). Mirrors the helper shape used in
- * debug-run so each spec stays focused on its own scenario.
- */
+/** Shared helpers for the Debug Step specs. */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Page, type APIRequestContext } from '@playwright/test'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { injectHttpHost, type ImportFixtureOptions } from '../../helpers/fixture-import'
@@ -34,14 +31,11 @@ export async function importAndNavigate(
     .catch(() => {})
   await ensureEnvironment(page.request)
 
-  // Test names must be unique across the database. Append a per-call
-  // random suffix so concurrent / repeated runs of the same fixture don't
-  // collide with each other (POST /tests treats a duplicate name as a
-  // 500 today, not 409).
+  // Test names must be unique, so a random suffix keeps repeated runs apart.
   const baseName = (fixture as { name?: string }).name ?? 'Debug Step Test'
   const uniqueFixture = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   const createResp = await page.request.post(`http://localhost:${BACKEND_PORT}/tests`, {
@@ -206,13 +200,7 @@ export async function getActiveSessionId(
   return sessionId as string
 }
 
-/**
- * Arm http-echo's stateful timeout endpoint for a given key. The NEXT request
- * to /timeout?key=<key> delays by the fixture's `delay` query param, then
- * disarms - so the SECOND request (post-Repeat) is instant. Targets
- * HTTP_TARGET_HOST so arm and trigger hit the same published service in both
- * host and container-shard modes.
- */
+/** Arm http-echo's timeout endpoint for a key: the next /timeout call delays once. */
 export async function armHttpsTimeout(
   request: APIRequestContext,
   key: string,

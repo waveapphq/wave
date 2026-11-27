@@ -17,7 +17,7 @@
  * 2. `create_test_from_recipe` refuses the same recipe with the same one finding, and no Test of
  *    that name is stored.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-lane-limit-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-lane-limit-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'
@@ -26,7 +26,7 @@ import { deleteTest, runToken } from '../../helpers/element-types'
 import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 interface Finding {

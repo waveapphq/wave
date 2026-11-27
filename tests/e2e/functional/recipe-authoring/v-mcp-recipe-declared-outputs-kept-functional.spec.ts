@@ -26,7 +26,7 @@
  * 6. The hand-built Shell Script Test reads back expressible with its captures and its Secret export, and
  *    `amend_test_from_recipe` with that readback, its Log changed, keeps both bindings and the Secret mark.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-declared-outputs-kept-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-declared-outputs-kept-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

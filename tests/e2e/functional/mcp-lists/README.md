@@ -30,7 +30,7 @@ since a variable name takes no hyphen). A spec deletes its own leftovers by that
 starts and everything it made after it ends, runs included. It never asserts that a list holds only
 its rows: it reads the rows under its own prefix, or checks a property every row must have. System
 variables are added next to whatever the shared store holds and removed one by one. The MCP listener
-runs until-restart on a per-stack port and is reset in teardown.
+runs until-restart on the backend port + 765 and is reset in teardown.
 
 ## Validation
 

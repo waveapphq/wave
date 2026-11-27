@@ -16,12 +16,13 @@
  * Phase: no-data (canvas + palette drops only; seeds via API for a fresh Test).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad, dragPaletteItemToCanvas, expandPalette } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
 
 async function createBlankTest(page: Page): Promise<string> {
-  const name = `V-CANVAS-FN-AUTONAME-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `V-CANVAS-FN-AUTONAME-01 ${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
       name,

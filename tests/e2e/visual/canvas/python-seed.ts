@@ -9,6 +9,7 @@
  * REQ: REQ-3.4.1.2
  */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { createValidTest, openTest, validateTest } from '../../helpers/fn-seed'
 import { ensureEnvironment } from '../../helpers/config'
@@ -190,7 +191,7 @@ export async function seedPythonTest(
   const fixture = pythonFixture({ ...options, name })
   await ensureEnvironment(request)
   const testId = await createValidTest(request, {
-    name: `${name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${name} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: fixture.workflow.nodes,
     edges: fixture.workflow.edges,
     variables: fixture.variables,

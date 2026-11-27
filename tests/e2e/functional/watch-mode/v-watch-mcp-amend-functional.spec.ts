@@ -30,7 +30,7 @@
  *     text: nothing streams (the assistant's banner never shows), nothing is written, and the tab
  *     keeps its edits and the session.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-amend-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-amend-functional.spec.ts
  */
 
 import type { APIRequestContext, BrowserContext } from '@playwright/test'
@@ -60,7 +60,7 @@ import {
   type ViewSample,
 } from './helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const WATCHED_CHANGE = 'amend_test_live_from_recipe'
 const SAVE_BUTTON = '[data-testid="toolbar-save-button"]'

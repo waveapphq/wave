@@ -1,24 +1,4 @@
-/**
- * HTTPS Simulator for E2E Testing
- *
- * Two servers in one process:
- * - HTTPS server on HTTPS_SIMULATOR_PORT (default 9443) - serves JSON with self-signed cert
- * - HTTP health server on HTTPS_HEALTH_PORT (default 9444) - Playwright webServer health check
- *
- * Endpoints (HTTPS):
- *   GET  /health              -> {"status":"healthy","protocol":"https","timestamp":"..."}
- *   *    /echo                -> echoes method, path, query params, headers, body
- *   GET  /delay/:seconds      -> responds after N seconds (for timeout testing)
- *   GET  /status/:code        -> responds with the given HTTP status code
- *   *    /retry               -> returns 502 first N times (via ?fail_count=N), then 200
- *   GET  /redirect/:count     -> redirects N times via 302, then returns 200
- *   GET  /redirect-to?url=... -> single redirect to a path on this simulator (400 otherwise)
- *   GET  /cookie?value=...    -> responds with a Set-Cookie credential header
- *   GET  /secret-payload      -> secret in the JSON body + a non-catalog custom header
- *
- * Health (HTTP):
- *   GET  /health -> {"status":"healthy","port":<https_port>}
- */
+/** HTTPS simulator for E2E tests, plus an HTTP health server for compose. */
 
 import https from 'node:https'
 import http from 'node:http'
@@ -39,8 +19,7 @@ const tlsOptions = {
 // Per-key retry counters: /retry?key=foo&fail_count=3 -> fail 3 times, then succeed
 const retryCounters = new Map<string, number>()
 
-// Per-key timeout armed flags: /timeout/arm?key=foo arms it, /timeout?key=foo triggers
-// First call after arm -> delays (client times out, retries), second call -> instant
+// Per-key timeout flag: the first /timeout call after an arm delays, the retry returns at once.
 const timeoutArmed = new Map<string, boolean>()
 
 function jsonResponse(res: http.ServerResponse, statusCode: number, body: unknown) {
@@ -120,8 +99,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     })
   }
 
-  // --- /retry?key=<key>&fail_count=<n>&fail_status=<code> ---
-  // Returns fail_status (default 502) for the first fail_count requests per key, then 200
+  // --- /retry: fail_status (default 502) fail_count times per key, then 200 ---
   if (url.pathname === '/retry') {
     const key = url.searchParams.get('key') || 'default'
     const failCount = parseInt(url.searchParams.get('fail_count') || '2', 10)
@@ -145,24 +123,20 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     })
   }
 
-  // --- /retry/reset ---
-  // Clears all retry counters (call between test runs)
+  // --- /retry/reset: clears all retry counters ---
   if (url.pathname === '/retry/reset') {
     retryCounters.clear()
     return jsonResponse(res, 200, { message: 'Retry counters reset' })
   }
 
-  // --- /timeout/arm?key=<key> ---
-  // Arms the timeout for the given key. Next call to /timeout with this key will delay.
+  // --- /timeout/arm?key=<key>: the next /timeout call with this key delays ---
   if (url.pathname === '/timeout/arm') {
     const key = url.searchParams.get('key') || 'default'
     timeoutArmed.set(key, true)
     return jsonResponse(res, 200, { message: 'Timeout armed', key })
   }
 
-  // --- /timeout?key=<key>&delay=<seconds> ---
-  // If armed: delays for `delay` seconds (client is expected to time out, then retry).
-  // The flag is disarmed immediately so the retry call returns instantly.
+  // --- /timeout: delays once when armed, then disarms so the retry is instant ---
   if (url.pathname === '/timeout') {
     const key = url.searchParams.get('key') || 'default'
     const delay = parseFloat(url.searchParams.get('delay') || '10')
@@ -180,8 +154,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return jsonResponse(res, 200, { message: 'Timeout test passed', key })
   }
 
-  // --- /redirect/:count ---
-  // Redirects count times via 302, then returns 200
+  // --- /redirect/:count: count 302 redirects, then 200 ---
   const redirectMatch = url.pathname.match(/^\/redirect\/(\d+)$/)
   if (redirectMatch) {
     const remaining = parseInt(redirectMatch[1], 10)
@@ -195,13 +168,9 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     })
   }
 
-  // --- /cookie?value=<cookie-value> ---
-  // Responds with a Set-Cookie credential header (secret-masking E2E: the
-  // HTTP plugin registers response credential-header values with the run
-  // registry, so the cookie value must mask in all downstream output).
+  // --- /cookie?value=<cookie-value>: a Set-Cookie credential header that must mask in all output ---
   if (url.pathname === '/cookie') {
-    // Default is deliberately server-side so the credential never appears in
-    // the request URL (which is logged before the response registers it).
+    // Server-side default: the request URL is logged before the response registers the credential.
     const value = url.searchParams.get('value') || 'wave-c00kie-s3cr3t-4417'
     const json = JSON.stringify({ message: 'cookie issued' })
     res.writeHead(200, {
@@ -212,15 +181,9 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return res.end(json)
   }
 
-  // --- /secret-payload?token=<body-value>&session=<header-value> ---
-  // Plants a secret in BOTH the JSON body and a custom response header. The
-  // body is plain content and X-Custom-Session is deliberately NOT a
-  // credential-catalog header, so only the block's outputSecretFields marking
-  // (not the plugin's structural catalog) can mask them - the exact surfaces
-  // the secret-aware I/O logging must protect.
+  // --- /secret-payload?token=<body-value>&session=<header-value>: secrets only outputSecretFields can mask ---
   if (url.pathname === '/secret-payload') {
-    // Defaults are server-side so the secrets never ride the request URL
-    // (logged before the response registers them) - same as /cookie.
+    // Server-side defaults, as for /cookie.
     const token = url.searchParams.get('token') || 'cnr6-body-a1b2c3d4-epsilon-real-bytes'
     const session = url.searchParams.get('session') || 'cnr6-hdr-a1b2c3d4-zeta-real-bytes'
     const json = JSON.stringify({ token })
@@ -232,8 +195,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
     return res.end(json)
   }
 
-  // --- /redirect-to?url=<path> ---
-  // Single 302 redirect to a path on this simulator
+  // --- /redirect-to?url=<path>: one 302 redirect to a path on this simulator ---
   if (url.pathname === '/redirect-to') {
     const target = url.searchParams.get('url')
     if (!target) {
@@ -266,7 +228,7 @@ httpsServer.listen(HTTPS_PORT, () => {
   console.log(`[HTTPS Simulator] Listening on https://localhost:${HTTPS_PORT}`)
 })
 
-// Start HTTP health check server (for Playwright webServer readiness)
+// Start HTTP health check server (for the compose health check)
 const healthServer = http.createServer((_req, res) => {
   jsonResponse(res, 200, { status: 'healthy', port: HTTPS_PORT })
 })

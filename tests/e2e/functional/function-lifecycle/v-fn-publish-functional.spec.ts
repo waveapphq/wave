@@ -36,7 +36,7 @@ const FN_NODE_ID = 'fn-pub'
 
 function buildSeed(): Record<string, unknown> {
   return {
-    name: `V-FN-PUBLISH ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-PUBLISH ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'V-FN-PUBLISH host Test',
     workflow: {

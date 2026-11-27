@@ -7,7 +7,7 @@
  * Hook: frontend/src/features/profiles/container/use-export-import.ts
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('@/features/profiles/api/crud', () => ({
@@ -42,7 +42,6 @@ const mockProfiles = [
 describe('useExportImport (profiles) - failure reporting', () => {
   const loadData = vi.fn().mockResolvedValue(undefined)
   const clearSelection = vi.fn()
-  let consoleSpy: ReturnType<typeof vi.spyOn>
 
   function renderExportImport(selectedIds: string[] = ['p1'], environmentsFailed = false) {
     return renderHook(() =>
@@ -53,16 +52,12 @@ describe('useExportImport (profiles) - failure reporting', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     loadData.mockResolvedValue(undefined)
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    consoleSpy.mockRestore()
   })
 
   describe('handleExportAction', () => {
     it('reports the reason and keeps the dialog open when the export fails', async () => {
       vi.mocked(exportProfile).mockRejectedValue(new Error('Export failed: Not Found'))
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { result } = renderExportImport()
 
       act(() => {
@@ -75,10 +70,15 @@ describe('useExportImport (profiles) - failure reporting', () => {
       expect(mockToastError).toHaveBeenCalledWith('Export failed: Not Found', 'Export Failed')
       expect(result.current.exportDialogOpen).toBe(true)
       expect(result.current.exportLoading).toBe(false)
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Export failed:',
+        expect.objectContaining({ message: 'Export failed: Not Found' })
+      )
     })
 
     it('passes a non-Error rejection through verbatim', async () => {
       vi.mocked(exportProfile).mockRejectedValue('not an error object')
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { result } = renderExportImport()
 
       act(() => {
@@ -89,6 +89,7 @@ describe('useExportImport (profiles) - failure reporting', () => {
       })
 
       expect(mockToastError).toHaveBeenCalledWith('not an error object', 'Export Failed')
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Export failed:', 'not an error object')
     })
   })
 

@@ -8,7 +8,7 @@ real.
 
 ## Prerequisites
 
-- Backend + frontend E2E stack (started by the Playwright config / `ci-playwright-local.sh`).
+- Backend + frontend E2E stack (started by `scripts/gate/15-playwright.sh` or `scripts/e2e/e2e-targeted-local.sh`).
 - No seed. Each test opens real browser contexts against one backend; the
   Workbench tabs register themselves in the session registry via the WebSocket
   `identify` frame, and the tests reset the global ownership slot

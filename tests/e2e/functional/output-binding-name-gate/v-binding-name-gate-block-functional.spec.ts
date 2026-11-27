@@ -22,6 +22,7 @@
  *      re-enables Save.
  */
 
+import { randomUUID } from 'node:crypto'
 import {
   test,
   expect,
@@ -67,7 +68,7 @@ function httpNode(): Record<string, unknown> {
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   return createValidTest(request, {
-    name: `V-BINDING-NAME-GATE-BLOCK ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-BINDING-NAME-GATE-BLOCK ${Date.now()}-${randomUUID().slice(0, 4)}`,
     nodes: [httpNode()],
     edges: [{ id: `e-start-${NODE_ID}`, source: 'start-node', target: NODE_ID }],
     variables: {

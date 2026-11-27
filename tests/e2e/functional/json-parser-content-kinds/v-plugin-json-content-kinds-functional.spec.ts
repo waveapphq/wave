@@ -12,11 +12,12 @@
  *    yields per-query typed variables (float / integer / boolean coercion).
  *
  * Phase: functional-workflow (imports its own fixture via POST /tests, then runs it).
- * Run: ./scripts/e2e-targeted-local.sh functional/json-parser-content-kinds/v-plugin-json-content-kinds-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/json-parser-content-kinds/v-plugin-json-content-kinds-functional.spec.ts
  *
  * REQ: REQ-3.4.2.2, REQ-3.6.2.2, REQ-3.1.3.13.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts, getLogLines } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -37,7 +38,7 @@ const LOG_IDS = [
 function loadFixture(): Record<string, unknown> {
   const raw = fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8')
   const fixture = JSON.parse(raw) as Record<string, unknown>
-  fixture.name = `JSON Parser Content Kinds ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `JSON Parser Content Kinds ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

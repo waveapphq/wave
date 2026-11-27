@@ -84,7 +84,7 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<SeededFu
 
 function buildSeedTest(fn: SeededFunction): Record<string, unknown> {
   return {
-    name: `V-FN-EDIT-PUBLISH ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-EDIT-PUBLISH ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'V-FN-EDIT-PUBLISH host Test with a Shared instance at v1.0.0',
     workflow: {
@@ -296,7 +296,7 @@ test.describe('V-FN-EDIT-PUBLISH (functional): edit-mode lifecycle end-to-end', 
     }
 
     const seed = {
-      name: `V-FN-EDIT-PUBLISH-MOD ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-EDIT-PUBLISH-MOD ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Pre-seeded edit-mode instance for publish-with-body-mod coverage',
       workflow: {

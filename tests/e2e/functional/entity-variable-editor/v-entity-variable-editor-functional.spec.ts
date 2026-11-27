@@ -10,7 +10,7 @@
  * 3. A Suite integer keeps its exact text (a 19-digit number) through save and reopen.
  *
  * Phase: functional-destructive (creates / clears its own suites, regressions, system vars).
- * Run: ./scripts/e2e-targeted-local.sh functional/entity-variable-editor/v-entity-variable-editor-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/entity-variable-editor/v-entity-variable-editor-functional.spec.ts
  */
 
 import { test, expect, type Page, type Locator, type APIRequestContext } from '../../helpers/playwright-fixtures'

@@ -53,10 +53,10 @@ and it will pass locally and fail in CI.
 ### Editing anything under `tests/e2e/services/` needs a full image rebuild
 
 The charts, the kwok Stages and the two helm binaries are copied into their
-images at BUILD time. Editing one and running `scripts/e2e-stack.sh up` leaves
+images at BUILD time. Editing one and running `scripts/e2e/e2e-stack.sh up` leaves
 the old image serving, and the specs then fail against a stale chart or a
 missing Stage in a way that reads like a plugin bug. The sequence is
-`scripts/e2e-stack.sh build`, then `down`, then `up --wait`.
+`scripts/e2e/e2e-stack.sh build`, then `down`, then `up --wait`.
 
 ## Steps
 

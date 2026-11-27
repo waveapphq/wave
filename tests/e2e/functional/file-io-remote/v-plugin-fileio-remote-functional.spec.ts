@@ -47,7 +47,7 @@
  *    the run fails at that block with the remote-host refusal; the then branch
  *    never runs
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/file-io-remote/v-plugin-fileio-remote-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/file-io-remote/v-plugin-fileio-remote-functional.spec.ts
  */
 
 import fs from 'fs'
@@ -109,7 +109,7 @@ function nodeOf(fixture: Fixture, id: string): FixtureNode {
 /** The SSH block must carry the harness constants, not a copy that drifted. */
 function expectStackSshTarget(fixture: Fixture): void {
   const values = nodeOf(fixture, 'open-session').data.config.values
-  expect(values.host, 'the fixture carries the host-mode sentinel the import helper rewrites').toBe(
+  expect(values.host, 'the fixture carries the 127.0.0.1 sentinel the import helper rewrites').toBe(
     SSH_FIXTURE_HOST_SENTINEL,
   )
   expect(String(values.port), 'the fixture targets the stack sshd port').toBe(SSH_MAIN_PORT)

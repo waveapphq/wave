@@ -1,7 +1,7 @@
 # WAVE E2E raw TCP/UDP target (test-only): one socat image, two compose
 # services - netcat-target (internal-only) and netcat-echo (published).
 # Listeners: TCP echo 9470, UDP echo 9471, UDP silent sink 9472 (never replies).
-# Build: scripts/e2e-stack.sh build
+# Build: scripts/e2e/e2e-stack.sh build
 FROM docker.io/library/alpine:3
 
 RUN apk add --no-cache socat

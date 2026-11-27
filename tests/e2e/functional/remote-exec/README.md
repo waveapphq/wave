@@ -4,12 +4,12 @@ Proves the Remote Execution container's mixed-locus body against the real-servic
 (`tests/e2e/services/`): the pushed pure-Python bundle really runs under the sshd host's python3.
 
 ## Pre-requisites
-- Backend + frontend E2E stacks up; real-service stack up (`scripts/e2e-stack.sh up --wait`):
+- Backend + frontend E2E stacks up; real-service stack up (`scripts/e2e/e2e-stack.sh up --wait`):
   `sshd` (:9445) and the internal `http-target` service.
 - Shared env `E2E Execution Env`.
 
 ## Execution
-Imports `fixture.json` via `POST /tests` (SSH host injected per mode), validates (zero errors),
+Imports `fixture.json` via `POST /tests` (SSH host injected), validates (zero errors),
 opens it in the workbench, runs it.
 
 ## Validation
@@ -87,7 +87,7 @@ the `sshd` host with nothing installed there (REQ-3.4.1.6, REQ-5.1.4; SQL-8, SQL
 replaces `__TOKEN__` with a per-run token for the table `sqlrem_<token>`, the `:tag` value, the
 SQLite artifact file `sqlrem-<token>.db` and the remote folder `sqlrem-<token>`, fills `ca_pem`
 from `CA_CERT_PEM` and every SQL block's blank Password from `SQL_STACK_PASSWORD`, and rewrites
-the SSH and direct-leg hosts per mode), validates it (zero errors), opens it and runs it.
+the SSH and direct-leg hosts), validates it (zero errors), opens it and runs it.
 
 Before the body, on WAVE: an SSH Session Exec makes this run's folder under the remote
 account's home, a SQLite block (`SQLite on WAVE`) runs on an artifact file, and a SQL block
@@ -144,7 +144,7 @@ OS-11, OS-8, OS-10). Needs `sshd` and `opensearch`.
 calibrates the slow query to 3 to 5 s; `afterAll` deletes `wave-e2e-<token>-*` and the Test.
 The spec imports `fixture-opensearch.json` (it replaces `__TOKEN__`, fills every body block's
 blank Password and CA Certificate from `OPENSEARCH_PASSWORD` and `CA_CERT_PEM` and the slow
-block's Query with the calibrated query; the SSH host is rewritten per mode), validates it (no
+block's Query with the calibrated query; the SSH host is rewritten), validates it (no
 repairs, zero errors and warnings), sets the console to DEBUG and runs it. The body dials
 `https://opensearch:9200`, a name only `sshd` resolves.
 

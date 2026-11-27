@@ -2,7 +2,7 @@
 # per-request fault on the resource read, configured through the api_url path
 # prefix. See server.ts for the directive list.
 #
-# Build: scripts/e2e-stack.sh build  (context = tests/e2e/services/k8s-stub)
+# Build: scripts/e2e/e2e-stack.sh build  (context = tests/e2e/services/k8s-stub)
 FROM node:22-slim
 
 RUN npm install -g tsx@4 >/dev/null 2>&1

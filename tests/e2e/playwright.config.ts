@@ -1,31 +1,13 @@
-/** Phased E2E config; run it through e2e-targeted-local.sh or ci-playwright-local.sh. */
+/** Phased E2E config; run it through scripts/e2e/e2e-targeted-local.sh or scripts/gate/15-playwright.sh. */
 
 import { defineConfig, devices } from '@playwright/test'
-import path from 'path'
 
-// Resolve project root (two levels up from tests/e2e/)
-const projectRoot = path.resolve(__dirname, '../..')
-
-// Determine if running in CI
 const isCI = !!process.env.CI
 
-// Container-sharded mode: services run already, so no webServer and one stack.
-const externalServices = process.env.WAVE_E2E_EXTERNAL_SERVICES === '1'
+// Each shard container runs one stack, so every project runs one worker.
+const WORKERS = 1
 
-// Host-mode stacks; each container in sharded mode has exactly one.
-const N_STACKS = externalServices
-  ? 1
-  : Number(process.env.WAVE_E2E_N_STACKS || '4')
-
-// One backend per container in sharded mode, so every project runs one worker there.
-const fixtureWorkers = externalServices ? 1 : N_STACKS
-const noDataWorkers = externalServices ? 1 : Math.max(N_STACKS * 2, 8)
-const emptyDbWorkers = externalServices ? 1 : N_STACKS
-
-// Base ports - the i-th stack uses FRONTEND_BASE_PORT+i and BACKEND_BASE_PORT+i.
-const FRONTEND_BASE_PORT = Number(process.env.WAVE_E2E_FRONTEND_PORT || '3000')
-const BACKEND_BASE_PORT = Number(process.env.WAVE_E2E_BACKEND_PORT || '8000')
-
+const FRONTEND_PORT = Number(process.env.WAVE_E2E_FRONTEND_PORT || '3000')
 
 // Common device settings
 const desktopChrome = {
@@ -554,7 +536,7 @@ export default defineConfig({
   forbidOnly: isCI,
   // No retries: a retry hides races; fix flaky tests at the root.
   retries: 0,
-  workers: noDataWorkers, // Global worker limit (per-project overrides this)
+  workers: WORKERS,
   reporter: [
     ['html', { open: 'never' }],
     ['list'],
@@ -566,57 +548,14 @@ export default defineConfig({
   // Store all test artifacts in tests/e2e/playwright-artifacts/ (gitignored)
   outputDir: './playwright-artifacts/test-results',
 
-  // Stack 0 fallback; playwright-fixtures.ts sets each worker's baseURL.
+  // The shard's own frontend.
   use: {
-    baseURL: `http://localhost:${FRONTEND_BASE_PORT}`,
+    baseURL: `http://localhost:${FRONTEND_PORT}`,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-
-  // Host mode: N isolated FE+BE stacks; sharded mode starts services itself.
-  webServer: externalServices
-    ? undefined
-    : Array.from({ length: N_STACKS }).flatMap((_, i) => {
-        const fePort = FRONTEND_BASE_PORT + i
-        const bePort = BACKEND_BASE_PORT + i
-        const dataDir = `/tmp/wave-e2e-stack-${i}`
-        const configFile = `${dataDir}.config.yaml`
-        // The data folder outlives the run, so its key is kept in a file beside it.
-        const keyFile = `${dataDir}.secret-key`
-        const cors = `http://localhost:${fePort},http://127.0.0.1:${fePort}`
-        return [
-          {
-            // A WAVE_SECRET_KEY from the developer's shell would override the copied config's key.
-            command:
-              `../scripts/e2e-config-with-key.sh ${configFile} ${keyFile} && ` +
-              `env -u WAVE_SECRET_KEY ` +
-              `WAVE_CONFIG_FILE=${configFile} ` +
-              `WAVE_ADMIN_ALLOWED=true ` +
-              `WAVE_STORAGE_BASE_PATH=${dataDir} ` +
-              `WAVE_SECURITY_CORS_ORIGINS=${cors} ` +
-              `poetry run uvicorn wavecore.api.app:app --port ${bePort}`,
-            cwd: path.join(projectRoot, 'backend'),
-            url: `http://localhost:${bePort}/health`,
-            reuseExistingServer: !isCI,
-            timeout: 120000,
-            // Don't mix server logs into the Playwright output.
-            stdout: 'ignore' as const,
-            stderr: 'ignore' as const,
-          },
-          {
-            // Prod preview: Vite bakes the API URL in, so each stack has its own build.
-            command: `npx vite preview --outDir build-${i} --port ${fePort} --strictPort`,
-            cwd: path.join(projectRoot, 'frontend'),
-            url: `http://localhost:${fePort}`,
-            reuseExistingServer: !isCI,
-            timeout: 120000,
-            stdout: 'ignore' as const,
-            stderr: 'ignore' as const,
-          },
-        ]
-      }),
 
   projects: [
     // DARK THEME
@@ -626,27 +565,27 @@ export default defineConfig({
       name: 'empty-db-dark',
       testMatch: emptyDbTests,
       fullyParallel: true,
-      workers: emptyDbWorkers,
+      workers: WORKERS,
       use: { ...desktopChrome, colorScheme: 'dark' },
     },
 
-    // Step 2a: no-data tests, run beside the fixture tests on more workers
+    // Step 2a: no-data tests, run beside the fixture tests
     {
       name: 'no-data-dark',
       testMatch: noDataTests,
       dependencies: ['empty-db-dark'],
       fullyParallel: true,
-      workers: noDataWorkers,
+      workers: WORKERS,
       use: { ...desktopChrome, colorScheme: 'dark' },
     },
 
-    // Step 2b: fixture tests; each worker's stack has its own DB
+    // Step 2b: fixture tests
     {
       name: 'fixture-dark',
       testMatch: fixtureTests,
       dependencies: ['empty-db-dark'],
       fullyParallel: true,
-      workers: fixtureWorkers,
+      workers: WORKERS,
       use: { ...desktopChrome, colorScheme: 'dark' },
     },
 
@@ -657,7 +596,7 @@ export default defineConfig({
       name: 'empty-db-light',
       testMatch: emptyDbTests,
       fullyParallel: true,
-      workers: emptyDbWorkers,
+      workers: WORKERS,
       use: { ...desktopChrome, colorScheme: 'light' },
     },
 
@@ -667,17 +606,17 @@ export default defineConfig({
       testMatch: noDataTests,
       dependencies: ['empty-db-light'],
       fullyParallel: true,
-      workers: noDataWorkers,
+      workers: WORKERS,
       use: { ...desktopChrome, colorScheme: 'light' },
     },
 
-    // Step 4b: Fixture tests (light) - parallel across N stacks
+    // Step 4b: Fixture tests (light)
     {
       name: 'fixture-light',
       testMatch: fixtureTests,
       dependencies: ['empty-db-light'],
       fullyParallel: true,
-      workers: fixtureWorkers,
+      workers: WORKERS,
       use: { ...desktopChrome, colorScheme: 'light' },
     },
   ],

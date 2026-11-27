@@ -12,6 +12,7 @@
  *   2. Log_after (then-egress sibling) ran (`block_states['log-after'] == 'passed'`).
  *   3. Final session status is `passed` (no scope-fail residue).
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT } from '../../helpers/config'
 import { resolveEnvironmentId } from '../../helpers/k8s-run'
@@ -24,7 +25,7 @@ function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, 'fixture-assert-in-trycatch-around-function.json'), 'utf-8'),
   )
-  return { ...fixture, name: `V-CANVAS-FN-ASSERT-IN-TRYCATCH-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  return { ...fixture, name: `V-CANVAS-FN-ASSERT-IN-TRYCATCH-01 ${Date.now()}-${randomUUID().slice(0, 6)}` }
 }
 
 async function seedFixture(request: APIRequestContext): Promise<string> {

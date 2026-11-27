@@ -32,6 +32,7 @@
  * Phase: functional-workflow (imports its own fixture, deletes it after).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
 import { openTest, rawPersistTest, validateTest, VALIDATION } from '../../helpers/fn-seed'
@@ -342,7 +343,7 @@ test.describe('V-NULL-EDITORS-FUNCTIONAL: null in the edit views and Fix All', (
     const variables = { ...(fixture.variables as Record<string, unknown>) }
     delete variables.pause_ms
     const brokenId = await rawPersistTest(page.request, {
-      name: `V-NULL-EDITORS missing ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `V-NULL-EDITORS missing ${Date.now()}-${randomUUID().slice(0, 6)}`,
       nodes: fixture.workflow.nodes,
       edges: fixture.workflow.edges,
       variables,

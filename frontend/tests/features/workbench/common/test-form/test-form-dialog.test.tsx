@@ -610,6 +610,10 @@ describe('TestFormDialog', () => {
       await waitFor(() => {
         expect(screen.queryByTestId('description-skeleton')).not.toBeInTheDocument()
       })
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        'Failed to fetch test details:',
+        expect.objectContaining({ message: 'Network error' })
+      )
       consoleError.mockRestore()
     })
 
@@ -979,6 +983,10 @@ describe('TestFormDialog', () => {
       await user.click(screen.getByRole('button', { name: /^save$/i }))
 
       expect(onSave).not.toHaveBeenCalled()
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        'Failed to fetch test details:',
+        expect.objectContaining({ message: 'Network error' })
+      )
       consoleError.mockRestore()
     })
 
@@ -994,6 +1002,10 @@ describe('TestFormDialog', () => {
           'Could not load test details and tags. Close and reopen this dialog to try again.'
         )
       })
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        'Failed to fetch test details:',
+        expect.objectContaining({ message: 'Network error' })
+      )
       consoleError.mockRestore()
     })
 

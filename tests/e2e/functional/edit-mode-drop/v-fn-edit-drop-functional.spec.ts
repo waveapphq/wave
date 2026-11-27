@@ -77,7 +77,7 @@ async function seedLibraryFunction(request: APIRequestContext): Promise<SeededFu
 
 function buildSeedTestWithDraft(fn: SeededFunction): Record<string, unknown> {
   return {
-    name: `V-FN-EDIT-DROP ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-EDIT-DROP ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Pre-seeded edit-mode draft for V-FN-EDIT-DROP',
     workflow: {

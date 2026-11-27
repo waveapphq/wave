@@ -19,6 +19,7 @@
  *    single default egress - the mode is a real change, not a label
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -37,7 +38,7 @@ const FAIL_SCOPE_DESCRIPTION =
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-WAIT-02 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-WAIT-02 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'One Retry-mode Wait Until with a complete condition.',
     workflow: {

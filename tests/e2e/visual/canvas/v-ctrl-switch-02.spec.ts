@@ -18,6 +18,7 @@
  *    completing them unlocks Save and the completed condition is what reaches storage
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -36,7 +37,7 @@ const DEFAULT_CAPTION = 'Runs when no case matched, or when a case above falls t
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-SWITCH-02 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-SWITCH-02 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'One Switch with a single complete case.',
     workflow: {

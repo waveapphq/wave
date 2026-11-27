@@ -8,7 +8,7 @@ container run, against the real-service stack. Shares its `fixture.json` with `r
   `E2E Execution Env`.
 
 ## Execution
-Each test imports `fixture.json` (SSH host injected per mode), opens it, and drives ad-hoc Run
+Each test imports `fixture.json` (SSH host injected), opens it, and drives ad-hoc Run
 Current on a specific node.
 
 ## Validation

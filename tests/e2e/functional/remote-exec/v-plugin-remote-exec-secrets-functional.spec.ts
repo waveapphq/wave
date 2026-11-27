@@ -22,6 +22,7 @@
  * replayed worker line, then-branch bookend) keep the absence sweep honest.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { waitForLogText, getLogTexts } from '../../helpers/log-reader'
 import { getActiveSessionId, getSessionVariables, injectServiceHost } from '../../helpers/fixture-import'
@@ -53,7 +54,7 @@ async function createProfile(page: Page, environmentId: string): Promise<{ id: s
   const profile = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, 'profile-secrets.json'), 'utf-8'),
   ) as Record<string, any>
-  profile.name = `${profile.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  profile.name = `${profile.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   profile.environment_values = { [environmentId]: profile.config }
   const resp = await page.request.post(`${BACKEND_URL}/profiles`, { data: profile })
   const body = await resp.json().catch(() => null)
@@ -67,7 +68,7 @@ function loadFixture(profileId: string, profileName: string): Record<string, unk
     .replace(/__PROFILE_ID__/g, profileId)
     .replace(/__PROFILE_NAME__/g, profileName)
   const fixture = injectServiceHost(JSON.parse(raw)) as Record<string, any>
-  fixture.name = `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

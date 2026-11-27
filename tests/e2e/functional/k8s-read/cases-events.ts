@@ -1,13 +1,4 @@
-/**
- * R2 case table - every K8s Events option the sweep proves, as data.
- *
- * The table IS the checklist. Each leg names its option ids (the id families
- * are defined in the suite README), the session it runs under, and the exact
- * Block values. The
- * spec builds one chained workflow from this table with the shared node
- * factories; the checked-in `fixture-events-golden.json` pins the emitted node
- * shape so the generated form stays reviewable against a hand-authored one.
- */
+/** Every K8s Events option the sweep proves, as data; the id families are in the suite README. */
 
 import {
   chainEdges,
@@ -24,7 +15,7 @@ import {
 import { SEEDED } from '../../helpers/k8s-seed'
 import { HTTP_FIXTURE_HOST_SENTINEL, K8S_API_PORT } from '../../helpers/config'
 
-/** The fixture-side API URL. `injectHttp` rewrites it in container-shard mode. */
+/** The fixture-side API URL. `injectHttp` rewrites it to the shard's gateway. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
 /** The four kwok Stage events the kubelet-events pod emits, oldest first. */
@@ -38,12 +29,10 @@ export const POSTED_REASONS = [
   SEEDED.warningReason,
 ] as const
 
-/** Everything a scoped read of the kubelet-events pod returns. The seeder gates
- *  on all four Stage events before it POSTs, so the set is exact. */
+/** What a scoped read of the kubelet-events pod returns, after all four Stage events. */
 export const KUBELET_REASONS: readonly string[] = [...STAGE_REASONS, ...POSTED_REASONS]
 
-/** Newest first, the order `_seen_at` must produce. The 1.5 s settle between the
- *  Stage chain and the POSTs is what makes the head deterministic. */
+/** Newest first, the order `_seen_at` must produce; the 1.5 s settle before the POSTs fixes the head. */
 export const KUBELET_ORDER: readonly string[] = [
   SEEDED.creationOnlyReason,
   'Started',
@@ -58,13 +47,10 @@ export const KUBELET_ORDER: readonly string[] = [
 /** The clause the apiserver cannot parse: no operator in it. */
 export const MALFORMED_SELECTOR_TOKEN = 'bogus'
 
-/** A value that turns the block's field selector into one the apiserver cannot
- *  parse: the comma opens a second clause with no operator in it. */
+/** A field selector value the apiserver cannot parse: the comma opens a clause with no operator. */
 export const MALFORMED_REASON = `${SEEDED.warningReason},${MALFORMED_SELECTOR_TOKEN}`
 
-/** Which credential a leg runs under. `anon` and `junk` are hand-written
- *  kubeconfigs, not Connect outputs: a junk bearer token 401s on /version, so
- *  K8s Connect cannot build that session at all. */
+/** A leg's credential; `anon` and `junk` are kubeconfigs K8s Connect cannot build. */
 export type EventsSession = 'admin' | 'anon' | 'junk'
 
 const SESSION_VARIABLE: Record<EventsSession, string> = {
@@ -101,8 +87,7 @@ const scopedToKubeletPod = {
   object_name: SEEDED.podKubelet,
 }
 
-/** One row per leg. Successes first: a recorded failure sits at the tail where
- *  it cannot hide a success, and the guarded S-03 leg is wired separately. */
+/** One row per leg, successes first, so a recorded failure cannot hide a success. */
 export const EVENTS_LEGS: readonly EventsLeg[] = [
   {
     key: 'e01',
@@ -390,9 +375,7 @@ export const okVar = (leg: EventsLeg): string => `${leg.key}_ok`
 export const errorVar = (leg: EventsLeg): string => `${leg.key}_err`
 export const reasonVar = (leg: EventsLeg): string => `${leg.key}_reason`
 
-/** A hand-written kubeconfig in the shape K8s Connect emits, so a session can
- *  carry a credential Connect itself would refuse to build. Pass no token for
- *  the anonymous identity. */
+/** A hand-written kubeconfig in the shape K8s Connect emits; no token means the anonymous identity. */
 export function handWrittenSession(token: string | null, namespace: string): string {
   return JSON.stringify({
     apiVersion: 'v1',
@@ -457,8 +440,7 @@ function connectNode(material: EventsSweepMaterial): WorkflowNode {
   })
 }
 
-/** Build the whole sweep: one Connect Block, one Events Block plus one marker
- *  per leg, the guarded empty-session leg, and the bookend. */
+/** The whole sweep: one Connect, an Events Block and marker per leg, and the bookend. */
 export function buildEventsSweepFixture(
   material: EventsSweepMaterial,
 ): Record<string, unknown> {
@@ -541,8 +523,7 @@ export function buildEventsSweepFixture(
       level: 'WARN',
       text: SESSION_EMPTY_CAUGHT,
     }),
-    // The error binding is applied after the catch chain, so the message is
-    // only readable on the then branch.
+    // The error binding applies after the catch chain, so only the then branch can read it.
     markerNode({
       id: 'log-s03-err',
       description: 'Marker for the bound empty-session error',

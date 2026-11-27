@@ -21,7 +21,7 @@
  * REQ: REQ-3.5.1.4 (Halt block), REQ-3.5.1.14 (Halt scope configuration)
  * Design Decisions: Decision 1 (no output handle), Decision 6 (post-halt nodes), Decision 8 (halt signal)
  *
- * Run manually with: ./scripts/e2e-targeted-local.sh functional/halt-control/v-ctrl-halt-functional.spec.ts
+ * Run manually with: ./scripts/e2e/e2e-targeted-local.sh functional/halt-control/v-ctrl-halt-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

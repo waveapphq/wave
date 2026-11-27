@@ -57,7 +57,7 @@ import {
   saveConfig,
 } from '../canvas-lanes/lanes-helpers'
 
-// One MCP port per stack, as the recipe specs use it.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const FIXTURE = 'fixture-choice.json'

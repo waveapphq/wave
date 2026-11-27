@@ -1,20 +1,10 @@
-/** Functional Playwright config; run specs with ./scripts/e2e-targeted-local.sh functional/<suite>/<spec>.spec.ts */
+/** Functional Playwright config; run specs with ./scripts/e2e/e2e-targeted-local.sh functional/<suite>/<spec>.spec.ts */
 
 import { defineConfig, devices } from '@playwright/test'
-import path from 'path'
 
-const projectRoot = path.resolve(__dirname, '../..')
 const isCI = !!process.env.CI
 
-const externalServices = process.env.WAVE_E2E_EXTERNAL_SERVICES === '1'
-
-// N parallel stacks in host mode; a container shard runs one.
-const N_STACKS = externalServices
-  ? 1
-  : Number(process.env.WAVE_E2E_N_STACKS || '4')
-const FRONTEND_BASE_PORT = Number(process.env.WAVE_E2E_FRONTEND_PORT || '3000')
-const BACKEND_BASE_PORT = Number(process.env.WAVE_E2E_BACKEND_PORT || '8000')
-const SSH_MAIN_PORT = Number(process.env.SSH_MAIN_PORT || '9445')
+const FRONTEND_PORT = Number(process.env.WAVE_E2E_FRONTEND_PORT || '3000')
 
 const desktopChrome = {
   ...devices['Desktop Chrome'],
@@ -26,7 +16,8 @@ export default defineConfig({
   forbidOnly: isCI,
   // No retries - flaky tests must be fixed at the source, not papered over.
   retries: 0,
-  workers: N_STACKS,
+  // Each shard container runs one stack.
+  workers: 1,
   reporter: [
     ['html', { open: 'never', outputFolder: './playwright-artifacts/functional-report' }],
     ['list'],
@@ -42,8 +33,8 @@ export default defineConfig({
 
   use: {
     ...desktopChrome,
-    // playwright-fixtures.ts sets baseURL per worker; this is the fallback.
-    baseURL: `http://localhost:${FRONTEND_BASE_PORT}`,
+    // The shard's own frontend.
+    baseURL: `http://localhost:${FRONTEND_PORT}`,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     trace: 'on-first-retry',
@@ -52,62 +43,8 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
-  // Host mode spawns N backend and frontend pairs; container shards start their own.
-  webServer: externalServices
-    ? undefined
-    : [
-        ...Array.from({ length: N_STACKS }).flatMap((_, i) => {
-          const fePort = FRONTEND_BASE_PORT + i
-          const bePort = BACKEND_BASE_PORT + i
-          const dataDir = `/tmp/wave-e2e-stack-${i}`
-          const configFile = `${dataDir}.config.yaml`
-          // The data folder outlives the run, so its key is kept in a file beside it.
-          const keyFile = `${dataDir}.secret-key`
-          const cors = `http://localhost:${fePort},http://127.0.0.1:${fePort}`
-          return [
-            {
-              // A WAVE_SECRET_KEY from the developer's shell would override the copied config's key.
-              command:
-                `../scripts/e2e-config-with-key.sh ${configFile} ${keyFile} && ` +
-                `env -u WAVE_SECRET_KEY ` +
-                `WAVE_CONFIG_FILE=${configFile} ` +
-                `WAVE_ADMIN_ALLOWED=true ` +
-                `WAVE_STORAGE_BASE_PATH=${dataDir} ` +
-                `WAVE_SECURITY_CORS_ORIGINS=${cors} ` +
-                `poetry run uvicorn wavecore.api.app:app --port ${bePort}`,
-              cwd: path.join(projectRoot, 'backend'),
-              url: `http://localhost:${bePort}/health`,
-              reuseExistingServer: !isCI,
-              timeout: 120_000,
-              // Don't mix server logs into the Playwright output.
-              stdout: 'ignore' as const,
-              stderr: 'ignore' as const,
-            },
-            {
-              // Preview the build-<i> bundle that ci-playwright-local.sh built for this port.
-              command: `npx vite preview --outDir build-${i} --port ${fePort} --strictPort`,
-              cwd: path.join(projectRoot, 'frontend'),
-              url: `http://localhost:${fePort}`,
-              reuseExistingServer: !isCI,
-              timeout: 120_000,
-              stdout: 'ignore' as const,
-              stderr: 'ignore' as const,
-            },
-          ]
-        }),
-        // The compose service stack; container shards start it in the CI script instead.
-        {
-          command: `${path.join(projectRoot, 'scripts/e2e-stack.sh')} run`,
-          port: SSH_MAIN_PORT,
-          reuseExistingServer: !isCI,
-          timeout: 180_000,
-          stdout: 'ignore' as const,
-          stderr: 'ignore' as const,
-        },
-      ],
-
   projects: [
-    // Step 1: destructive tests, parallel across stacks, serial within a file.
+    // Step 1: destructive tests, serial within a file.
     {
       name: 'functional-destructive',
       testMatch: [

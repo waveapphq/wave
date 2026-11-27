@@ -15,6 +15,7 @@
  *      (verifiable via the outer caller's outputBinding -> caller variable).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { getLogEntries } from '../../helpers/log-reader'
@@ -24,7 +25,7 @@ const FN_NODE_ID = 'fn-varset-output-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-VARSET-OUTPUT ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-VARSET-OUTPUT ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function whose body assigns output exit_msg via Variable Setter',
     variables: { caller_var: { type: 'string', value: '' } },

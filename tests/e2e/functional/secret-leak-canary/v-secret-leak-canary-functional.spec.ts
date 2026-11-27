@@ -32,6 +32,7 @@
  * report, every export.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogTexts } from '../../helpers/log-reader'
 import {
@@ -113,7 +114,7 @@ async function createProfile(page: Page, environmentId: string): Promise<string>
   const profile = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, 'profile-http.json'), 'utf-8'),
   ) as Record<string, any>
-  profile.name = `${profile.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  profile.name = `${profile.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   profile.environment_values = { [environmentId]: profile.config }
   const resp = await page.request.post(`${BACKEND_URL}/profiles`, { data: profile })
   const body = await resp.json().catch(() => null)

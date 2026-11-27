@@ -27,8 +27,8 @@ plugin), which the spec asserts verbatim.
 
 ## Steps
 
-1. `./scripts/e2e-targeted-local.sh functional/csv-parser/<spec>.spec.ts` from the root of
-   the clone, or the whole suite via `./scripts/ci-playwright-local.sh`.
+1. `./scripts/e2e/e2e-targeted-local.sh functional/csv-parser/<spec>.spec.ts` from the root of
+   the clone, or the whole suite via `./scripts/gate/15-playwright.sh full`.
 
 ## Validation
 

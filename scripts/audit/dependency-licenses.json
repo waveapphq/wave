@@ -1,0 +1,1905 @@
+{
+  "packages": [
+    {
+      "ecosystem": "npm",
+      "name": "@babel/runtime",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/autocomplete",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/commands",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/lang-json",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/lang-python",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/lang-sql",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/lang-xml",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/lang-yaml",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/language",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/lint",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/search",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/state",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/theme-one-dark",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@codemirror/view",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@date-fns/tz",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@dnd-kit/accessibility",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@dnd-kit/core",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@dnd-kit/sortable",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@dnd-kit/utilities",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@floating-ui/core",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@floating-ui/dom",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@floating-ui/react-dom",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@floating-ui/utils",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jsep-plugin/assignment",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@jsep-plugin/regex",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/common",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/highlight",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/json",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/lr",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/python",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/xml",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@lezer/yaml",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@marijn/find-cluster-break",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/number",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/primitive",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-alert-dialog",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-arrow",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-checkbox",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-collapsible",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-collection",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-compose-refs",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-context",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-context-menu",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-dialog",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-direction",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-dismissable-layer",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-dropdown-menu",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-focus-guards",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-focus-scope",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-hover-card",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-id",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-label",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-menu",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-popover",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-popper",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-portal",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-presence",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-primitive",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-progress",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-radio-group",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-roving-focus",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-scroll-area",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-select",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-separator",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-slider",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-slot",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-switch",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-toggle",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-tooltip",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-callback-ref",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-controllable-state",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-effect-event",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-escape-keydown",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-layout-effect",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-previous",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-rect",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-use-size",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/react-visually-hidden",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@radix-ui/rect",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tabby_ai/hijri-converter",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tanstack/react-table",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tanstack/react-virtual",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tanstack/table-core",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tanstack/virtual-core",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-color",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-drag",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-interpolate",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-selection",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-transition",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/d3-zoom",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/debug",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/estree",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/estree-jsx",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/hast",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/mdast",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/ms",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/react",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/unist",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@uiw/codemirror-extensions-basic-setup",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@uiw/react-codemirror",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json says MIT, as the LICENSE of its sibling packages from the same repository does."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@ungap/structured-clone",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@xyflow/react",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@xyflow/system",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "argparse",
+      "license": "Python-2.0",
+      "reason": "LICENSE read: the Python license history (PSF License Agreement), as package.json says."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "aria-hidden",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bail",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ccount",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "character-entities",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "character-entities-html4",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "character-entities-legacy",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "character-reference-invalid",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "class-variance-authority",
+      "license": "Apache-2.0",
+      "reason": "LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "classcat",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "clsx",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "cmdk",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "codemirror",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "comma-separated-tokens",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "cookie",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "crelt",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "csstype",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-color",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-dispatch",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-drag",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-ease",
+      "license": "BSD-3-Clause",
+      "reason": "LICENSE read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-interpolate",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-selection",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-timer",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-transition",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "d3-zoom",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "date-fns",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "date-fns-jalali",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "debug",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "decode-named-character-reference",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "dequal",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "detect-node-es",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "devlop",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "estree-util-is-identifier-name",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "extend",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "get-nonce",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "hast-util-to-jsx-runtime",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "hast-util-whitespace",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "html-url-attributes",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "inline-style-parser",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-alphabetical",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-alphanumerical",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-decimal",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-hexadecimal",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "is-plain-obj",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "js-yaml",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "jsep",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "jsonpath-plus",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "longest-streak",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "lucide-react",
+      "license": "ISC",
+      "reason": "LICENSE read: ISC, with portions from Feather under MIT.",
+      "bundled": [
+        "icons derived from Feather MIT"
+      ]
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-from-markdown",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-mdx-expression",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-mdx-jsx",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-mdxjs-esm",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-phrasing",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-to-hast",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-to-markdown",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "mdast-util-to-string",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-core-commonmark",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-factory-destination",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-factory-label",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-factory-space",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-factory-title",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-factory-whitespace",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-character",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-chunked",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-classify-character",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-combine-extensions",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-decode-numeric-character-reference",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-decode-string",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-encode",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-html-tag-name",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-normalize-identifier",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-resolve-all",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-sanitize-uri",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-subtokenize",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-symbol",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "micromark-util-types",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "ms",
+      "license": "MIT",
+      "reason": "license.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "parse-entities",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "property-information",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-day-picker",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-dom",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-markdown",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-remove-scroll",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-remove-scroll-bar",
+      "license": "MIT",
+      "reason": "No license file in the package; package.json and the README's License section say MIT."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-resizable-panels",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-router",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-router-dom",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-style-singleton",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "remark-parse",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "remark-rehype",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "scheduler",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "set-cookie-parser",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "space-separated-tokens",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "stringify-entities",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "style-mod",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "style-to-js",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "style-to-object",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tailwind-merge",
+      "license": "MIT",
+      "reason": "LICENSE.md read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tailwindcss",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tailwindcss-animate",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tree-sitter-wasms",
+      "license": "Unlicense",
+      "reason": "LICENSE read: Unlicense text for the package.",
+      "bundled": [
+        "out/tree-sitter-python.wasm MIT"
+      ]
+    },
+    {
+      "ecosystem": "npm",
+      "name": "trim-lines",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "trough",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tslib",
+      "license": "0BSD",
+      "reason": "CopyrightNotice.txt, LICENSE.txt read: 0BSD text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "unified",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "unist-util-is",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "unist-util-position",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "unist-util-stringify-position",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "unist-util-visit",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "unist-util-visit-parents",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "use-callback-ref",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "use-sidecar",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "use-sync-external-store",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "vfile",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "vfile-message",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "w3c-keyname",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "web-tree-sitter",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "xml-formatter",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "xml-parser-xo",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "zustand",
+      "license": "MIT",
+      "reason": "LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "npm",
+      "name": "zwitch",
+      "license": "MIT",
+      "reason": "license read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "aiofiles",
+      "license": "Apache-2.0",
+      "reason": "dist-info LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "annotated-doc",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "annotated-types",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "anyio",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "apsw",
+      "license": "Zlib",
+      "reason": "dist-info LICENSE read: zlib license text; metadata names only any-OSI.",
+      "bundled": [
+        "SQLite blessing"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "asn1crypto",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "asyncssh",
+      "license": "EPL-2.0",
+      "reason": "dist-info LICENSE read: EPL-2.0 with GPL-2.0-or-later as Secondary License; WAVE elects EPL-2.0, used unmodified."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "attrs",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "bcrypt",
+      "license": "Apache-2.0",
+      "reason": "dist-info LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "certifi",
+      "license": "MPL-2.0",
+      "reason": "dist-info LICENSE read: MPL 2.0 block for the CA bundle; weak copyleft per file, shipped unmodified, so no WAVE code is covered."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "cffi",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT No Attribution text, which License-Expression gives as MIT.",
+      "bundled": [
+        "libffi MIT"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "click",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.txt read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "colorama",
+      "license": "BSD-3-Clause",
+      "reason": "Windows-only (not installed on Linux); the 0.4.6 wheel's dist-info LICENSE.txt read: BSD 3-clause."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "croniter",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "cryptography",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "reason": "dist-info LICENSE, LICENSE.APACHE and LICENSE.BSD read: Apache 2.0 or BSD 3-clause. OpenSSL is compiled into the Rust extension.",
+      "bundled": [
+        "OpenSSL Apache-2.0"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "dnspython",
+      "license": "ISC",
+      "reason": "dist-info LICENSE read: ISC text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "ecdsa",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text; metadata names no license field."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "email-validator",
+      "license": "Unlicense",
+      "reason": "dist-info LICENSE read: Unlicense text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "et-xmlfile",
+      "license": "MIT",
+      "reason": "dist-info LICENCE.rst read: MIT text.",
+      "bundled": [
+        "code from the Python standard library PSF-2.0"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "fastapi",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "h11",
+      "license": "MIT",
+      "reason": "dist-info LICENSE.txt read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "httpcore",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "httpcore2",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "httptools",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text.",
+      "bundled": [
+        "llhttp MIT"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "httpx",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "httpx2",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "idna",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "jedi",
+      "license": "MIT",
+      "reason": "dist-info LICENSE.txt read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "jsonpath-ng",
+      "license": "Apache-2.0",
+      "reason": "dist-info LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "jsonschema",
+      "license": "MIT",
+      "reason": "dist-info COPYING read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "jsonschema-specifications",
+      "license": "MIT",
+      "reason": "dist-info COPYING read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "lxml",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.txt read: BSD 3-clause; LICENSES.txt lists ElementTree-derived and schematron files under permissive terms. libiconv is linked unmodified into etree, as the LGPL allows for a library.",
+      "bundled": [
+        "libxml2 MIT",
+        "libxslt MIT",
+        "libiconv LGPL-2.1-or-later",
+        "zlib Zlib"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "mcp",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "mcp-types",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "openpyxl",
+      "license": "MIT",
+      "reason": "dist-info LICENCE.rst read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "opentelemetry-api",
+      "license": "Apache-2.0",
+      "reason": "dist-info LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "oracledb",
+      "license": "UPL-1.0 OR Apache-2.0",
+      "reason": "dist-info LICENSE.txt read: UPL 1.0 or Apache 2.0."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "packaging",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "reason": "dist-info LICENSE, LICENSE.APACHE and LICENSE.BSD read: Apache 2.0 or BSD 2-clause."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "parso",
+      "license": "MIT",
+      "reason": "dist-info LICENSE.txt read: MIT text.",
+      "bundled": [
+        "parts derived from the Python grammar PSF-2.0"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pg8000",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "psutil",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE read: BSD 3-clause text; metadata names no license field."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pycparser",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pydantic",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pydantic-core",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pyjwt",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pymysql",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pyopenssl",
+      "license": "Apache-2.0",
+      "reason": "dist-info LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-dateutil",
+      "license": "Apache-2.0 AND BSD-3-Clause",
+      "reason": "dist-info LICENSE read: Apache 2.0 for newer code and BSD 3-clause for older code."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-dotenv",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-multipart",
+      "license": "Apache-2.0",
+      "reason": "dist-info LICENSE.txt read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-tds",
+      "license": "MIT",
+      "reason": "dist-info LICENSE.txt read: MIT text; pytds/lcid.py header read: LGPL-3.0-or-later, shipped unmodified as its own file.",
+      "bundled": [
+        "pytds/lcid.py LGPL-3.0-or-later"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pytz",
+      "license": "MIT",
+      "reason": "dist-info LICENSE.txt read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pywin32",
+      "license": "BSD-3-Clause",
+      "reason": "Windows-only (not installed on Linux); the cp312 win_amd64 wheel's win32, com and pythonwin License.txt read: BSD 3-clause. adodbapi ships unmodified as its own module, as the LGPL allows.",
+      "bundled": [
+        "adodbapi LGPL-2.1-only",
+        "pythonwin/pywin/idle PSF-2.0",
+        "Scintilla HPND",
+        "MAPIStubLibrary MIT"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pyyaml",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "referencing",
+      "license": "MIT",
+      "reason": "dist-info COPYING read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "regex",
+      "license": "Apache-2.0 AND CNRI-Python",
+      "reason": "dist-info LICENSE.txt read: Apache 2.0, with the CNRI Python license for code from CPython."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "rpds-py",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "ruamel-yaml",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "ruamel-yaml-clib",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "scramp",
+      "license": "MIT-0",
+      "reason": "dist-info LICENSE read: MIT No Attribution text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "six",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "sniffio",
+      "license": "MIT OR Apache-2.0",
+      "reason": "dist-info LICENSE, LICENSE.MIT and LICENSE.APACHE2 read: MIT or Apache 2.0."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "sqlglot",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "sse-starlette",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "starlette",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "tlslite-ng",
+      "license": "LGPL-2.1-only",
+      "reason": "dist-info LICENSE read: Hubert Kario's code is LGPL 2.1, the rest public domain, BSD or MIT; a Python library used unmodified, which the LGPL allows."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "truststore",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "typing-extensions",
+      "license": "PSF-2.0",
+      "reason": "dist-info LICENSE read: the Python license history ending in the PSF License Agreement."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "typing-inspection",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "uvicorn",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE.md read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "uvloop",
+      "license": "MIT OR Apache-2.0",
+      "reason": "dist-info LICENSE-MIT and LICENSE-APACHE read: MIT or Apache 2.0.",
+      "bundled": [
+        "libuv MIT"
+      ]
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "watchfiles",
+      "license": "MIT",
+      "reason": "dist-info LICENSE read: MIT text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "websockets",
+      "license": "BSD-3-Clause",
+      "reason": "dist-info LICENSE read: BSD 3-clause text."
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "zxcvbn",
+      "license": "MIT",
+      "reason": "dist-info LICENSE.txt read: MIT text."
+    },
+    {
+      "ecosystem": "wheel",
+      "name": "apsw",
+      "license": "Zlib",
+      "reason": "Each wheel's dist-info LICENSE read: zlib license text; metadata names only any-OSI. libcrypt ships as its own unmodified shared library, as the LGPL allows.",
+      "bundled": [
+        "libcrypt LGPL-2.1-or-later",
+        "SQLite blessing"
+      ]
+    },
+    {
+      "ecosystem": "wheel",
+      "name": "cffi",
+      "license": "MIT",
+      "reason": "Each wheel's dist-info LICENSE read: MIT No Attribution text, which License-Expression gives as MIT.",
+      "bundled": [
+        "libffi MIT"
+      ]
+    },
+    {
+      "ecosystem": "wheel",
+      "name": "cryptography",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "reason": "Each wheel's LICENSE, LICENSE.APACHE and LICENSE.BSD read: Apache 2.0 or BSD 3-clause. libgcc_s is the GCC runtime under the GCC Runtime Library Exception, so it puts no terms on the program.",
+      "bundled": [
+        "libgcc_s GPL-3.0-or-later WITH GCC-exception-3.1",
+        "OpenSSL Apache-2.0"
+      ]
+    },
+    {
+      "ecosystem": "wheel",
+      "name": "oracledb",
+      "license": "UPL-1.0 OR Apache-2.0",
+      "reason": "Each wheel's dist-info LICENSE.txt read: UPL 1.0 or Apache 2.0."
+    },
+    {
+      "ecosystem": "wheel",
+      "name": "pyopenssl",
+      "license": "Apache-2.0",
+      "reason": "The wheel's dist-info LICENSE read: Apache 2.0 text."
+    },
+    {
+      "ecosystem": "wheel",
+      "name": "typing-extensions",
+      "license": "PSF-2.0",
+      "reason": "The wheel's dist-info LICENSE read: the Python license history ending in the PSF License Agreement."
+    }
+  ]
+}

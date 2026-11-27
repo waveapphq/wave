@@ -12,7 +12,7 @@ is refused at save.
 
 ### Prerequisites
 
-- The stack's `sshd` service (port 9445): `./scripts/e2e-stack.sh up --wait sshd`.
+- The stack's `sshd` service (port 9445): `./scripts/e2e/e2e-stack.sh up --wait sshd`.
 - The shared E2E environment (made by the spec when it is missing).
 - `fixture.json`: a Test named `Grüße 測試` holding a Log block named `Grüße 測試` that writes
   `Grüße 測試`, a Python block that prints it, SSH Session Open / Exec / Close where the Exec runs

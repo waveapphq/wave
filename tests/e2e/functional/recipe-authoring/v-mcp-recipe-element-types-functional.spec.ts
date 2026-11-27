@@ -20,7 +20,7 @@
  * 5. A float element written as `.nan` or `.inf` is text, so it is refused by type, named by
  *    its key or item (REQ-3.1.3.14).
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-element-types-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-element-types-functional.spec.ts
  */
 
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'

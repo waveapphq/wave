@@ -23,7 +23,7 @@ Cancel) and its effect is proven by a real SSH Session Open run and by `GET /net
 - Detect on a closed port dials `127.0.0.1:NETCAT_CLOSED_PORT` (9479), where nothing listens
   on the WAVE host.
 - Fixtures are imported via `POST /tests` and pass validation with zero errors before any
-  run. Their Host carries the `127.0.0.1` sentinel (rewritten per mode by
+  run. Their Host carries the `127.0.0.1` sentinel (rewritten by
   `injectServiceHost`); the spec sets the Port from the config constants.
 
 ## Fixtures

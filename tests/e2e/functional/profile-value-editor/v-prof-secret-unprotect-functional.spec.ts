@@ -10,7 +10,7 @@
  *
  * Phase: functional-destructive (the test seeds and deletes its own profile and its two
  * environments over the API).
- * Run: ./scripts/e2e-targeted-local.sh functional/profile-value-editor/v-prof-secret-unprotect-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/profile-value-editor/v-prof-secret-unprotect-functional.spec.ts
  *
  * Pass Criteria:
  * 1. Before: the secret parameter holds a value in both environments (read over the API)

@@ -26,7 +26,8 @@ describe('Utility Functions', () => {
     })
 
     it('handles conditional classes', () => {
-      expect(cn('base', true && 'included', false && 'excluded')).toBe(
+      const show = { included: true, excluded: false }
+      expect(cn('base', show.included && 'included', show.excluded && 'excluded')).toBe(
         'base included'
       )
     })

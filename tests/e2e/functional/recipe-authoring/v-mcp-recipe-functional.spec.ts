@@ -34,6 +34,7 @@
  *    disabled at the end (v-mcp-02 precedent).
  */
 
+import { randomUUID } from 'node:crypto'
 import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -45,7 +46,7 @@ import { getActiveSessionId, getSessionVariables } from '../../helpers/fixture-i
 import { enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
 import { selectEnvironment } from '../../helpers/workbench'
 
-// One MCP port per stack so host-mode parallel workers never collide (8765, 8766, ...).
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const BASE_NAME = 'Recipe E2E Branch Loop Assert'
@@ -123,7 +124,7 @@ test.describe('V-MCP-RECIPE-FUNCTIONAL: recipe-authored test via MCP', () => {
   }) => {
     test.setTimeout(240_000)
 
-    const uniqueName = `${BASE_NAME} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const uniqueName = `${BASE_NAME} ${Date.now()}-${randomUUID().slice(0, 6)}`
     const recipe = fs
       .readFileSync(path.resolve(__dirname, 'recipe.yaml'), 'utf-8')
       .replace(BASE_NAME, uniqueName)

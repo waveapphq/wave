@@ -13,7 +13,7 @@
  * 3. get_test_recipe reads the Test back as a recipe that says `proxy_mode: 'off'`.
  * 4. In the Workbench the block's Proxy row reads "Off".
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-choice-words-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-choice-words-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'
@@ -30,7 +30,7 @@ import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers
 import { resetOwnership } from '../../helpers/ownership'
 import { openConfig } from '../canvas-lanes/lanes-helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const TARGET_URL = `https://${HTTP_TARGET_HOST}:${HTTP_MAIN_PORT}/health`
 

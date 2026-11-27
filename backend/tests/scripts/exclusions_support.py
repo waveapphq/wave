@@ -13,7 +13,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "check-exclusions.py"
+from tests.scripts.script_support import Repo
+
+SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "lib" / "check-exclusions.py"
 
 BACKEND_KEY = "waveapphq_wave-backend"
 FRONTEND_KEY = "waveapphq_wave-frontend"
@@ -21,6 +23,8 @@ ISSUES_PATH = "/api/issues/search"
 BRANCHES_PATH = "/api/project_branches/list"
 ALERTS_PATH = "/repos/waveapphq/wave/code-scanning/alerts"
 ANALYSES_PATH = "/repos/waveapphq/wave/code-scanning/analyses"
+COMMITS_PREFIX = "/repos/waveapphq/wave/commits/"
+CHECK_RUNS_SUFFIX = "/check-runs"
 CATEGORIES = ("/language:actions", "/language:javascript-typescript", "/language:python")
 
 SONAR_LIST = "tests/exclusions/sonarqube-cloud.md"
@@ -65,6 +69,7 @@ class FakeServices:
     alerts: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     analyses: Callable[[int], list[dict[str, Any]]] = lambda _call: []
     failures: dict[str, int] = field(default_factory=dict)
+    check_runs: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     _analyses_calls: int = 0
 
     def requests_to(self, path: str) -> list[Recorded]:
@@ -83,10 +88,33 @@ class FakeServices:
         ]
         self.analyses = lambda _call: found
 
+    def add_check_run(
+        self, sha: str, name: str, conclusion: str | None, app: str = "github-actions"
+    ) -> None:
+        """Hold one check run of a commit; a None conclusion is a run still in progress."""
+        self.check_runs.setdefault(sha, []).append(
+            {
+                "id": len(self.check_runs.get(sha, [])) + 1,
+                "name": name,
+                "head_sha": sha,
+                "status": "completed" if conclusion is not None else "in_progress",
+                "conclusion": conclusion,
+                "app": {"slug": app},
+            }
+        )
+
     def reply(self, path: str, query: dict[str, str]) -> Reply:
         """Build the reply for one request."""
         if path in self.failures:
             return self.failures[path], {"message": "Server Error"}
+        if path.startswith(COMMITS_PREFIX) and path.endswith(CHECK_RUNS_SUFFIX):
+            sha = path[len(COMMITS_PREFIX) : -len(CHECK_RUNS_SUFFIX)]
+            runs = self.check_runs.get(sha, [])
+            if "check_name" in query:
+                runs = [r for r in runs if r["name"] == query["check_name"]]
+            if query.get("page", "1") != "1":
+                runs = []
+            return 200, {"total_count": len(runs), "check_runs": runs}
         if path == ISSUES_PATH:
             kind = "pullRequest" if "pullRequest" in query else "branch"
             issues = self.sonar_marks.get(
@@ -159,54 +187,6 @@ def start_services() -> tuple[FakeServices, ThreadingHTTPServer]:
     services.url = f"http://127.0.0.1:{server.server_address[1]}"
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return services, server
-
-
-class Repo:
-    """A git work tree in tmp_path that the script runs in."""
-
-    def __init__(self, root: Path) -> None:
-        self.root = root
-        root.mkdir(parents=True)
-        self.git("init", "-q", "-b", "master")
-        self.git("config", "user.email", "tests@example.com")
-        self.git("config", "user.name", "Tests")
-        self.git("config", "commit.gpgsign", "false")
-
-    def git(self, *args: str) -> str:
-        """Run git in the work tree and return its output."""
-        done = subprocess.run(
-            ["git", *args], cwd=self.root, capture_output=True, text=True, check=True
-        )
-        return done.stdout.strip()
-
-    def write(self, rel: str, lines: list[str]) -> None:
-        """Write a file, one string per line."""
-        path = self.root / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    def line(self, rel: str, number: int) -> str:
-        """Return one 1-based line of a file."""
-        return (self.root / rel).read_text(encoding="utf-8").splitlines()[number - 1]
-
-    def line_of(self, rel: str, text: str) -> int:
-        """Return the 1-based number of the first line that equals text."""
-        lines = (self.root / rel).read_text(encoding="utf-8").splitlines()
-        return lines.index(text) + 1
-
-    def commit(self) -> str:
-        """Track every file and commit; return the commit sha."""
-        self.git("add", "-A")
-        self.git("commit", "-q", "-m", "tree", "--allow-empty")
-        return self.git("rev-parse", "HEAD")
-
-    def checkout(self, branch: str) -> None:
-        """Create and check out a branch at HEAD."""
-        self.git("checkout", "-q", "-b", branch)
-
-    def detach(self) -> None:
-        """Detach HEAD at the current commit."""
-        self.git("checkout", "-q", "--detach")
 
 
 def sonar_list(entries: list[tuple[str, str | None]], extra: list[str] | None = None) -> list[str]:

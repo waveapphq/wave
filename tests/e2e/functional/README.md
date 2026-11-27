@@ -6,18 +6,18 @@ End-to-end tests that exercise real backend execution - importing fixtures, runn
 
 ```bash
 # From the root of the clone
-./scripts/ci-playwright-local.sh
+./scripts/gate/15-playwright.sh full
 
 # Run specific specs, with paths relative to tests/e2e/:
-./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-execution.spec.ts
-./scripts/e2e-targeted-local.sh functional/assert-control/v-ctrl-assert-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-execution.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/assert-control/v-ctrl-assert-functional.spec.ts
 ```
 
 Both scripts start the backend, the frontend and the service stack in their containers.
 
-External-protocol suites (HTTP, SSH, Remote Exec) target the real compose service stack - `http-echo`, `sshd`, `http-target`, and friends - managed by `scripts/e2e-stack.sh` and documented in `../services/README.md`.
+External-protocol suites (HTTP, SSH, Remote Exec) target the real compose service stack - `http-echo`, `sshd`, `http-target`, and friends - managed by `scripts/e2e/e2e-stack.sh` and documented in `../services/README.md`.
 
-**Important**: Functional tests are NOT registered in `playwright.config.ts`. They run exclusively via `playwright.functional.config.ts`. The CI script (`ci-playwright-local.sh`) runs them as a separate step.
+**Important**: Functional tests are NOT registered in `playwright.config.ts`. They run exclusively via `playwright.functional.config.ts`. Gate 15 (`15-playwright.sh`) runs them as a separate step.
 
 ## Execution Order
 
@@ -26,7 +26,7 @@ Two projects, declared in this order and with NO Playwright `dependencies` betwe
 1. **`functional-destructive`** - Backup/restore and global variables (reset DB, CRUD operations)
 2. **`functional-workflow`** - Workflow execution + import/export tests (fixture-based, non-destructive)
 
-A dependency is deliberately absent: it would force `--shard` to replicate every destructive test into every shard. Isolation comes from per-worker state instead - each worker runs against its own backend stack with its own store root (`WAVE_STORAGE_BASE_PATH`), and a container shard runs a single worker against a single stack. Backup-restore also resets the database in `afterAll` to leave a clean state.
+A dependency is deliberately absent: it would force `--shard` to replicate every destructive test into every shard. Isolation comes from the shard instead - each shard container runs a single worker against its own backend stack with its own store root (`WAVE_STORAGE_BASE_PATH`). Backup-restore also resets the database in `afterAll` to leave a clean state.
 
 ## Test Categories
 

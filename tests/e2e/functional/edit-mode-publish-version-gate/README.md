@@ -31,7 +31,7 @@ Regression guards for the edit-mode publish dialog's version handling:
 ## Validation
 
 - Each `test()` carries an inline `// regression guard: ...` comment naming the
-  issue. Library entries are name-stamped so parallel workers never collide.
+  issue. Library entries are name-stamped.
 
 # V-FN-PUBLISH-BUMP-DEFAULT-KIND (functional)
 

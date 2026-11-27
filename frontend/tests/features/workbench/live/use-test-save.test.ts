@@ -312,14 +312,18 @@ describe('useTestSave', () => {
     it('always resets isDirectSaving in finally block', async () => {
       setupStore({ editingTestId: 'test-42', editingTestName: 'Test' })
       mockUpdateTest.mockRejectedValueOnce(new Error('fail'))
-      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const params = { ...defaultParams() }
       const { result } = renderHook(() => useTestSave(params), { wrapper })
 
       await act(async () => { await result.current.handleSaveClick() })
 
       expect(result.current.isDirectSaving).toBe(false)
-      vi.mocked(console.warn).mockRestore()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Direct save failed:',
+        expect.objectContaining({ message: 'fail' })
+      )
+      consoleSpy.mockRestore()
     })
   })
 

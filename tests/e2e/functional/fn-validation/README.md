@@ -14,7 +14,7 @@ of the wrong type, a nested body or Function flow the save refuses) are
 raw-persisted through
 `POST /admin/bulk/tests` (which bypasses save validation); valid baselines use
 `POST /tests`. Library entries are created via `POST /functions`. Admin mode is
-enabled per stack (`WAVE_ADMIN_ALLOWED=true`).
+enabled in the shard backend (`WAVE_ADMIN_ALLOWED=true`).
 
 ## Specs
 

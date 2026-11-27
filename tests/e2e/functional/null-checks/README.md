@@ -11,7 +11,7 @@ generator.
 
 ## Pre-requisites
 
-- Backend and frontend on the per-worker ports (Playwright fixtures).
+- Backend and frontend on the shard's ports (Playwright fixtures).
 - No stack services.
 
 | Spec | What it builds | Services |

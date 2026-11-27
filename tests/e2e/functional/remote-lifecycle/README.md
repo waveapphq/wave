@@ -9,7 +9,7 @@ stack.
   `E2E Execution Env`.
 
 ## Execution
-Imports the shared fixture (SSH host injected per mode), then drives full runs, a breakpointed
+Imports the shared fixture (SSH host injected), then drives full runs, a breakpointed
 debug run with Immediate Stop, and ad-hoc Run Current.
 
 ## Validation

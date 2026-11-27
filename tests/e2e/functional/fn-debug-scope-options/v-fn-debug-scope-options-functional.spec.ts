@@ -14,6 +14,7 @@
  *      honored.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 
@@ -21,7 +22,7 @@ const FN_NODE_ID = 'fn-debug-scope-options-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-DEBUG-SCOPE-OPTIONS ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-DEBUG-SCOPE-OPTIONS ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function body A -> B -> C for scope-options coverage',
     variables: {},

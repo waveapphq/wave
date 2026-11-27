@@ -12,6 +12,7 @@
  *      cascade does not nuke unrelated entities).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 
@@ -88,7 +89,7 @@ test.describe('F-SUITE-DELETE-CASCADE-01: suite delete cascades out of regressio
   test('deleting a suite removes it from every referencing regression; member tests survive', async ({
     request,
   }) => {
-    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const suffix = `${Date.now()}-${randomUUID().slice(0, 5)}`
 
     const testInDeletedSuite = await createTest(request, `cascade-test-deleted-${suffix}`)
     const testInKeptSuite = await createTest(request, `cascade-test-kept-${suffix}`)

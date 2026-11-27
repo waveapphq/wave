@@ -24,6 +24,7 @@
  *    variable, and nothing inside the block runs.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { ensureEnvironment } from '../../helpers/config'
 import { sheetLiteralRow } from '../../helpers/condition-builder'
@@ -67,7 +68,7 @@ function nullCompareTo(variable: string): string {
 }
 
 function token(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 async function consoleEntries(page: Page): Promise<LogEntry[]> {

@@ -301,6 +301,7 @@ describe('useExportImport', () => {
     })
 
     expect(mockToastError).toHaveBeenCalledWith('not an error object', 'Export Failed')
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Export failed:', 'not an error object')
     consoleSpy.mockRestore()
   })
 })

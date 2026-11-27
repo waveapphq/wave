@@ -21,6 +21,7 @@
  * 3. With all three held (0, 3, 1) the same For passes, runs its body for 0, 1, 2 and then runs its then Log.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { bindOutput, groupHeader, pickEnum, setRowExpression } from '../../helpers/config-sheet'
@@ -65,7 +66,7 @@ async function seedBlankTest(
 ): Promise<string> {
   await ensureEnvironment(request)
   const testId = await createValidTest(request, {
-    name: `zz-V-CTRL-FOR-NULL ${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `zz-V-CTRL-FOR-NULL ${label} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: [],
     edges: [],
     variables,

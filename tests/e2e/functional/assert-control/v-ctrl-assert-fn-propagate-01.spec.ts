@@ -14,6 +14,7 @@
  *   Part 2 - Try/Catch wraps the Function: ``Log_caught`` runs, ``Log_after``
  *     (sibling-after the Try/Catch) runs, session ends ``passed``.
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -199,7 +200,7 @@ test.describe('V-CTRL-ASSERT-FN-PROPAGATE-01', () => {
     page,
   }) => {
     await ensureEnvironment(request)
-    const name = `V-CTRL-ASSERT-FN-PROPAGATE plain ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CTRL-ASSERT-FN-PROPAGATE plain ${Date.now()}-${randomUUID().slice(0, 6)}`
     const testId = await seed(request, buildPlainFixture(name))
 
     await openCanvas(page, testId)
@@ -221,7 +222,7 @@ test.describe('V-CTRL-ASSERT-FN-PROPAGATE-01', () => {
     page,
   }) => {
     await ensureEnvironment(request)
-    const name = `V-CTRL-ASSERT-FN-PROPAGATE trycatch ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CTRL-ASSERT-FN-PROPAGATE trycatch ${Date.now()}-${randomUUID().slice(0, 6)}`
     const testId = await seed(request, buildTryCatchFixture(name))
 
     await openCanvas(page, testId)

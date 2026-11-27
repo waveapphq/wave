@@ -24,7 +24,7 @@
  *    body template rendered (`Greeting: Ada`).
  * 4. Every node shows execution status `success`.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/param-template-trim/v-param-template-trim-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/param-template-trim/v-param-template-trim-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

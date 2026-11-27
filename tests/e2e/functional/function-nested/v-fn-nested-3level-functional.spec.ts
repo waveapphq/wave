@@ -19,6 +19,7 @@
  *      Function bodies executed and the deepest line propagated to the root.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { getLogTexts } from '../../helpers/log-reader'
@@ -28,7 +29,7 @@ import path from 'path'
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixture-3level.json'), 'utf-8'))
-  return { ...fixture, name: `V-FN-NESTED-3LEVEL ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  return { ...fixture, name: `V-FN-NESTED-3LEVEL ${Date.now()}-${randomUUID().slice(0, 6)}` }
 }
 
 async function importAndValidate(request: APIRequestContext): Promise<string> {

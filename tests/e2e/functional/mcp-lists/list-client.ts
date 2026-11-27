@@ -4,7 +4,7 @@ import { expect, type APIRequestContext } from '../../helpers/playwright-fixture
 import { BACKEND_PORT, BACKEND_URL } from '../../helpers/config'
 import { callToolItems, type McpTextItems } from '../../helpers/mcp'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP port sits a fixed offset above the shard's backend port.
 export const MCP_PORT = Number(BACKEND_PORT) + 765
 
 export const MASK = '********'

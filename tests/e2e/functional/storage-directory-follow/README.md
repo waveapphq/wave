@@ -69,7 +69,6 @@ behind.
 
 Every filesystem path is built by one fenced helper that refuses any path that
 is not `<STORAGE_BASE_PATH>/<one of the three entity directories>/<a uuid this
-spec created>`. `STORAGE_BASE_PATH` is already per-stack, so nothing here can
-reach another shard's data. Teardown deletes every id the spec created or
+spec created>`. `STORAGE_BASE_PATH` is the shard container's own data folder. Teardown deletes every id the spec created or
 planted through the entity's own API and then removes any directory left
 behind.

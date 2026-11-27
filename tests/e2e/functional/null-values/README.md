@@ -17,7 +17,7 @@ null leg of the settings spec is the one exception, see below).
 
 ## Pre-requisites
 
-- Backend and frontend on the per-worker ports (Playwright fixtures).
+- Backend and frontend on the shard's ports (Playwright fixtures).
 - E2E stack services, brought up by the targeted / CI scripts:
 
 | Spec | Fixture / recipe | Services |
@@ -29,7 +29,7 @@ null leg of the settings spec is the one exception, see below).
 | `v-null-opensearch-functional.spec.ts` | `fixture-opensearch.json` | `opensearch` (direct node) |
 | `v-null-editors-functional.spec.ts` | `fixture-editors.json` | none |
 | `v-null-print-form-functional.spec.ts` | `fixture-print-form.json` | none |
-| `v-null-mcp-functional.spec.ts` | `recipe-mcp-owed-secret-variables.yaml`, `recipe-mcp-run-overrides.yaml` | the backend's MCP endpoint (the spec enables it on a per-stack port), `poetry` for `functional/recipe-authoring/mcp_tool_client.py`, the E2E environment |
+| `v-null-mcp-functional.spec.ts` | `recipe-mcp-owed-secret-variables.yaml`, `recipe-mcp-run-overrides.yaml` | the backend's MCP endpoint (the spec enables it on the backend port + 765), `poetry` for `functional/recipe-authoring/mcp_tool_client.py`, the E2E environment |
 | `v-field-http-null-header-functional.spec.ts` | `fixture-http-null-header.json` | `http-echo` |
 | `v-field-entry-nulls-functional.spec.ts` | `fixture-entry-nulls.json` | `http-echo`, `postgres`, `kwok` (direct); per-run namespace from `seedRun(..., 'minimal')` |
 

@@ -28,6 +28,7 @@
  *    takes out only the retry edge, and the run passes through that Log and never runs the retry lane.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { importFixtureTest } from '../../helpers/fixture-import'
@@ -397,7 +398,7 @@ test.describe('V-CTRL-FIELDS-MODES: mode sections, lanes and Note on the shared 
     const resp = await request.post(`${BACKEND_URL}/tests`, {
       data: {
         ...base,
-        name: `zz-ctrl-fields-modes-2 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: `zz-ctrl-fields-modes-2 ${Date.now()}-${randomUUID().slice(0, 6)}`,
         workflow: { nodes, edges },
       },
     })

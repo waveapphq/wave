@@ -17,6 +17,7 @@
  *     callout, even while the running session already holds artifacts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -57,7 +58,7 @@ function fileIoWriteNode(id: string, description: string, artifactPath: string, 
 
 function baseFixture(name: string, nodes: unknown[], edges: unknown[]) {
   return {
-    name: `${name} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: `${name} ${Date.now()}-${randomUUID().slice(0, 5)}`,
     version: '1.0.0',
     description: 'Tests-page artifact gate fixture.',
     workflow: { nodes, edges },

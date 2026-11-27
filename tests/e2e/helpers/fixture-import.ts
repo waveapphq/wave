@@ -1,13 +1,6 @@
-/**
- * Fixture import helpers shared by functional workflow specs.
- *
- * Centralizes the standard "import fixture -> validate -> open in
- * workbench" flow: unique-name
- * suffixing (POST /tests treats duplicate names as an error), the
- * mandatory zero-error /tests/{id}/validate gate, and the
- * localStorage-clean double navigation to /workbench?editTest=<id>.
- */
+/** Fixture import: a unique name, the zero-error validate gate, opening the workbench. */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Locator, type Page } from './playwright-fixtures'
 import { waitForCanvasLoad } from './canvas'
 import {
@@ -23,18 +16,13 @@ import {
   SSH_TARGET_HOST,
   SSH_FIXTURE_HOST_SENTINEL,
   HTTP_TARGET_HOST,
-  HTTP_FIXTURE_HOST_SENTINEL,
 } from './config'
 
 /** Options controlling how a fixture is prepared before POST /tests. */
 export interface ImportFixtureOptions {
-  /** Rewrite connection `host` params (127.0.0.1 -> SSH_TARGET_HOST) with
-   *  injectServiceHost so the fixture reaches the compose stack in container-shard
-   *  mode. No-op in host mode. */
+  /** Rewrite connection hosts to SSH_TARGET_HOST with injectServiceHost. */
   injectSsh?: boolean
-  /** Rewrite ://127.0.0.1:<stack-port> URLs (ports 9449-9461, 9477-9478, 9480-9481 only) to
-   *  HTTP_TARGET_HOST so the fixture reaches the published HTTP/TLS/proxy/kwok,
-   *  OpenSearch and tls-lab chain services in container-shard mode. No-op in host mode. */
+  /** Rewrite 127.0.0.1 URLs of the stack ports to HTTP_TARGET_HOST with injectHttpHost. */
   injectHttp?: boolean
   /** Fail when POST /tests reports repairs (blocks or connections removed at save). */
   rejectRepairs?: boolean
@@ -43,15 +31,11 @@ export interface ImportFixtureOptions {
 /** Published HTTP-side stack ports (9449-9461), OpenSearch (9477 node, 9478 gateway) and the tls-lab chain (9480, 9481); :8000 and 9479 never match. */
 const HTTP_STACK_URL_RE = /:\/\/127\.0\.0\.1:(9449|945\d|946[01]|947[78]|948[01])\b/g
 
-/** Rewrite every `host` key equal to the fixture sentinel (127.0.0.1) to the
- *  stack host (SSH_TARGET_HOST unless given, e.g. SQL_TARGET_HOST). Deep,
- *  immutable. A no-op when the target IS the sentinel (host mode), so host-mode
- *  fixtures stay byte-identical. */
+/** Rewrite every `host` equal to the 127.0.0.1 sentinel to the stack host, deep and immutable. */
 export function injectServiceHost(
   fixture: Record<string, unknown>,
   targetHost: string = SSH_TARGET_HOST,
 ): Record<string, unknown> {
-  if (targetHost === SSH_FIXTURE_HOST_SENTINEL) return fixture
   const walk = (node: unknown): unknown => {
     if (Array.isArray(node)) return node.map(walk)
     if (node && typeof node === 'object') {
@@ -66,14 +50,11 @@ export function injectServiceHost(
   return walk(fixture) as Record<string, unknown>
 }
 
-/** Rewrite every string value's ://127.0.0.1:<port> to HTTP_TARGET_HOST for the
- *  stack-published ports 9449-9461, 9477-9478 and 9480-9481 ONLY. Deep, immutable. A no-op when the
- *  target IS the sentinel (host mode), so host-mode fixtures stay byte-identical. */
+/** Rewrite ://127.0.0.1:<port> to HTTP_TARGET_HOST for the stack's published ports. */
 export function injectHttpHost(
   fixture: Record<string, unknown>,
   targetHost: string = HTTP_TARGET_HOST,
 ): Record<string, unknown> {
-  if (targetHost === HTTP_FIXTURE_HOST_SENTINEL) return fixture
   const walk = (node: unknown): unknown => {
     if (Array.isArray(node)) return node.map(walk)
     if (node && typeof node === 'object') {
@@ -91,8 +72,7 @@ export function injectHttpHost(
   return walk(fixture) as Record<string, unknown>
 }
 
-/** Import a fixture via POST /tests under a unique name and return its id.
- *  Fails the test if the import or the zero-error validation gate fails. */
+/** Import a fixture under a unique name, fail on any validation error, and return its id. */
 export async function importFixtureTest(
   page: Page,
   fixture: Record<string, unknown>,
@@ -106,7 +86,7 @@ export async function importFixtureTest(
   const baseName = (prepared as { name?: string }).name ?? 'Functional Test'
   const uniqueFixture = {
     ...prepared,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   const createResp = await page.request.post(`${BACKEND_URL}/tests`, {
@@ -141,8 +121,7 @@ export async function importFixtureTest(
   return testId
 }
 
-/** Clear the draft session, import the fixture, validate it, and open it in
- *  the workbench (localStorage-clean double navigation). Returns the test id. */
+/** Clear the draft, import, validate and open the fixture; returns the test id. */
 export async function importValidateAndNavigate(
   page: Page,
   fixture: Record<string, unknown>,
@@ -167,10 +146,7 @@ export interface ImportExpectingErrorsOptions extends ImportFixtureOptions {
 
 export type ImportedWithErrors = ValidateResult & { testId: string }
 
-/** Import a fixture that is MEANT to fail validation and return the findings.
- *  Persists through the admin bulk route, because POST /tests refuses an
- *  invalid workflow, and asserts nothing about the validate response - the
- *  caller asserts which Blocks and parameters were named. */
+/** Import a fixture meant to fail validation, through the admin bulk route, and return the findings. */
 export async function importExpectingErrors(
   page: Page,
   fixture: Record<string, unknown>,
@@ -193,7 +169,7 @@ export async function importExpectingErrors(
   }
   const baseName = source.name ?? 'Invalid Fixture'
   const testId = await rawPersistTest(page.request, {
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     nodes: source.workflow?.nodes ?? [],
     edges: source.workflow?.edges ?? [],
     variables: source.variables ?? {},
@@ -209,9 +185,7 @@ export async function importExpectingErrors(
   return { testId, ...result }
 }
 
-/** The active workbench session id (draft or run - same session).
- *  Polls briefly: under CI contention the run can report non-idle a beat before
- *  the backend registers the session, so a single GET can catch a transient null. */
+/** The active workbench session id, polled since the run can report non-idle before the session exists. */
 export async function getActiveSessionId(page: Page): Promise<string> {
   let sessionId = ''
   await expect

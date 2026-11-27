@@ -18,6 +18,7 @@
  *      is enabled as soon as a real edit is made.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { configSheet, openBlockSheet } from '../../helpers/workbench'
 import {
@@ -69,7 +70,7 @@ test.describe('V-BINDING-NAME-GATE-FUNCTION (functional): output binding name ga
     request,
   }) => {
     const testId = await createValidTest(request, {
-      name: `V-BINDING-NAME-GATE-FUNCTION ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-BINDING-NAME-GATE-FUNCTION ${Date.now()}-${randomUUID().slice(0, 4)}`,
       nodes: [functionNode({})],
       edges: [startEdge(NODE_ID)],
     })
@@ -118,7 +119,7 @@ test.describe('V-BINDING-NAME-GATE-FUNCTION (functional): output binding name ga
     // `dropped_output` is not declared by the Function any more, and the name
     // it still points at could never be written to. Neither fact may reach Save.
     const testId = await rawPersistTest(request, {
-      name: `V-BINDING-NAME-GATE-FUNCTION stale ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-BINDING-NAME-GATE-FUNCTION stale ${Date.now()}-${randomUUID().slice(0, 4)}`,
       nodes: [functionNode({ result: '', dropped_output: 'k8s-' })],
       edges: [startEdge(NODE_ID)],
     })

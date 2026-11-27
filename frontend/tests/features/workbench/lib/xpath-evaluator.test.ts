@@ -141,7 +141,7 @@ describe('evaluateXPath', () => {
 
     it('catches DOMParser non-Error throw', () => {
       vi.spyOn(DOMParser.prototype, 'parseFromString').mockImplementation(() => {
-        throw 'parser broke' // eslint-disable-line no-throw-literal
+        throw 'parser broke'
       })
       const result = evaluateXPath('<root/>', '//item')
       expect(result.success).toBe(false)
@@ -305,7 +305,7 @@ describe('evaluateXPath - snapshot result types', () => {
       function (this: DOMParser, ...args: [string, DOMParserSupportedType]) {
         const doc = origParseFromString.apply(this, args)
         doc.evaluate = () => {
-          throw 42 // eslint-disable-line no-throw-literal
+          throw 42
         }
         return doc
       }
@@ -383,7 +383,7 @@ describe('validateXPathSyntax', () => {
       function (this: DOMParser, ...args: [string, DOMParserSupportedType]) {
         const doc = originalParseFromString.apply(this, args)
         doc.evaluate = () => {
-          throw 'not an error object' // eslint-disable-line no-throw-literal
+          throw 'not an error object'
         }
         return doc
       }

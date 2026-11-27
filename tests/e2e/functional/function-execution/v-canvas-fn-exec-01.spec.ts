@@ -27,6 +27,7 @@
  * expose `block_states` / `execution_logs`).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogLines } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -40,7 +41,7 @@ function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, 'fixture-exec-end-to-end.json'), 'utf-8'),
   )
-  return { ...fixture, name: `V-CANVAS-FN-EXEC-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  return { ...fixture, name: `V-CANVAS-FN-EXEC-01 ${Date.now()}-${randomUUID().slice(0, 6)}` }
 }
 
 async function selectEnvironment(page: Page, envName: string) {

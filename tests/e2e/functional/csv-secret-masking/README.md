@@ -15,8 +15,8 @@ subscribes to the WS log stream.
 
 ## Steps
 
-1. `./scripts/e2e-targeted-local.sh functional/csv-secret-masking/v-csv-secret-masking-functional.spec.ts` from the root of
-   the clone, or the whole suite via `./scripts/ci-playwright-local.sh`.
+1. `./scripts/e2e/e2e-targeted-local.sh functional/csv-secret-masking/v-csv-secret-masking-functional.spec.ts` from the root of
+   the clone, or the whole suite via `./scripts/gate/15-playwright.sh full`.
 
 ## Validation
 

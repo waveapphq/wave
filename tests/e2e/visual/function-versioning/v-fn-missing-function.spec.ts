@@ -26,13 +26,9 @@ async function seedTestWithDeletedFunction(request: APIRequestContext): Promise<
   testId: string
   libName: string
 }> {
-  const libName = `missing_${Math.random().toString(36).slice(2, 8)}`
+  const libName = `missing_${randomUUID().slice(0, 6)}`
   // Use a UUID that almost certainly doesn't exist in storage.
-  const ghostFunctionId = `00000000-0000-0000-0000-${Math.random()
-    .toString(36)
-    .padEnd(12, '0')
-    .slice(0, 12)
-    .replace(/[^a-z0-9]/g, '0')}`
+  const ghostFunctionId = `00000000-0000-0000-0000-${randomUUID().slice(-12)}`
 
   // The write path blocks a Shared instance whose functionId is
   // unknown, so the broken state is raw-persisted via the admin bulk endpoint
@@ -43,7 +39,7 @@ async function seedTestWithDeletedFunction(request: APIRequestContext): Promise<
   const testId = randomUUID()
   const entity = {
     id: testId,
-    name: `V-FN-MISSING-FUNCTION ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-MISSING-FUNCTION ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Shared instance pointing at a non-existent library entry',
     workflow: {

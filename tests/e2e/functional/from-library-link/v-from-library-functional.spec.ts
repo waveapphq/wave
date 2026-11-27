@@ -50,7 +50,7 @@ async function seedLibrary(request: APIRequestContext): Promise<SeededFunction> 
 
 async function seedTest(request: APIRequestContext, fn: SeededFunction): Promise<string> {
   const seed = {
-    name: `V-FROM-LIBRARY-LINK ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FROM-LIBRARY-LINK ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Shared Function instance for From-library link coverage',
     workflow: {

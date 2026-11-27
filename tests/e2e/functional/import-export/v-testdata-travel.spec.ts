@@ -22,9 +22,10 @@
  * 5. Importing with overwrite replaces the existing test's files: the old ones
  *    are gone and only the archive's remain, byte for byte.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/import-export/v-testdata-travel.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/import-export/v-testdata-travel.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { openTest } from '../../helpers/fn-seed'
@@ -60,7 +61,7 @@ const STALE_ROOT_CONTENT = 'stale-root-bytes-that-the-archive-must-replace'
 const createdTestIds: string[] = []
 
 function uniqueName(label: string): string {
-  return `${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${label} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 /** The export filename stem: the backend drops anything that is not a word

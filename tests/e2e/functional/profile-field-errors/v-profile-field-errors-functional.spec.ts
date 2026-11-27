@@ -27,9 +27,10 @@
  * 8. Reopening that profile flags nothing: no field message and no note under Save.
  * 9. Every profile the spec creates is deleted and gone afterwards.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/profile-field-errors/v-profile-field-errors-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/profile-field-errors/v-profile-field-errors-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, ensureEnvironment } from '../../helpers/config'
 import { DATABASE_PROFILE_FIELDS, openDatabaseProfileForm } from '../../helpers/profiles'
@@ -52,7 +53,7 @@ const createButton = (dialog: Locator): Locator =>
   dialog.getByRole('button', { name: 'Create', exact: true })
 
 function uniqueName(): string {
-  return `FieldErr DB ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `FieldErr DB ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 async function box(locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> {

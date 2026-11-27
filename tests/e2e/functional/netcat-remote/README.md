@@ -20,10 +20,10 @@ NETCAT-16, NETCAT-17).
     reaches it.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd netcat-target
+  ./scripts/e2e/e2e-stack.sh up --wait sshd netcat-target
   ```
 
-- `fixture.json` - an SSH Session Open (Host `127.0.0.1`, rewritten per mode
+- `fixture.json` - an SSH Session Open (Host `127.0.0.1`, rewritten
   by `injectSsh`), an SSH Session Exec that writes `remote-payload.txt` under a
   per-run folder on the host, then a Remote Execution body of six Netcat blocks
   with Host `netcat-target`:
@@ -46,7 +46,7 @@ NETCAT-16, NETCAT-17).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/netcat-remote/v-plugin-netcat-remote-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/netcat-remote/v-plugin-netcat-remote-functional.spec.ts`.
 2. Load `fixture.json`, check it against the harness constants, and set the
    run folder to a fresh `/tmp/wave-e2e-ncrem-<8 hex>`.
 3. Clear the workbench draft, import via `POST /tests` with `injectSsh`, open

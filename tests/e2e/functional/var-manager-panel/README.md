@@ -30,8 +30,8 @@ back in front fails rather than quietly weakening the other spec.
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 - The shared environment `E2E Execution Env` (provisioned by `ensureEnvironment`).
 
 ## Execution Steps

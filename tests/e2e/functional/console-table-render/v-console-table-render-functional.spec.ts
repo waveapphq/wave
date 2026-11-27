@@ -37,7 +37,7 @@
  * Known and accepted, NOT asserted: below roughly an 1800px window the console line
  * wraps and the columns stop lining up on screen. The copy text is unaffected.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/console-table-render/v-console-table-render-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/console-table-render/v-console-table-render-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

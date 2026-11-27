@@ -17,6 +17,7 @@
  * 6. A running Wait Until carries the RUNNING badge ALONE - no countdown
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT, ensureEnvironment } from '../../helpers/config'
@@ -134,7 +135,7 @@ async function seedAndOpen(
 ): Promise<void> {
   await page.request.delete(`${BASE}/workbench/session/`).catch(() => {})
   const fixture = {
-    name: `V-CTRL-WAIT-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-WAIT-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Wait Until lane rendering fixture.',
     workflow: { nodes, edges },

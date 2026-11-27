@@ -11,7 +11,7 @@ literal-mode integer input is the field value the Block saves (REQ-3.1.1.5).
 
 ## Pre-requisites
 
-- Backend and frontend on the per-worker ports (Playwright fixtures).
+- Backend and frontend on the shard's ports (Playwright fixtures).
 - The shared environment `E2E Execution Env` (provisioned by `ensureEnvironment`) for the runs.
 - The MCP listener, enabled until restart on the stack's own port by the recipe test and reset
   after it.

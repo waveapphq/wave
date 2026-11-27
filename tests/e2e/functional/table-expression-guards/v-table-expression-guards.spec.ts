@@ -26,7 +26,7 @@
  *       show no finding, save and run, while the same marks outside quotes
  *       still get their finding
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/table-expression-guards/v-table-expression-guards.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/table-expression-guards/v-table-expression-guards.spec.ts
  */
 
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'

@@ -371,7 +371,10 @@ describe('useValidation', () => {
       })
 
       expect(mockToastError).toHaveBeenCalledWith('Failed to delete test.', 'Delete Failed')
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to delete test:',
+        expect.objectContaining({ message: 'Network error' })
+      )
 
       // Should NOT navigate on error
       expect(mockNavigate).not.toHaveBeenCalled()
@@ -526,7 +529,10 @@ describe('useValidation', () => {
         'Fix Failed',
       )
       expect(result.current.isFixingTest).toBe(false)
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to fix test:',
+        expect.objectContaining({ message: 'Server error' })
+      )
 
       consoleSpy.mockRestore()
     })
@@ -605,6 +611,10 @@ describe('useValidation', () => {
         'Fix Failed',
       )
       expect(result.current.showValidationErrorDialog).toBe(true)
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to fix test:',
+        expect.objectContaining({ message: 'Internal server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -621,6 +631,10 @@ describe('useValidation', () => {
       expect(mockToastError).toHaveBeenCalledWith(
         'Failed to apply automatic fixes. Please try again.',
         'Fix Failed',
+      )
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to fix test:',
+        expect.objectContaining({ message: 'Test has 1 validation error(s)' })
       )
       consoleSpy.mockRestore()
     })

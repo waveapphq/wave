@@ -15,8 +15,8 @@ mask.
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 - No external service: every leg converts text in-process.
 
 ## Execution Steps

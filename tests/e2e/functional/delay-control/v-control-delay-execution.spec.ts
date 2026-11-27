@@ -18,7 +18,7 @@
  *
  * REQ: REQ-3.5.4.1 Configurable delay blocks
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/delay-control/v-control-delay-execution.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/delay-control/v-control-delay-execution.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

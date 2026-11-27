@@ -15,6 +15,7 @@
  * 3. The Log after the For prints `item=seed`.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { numberInput, setRowExpression } from '../../helpers/config-sheet'
 import { ensureEnvironment } from '../../helpers/config'
@@ -63,7 +64,7 @@ test.describe('V-CTRL-FOREACH-NESTED-EMPTY: a For Each over nothing inside a For
     await test.step('a blank Test declaring o_item, open on the canvas', async () => {
       await ensureEnvironment(request)
       testId = await createValidTest(request, {
-        name: `zz-V-CTRL-FOREACH-NESTED-EMPTY ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: `zz-V-CTRL-FOREACH-NESTED-EMPTY ${Date.now()}-${randomUUID().slice(0, 6)}`,
         nodes: [],
         edges: [],
         variables: { o_item: { type: 'map', value: SEED, scope: 'test' } },

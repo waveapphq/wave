@@ -12,7 +12,7 @@
  * 3. get_test_recipe writes the Note back in the Function entry's `notes:`, and the readback is
  *    the written recipe.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-function-notes-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-function-notes-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

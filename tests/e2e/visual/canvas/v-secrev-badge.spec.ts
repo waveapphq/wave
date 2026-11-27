@@ -16,6 +16,7 @@
  * 2. The Always-mask block shows neither badge.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { importValidateAndNavigate } from '../../helpers/fixture-import'
 import { BACKEND_URL } from '../../helpers/config'
@@ -50,7 +51,7 @@ function logNode(id: string, masking: string, y: number) {
 
 function buildBadgeFixture(): Record<string, unknown> {
   return {
-    name: `V-SECREV-BADGE ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-SECREV-BADGE ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'One Always-reveal Log (amber badge) and one Always-mask Log (no badge).',
     workflow: {

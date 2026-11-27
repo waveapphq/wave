@@ -43,7 +43,7 @@ async function seedLibrary(request: APIRequestContext): Promise<SeededFn> {
 async function seedTest(request: APIRequestContext, shared: SeededFn): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-LIFECYCLE-DIALOGS ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-LIFECYCLE-DIALOGS ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Shared instance, pre-seeded edit mode for both dialogs',
       workflow: {

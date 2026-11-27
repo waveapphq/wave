@@ -13,6 +13,7 @@
  * 6. Reset clears execution states and returns to idle
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad, waitForCanvasToolbar } from '../../helpers/canvas'
 import { exec } from '../../helpers/exec'
@@ -309,7 +310,7 @@ test.describe('V-CANVAS-04: Running State Visualization', () => {
     // Per design: Stop sets status to stopped. The shared one-Log fixture finishes
     // before Stop can land, so seed a Delay (keeps the run "running" long enough to
     // click Stop) followed by a trailing node that Stop causes to be skipped.
-    const name = `V-CANVAS-04-S9 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CANVAS-04-S9 ${Date.now()}-${randomUUID().slice(0, 6)}`
     const seed = await page.request.post(`http://localhost:${BACKEND_PORT}/tests`, {
       data: buildDelayWorkflowFixture(name),
     })

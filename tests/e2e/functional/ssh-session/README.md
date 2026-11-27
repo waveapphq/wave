@@ -5,21 +5,20 @@ real OpenSSH hosts (real-service harness, REQ-3.4.1.3 / REQ-5.1.5).
 
 ## Prerequisites
 
-- The real-service stack must be running (`scripts/e2e-stack.sh up --wait`; started
-  automatically by `playwright.functional.config.ts` webServer in host mode, by
-  `scripts/e2e-targeted-local.sh` for targeted runs, and by `ci-playwright-local.sh`
-  for full CI). See `tests/e2e/services/README.md` - user `wave`, password
+- The real-service stack must be running (`scripts/e2e/e2e-stack.sh up --wait`; started
+  automatically by `scripts/e2e/e2e-targeted-local.sh` for targeted runs and by
+  `15-playwright.sh` for the gate). See `tests/e2e/services/README.md` - user `wave`, password
   `wave-secret`, main host :9445, nested jump host reachable only in-stack.
 - Strict host-key tests rely on WAVE's trusted SSH hosts list, never the
   account's `~/.ssh/known_hosts`. `setup/global-setup.ts` seeds it on every
-  backend in both modes through `resetNetworkSettings`
+  backend through `resetNetworkSettings`
   (`helpers/network-settings.ts`): the committed host key for :9445, a WRONG key
   for :9448, the host key for the tunnel far host `sshd` port 22, nothing for
   :9447. The auth spec calls the same helper before and after its test, so
   :9447 is untrusted when it runs.
 - Fixtures are imported via `POST /tests` and validated via
   `POST /tests/{id}/validate?context=run` (zero errors) before the run. SSH hosts
-  carry the `127.0.0.1` sentinel, rewritten by `injectServiceHost` per mode.
+  carry the `127.0.0.1` sentinel, rewritten by `injectServiceHost`.
 
 ## Specs
 

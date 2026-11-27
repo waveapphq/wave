@@ -16,6 +16,7 @@
  *      cursor-not-allowed AND aria-disabled).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { clickNodeKebabItem, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -25,7 +26,7 @@ const FN_NODE_ID = 'fn-pub-required-fields-1'
 async function seedTest(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-PUBLISH-REQUIRED-FIELDS ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-PUBLISH-REQUIRED-FIELDS ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Local Function for publish-required-fields coverage',
       workflow: {

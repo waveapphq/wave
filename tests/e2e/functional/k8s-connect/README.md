@@ -21,7 +21,7 @@ sealed on every surface (REQ-5.1.1, REQ-3.4.1.5, REQ-4.5.1, REQ-4.6.3).
   fixture variables at load time; fixture JSON never commits PEM or token
   values.
 - Fixtures carry the literal `https://127.0.0.1:9460` API URL; the
-  `injectHttp` import option rewrites it for container-shard mode. The
+  `injectHttp` import option rewrites it to the shard's gateway. The
   tunneled fixture instead builds its URL from the tunnel's resolved local
   port and pins `tls_server_name: kwok-internal`.
 
@@ -70,7 +70,7 @@ sealed on every surface (REQ-5.1.1, REQ-3.4.1.5, REQ-4.5.1, REQ-4.6.3).
 ## Isolation
 
 - `importFixtureTest` uniquifies every test name; runs execute in the
-  per-worker workbench session and the worker fixture frees it afterwards.
+  workbench session and the worker fixture frees it afterward.
 - The specs only READ from the cluster (`/version`) and mint short-lived
   tokens for the dedicated `wave-tests` service account - no cluster-scoped
   mutations, and the `restricted` namespace is never written.

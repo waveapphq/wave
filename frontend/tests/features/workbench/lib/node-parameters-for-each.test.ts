@@ -92,20 +92,20 @@ describe('ForEach Loop Control Parameters', () => {
     it('has variableRef property with allowed types', () => {
       const inputs = CONTROL_INPUTS['for-each']
       const collection = inputs.find((p) => p.name === 'collection')!
-      expect((collection as any).variableRef).toBeDefined()
+      expect(collection.variableRef).toBeDefined()
     })
 
     it('has variableRef.types containing array, map, and table', () => {
       const inputs = CONTROL_INPUTS['for-each']
       const collection = inputs.find((p) => p.name === 'collection')!
-      const variableRef = (collection as any).variableRef as { types: string[] }
+      const variableRef = collection.variableRef!
       expect(variableRef.types).toEqual(['array', 'map', 'table'])
     })
 
     it('has selectableType with array, map, table options', () => {
       const inputs = CONTROL_INPUTS['for-each']
       const collection = inputs.find((p) => p.name === 'collection')!
-      const selectableType = (collection as any).selectableType as { options: string[] }
+      const selectableType = collection.selectableType!
       expect(selectableType).toBeDefined()
       expect(selectableType.options).toEqual(['array', 'map', 'table'])
     })
@@ -192,7 +192,7 @@ describe('ForEach Loop Control Parameters', () => {
     it('does not have variableRef', () => {
       const inputs = CONTROL_INPUTS['for-each']
       const timeout = inputs.find((p) => p.name === 'timeout')!
-      expect((timeout as any).variableRef).toBeUndefined()
+      expect(timeout.variableRef).toBeUndefined()
     })
 
     it('has no showWhen condition', () => {

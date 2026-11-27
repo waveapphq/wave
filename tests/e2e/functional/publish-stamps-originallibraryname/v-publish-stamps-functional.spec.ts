@@ -26,7 +26,7 @@ const FN_NODE_ID = 'fn-publish-stamps-1'
 
 async function seedTestWithLocalFunction(request: APIRequestContext, label: string): Promise<string> {
   const seed = {
-    name: `V-PUBLISH-STAMPS ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-PUBLISH-STAMPS ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Pre-seeded local Function for publish-stamps coverage',
     workflow: {

@@ -1,6 +1,6 @@
 # WAVE E2E real-service stack (test-only).
 #
-# Managed by scripts/e2e-stack.sh - do NOT invoke docker-compose/podman-compose
+# Managed by scripts/e2e/e2e-stack.sh - do NOT invoke docker-compose/podman-compose
 # directly (the wrapper owns the rootless-podman network quirk and image builds).
 #
 # Services:

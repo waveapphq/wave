@@ -24,7 +24,7 @@ Registered under the `functional-workflow` project of
   PATH of the machine the backend runs on (the E2E runner image carries it).
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait postgres mssql opensearch kwok tls-lab
+  ./scripts/e2e/e2e-stack.sh up --wait postgres mssql opensearch kwok tls-lab
   ```
 
 - Who signs what: the WAVE Test CA (`CA_CERT_PEM`) signs the PostgreSQL and

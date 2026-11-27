@@ -10,6 +10,7 @@
  *   2. then Log DOES fire (pass-through via the `then` egress)
  *   3. session final status == "passed"
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -22,7 +23,7 @@ const THEN_LOG_ID = 'then-log'
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-FOR-DISABLED-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-FOR-DISABLED-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Disabled For loop pass-through (then runs, body cascade-skips)',
     workflow: {

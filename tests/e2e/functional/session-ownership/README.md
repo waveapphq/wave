@@ -6,7 +6,7 @@ session from being lost while its tab is still open.
 
 ## Prerequisites
 
-- Backend + frontend E2E stack (started by the Playwright config / `ci-playwright-local.sh`).
+- Backend + frontend E2E stack (started by `scripts/gate/15-playwright.sh` or `scripts/e2e/e2e-targeted-local.sh`).
 - No seed for the mirror / take-over / continuity walks. Each test drives the
   single GLOBAL ownership slot directly and resets it (force -> release) in
   `beforeEach` / `afterEach`.

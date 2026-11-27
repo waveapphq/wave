@@ -28,7 +28,7 @@
  *    id and the masked log line, and never the secret value.
  * 9. An unknown execution id and an unknown format are refused with their exact texts.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/mcp-report/v-mcp-run-report-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/mcp-report/v-mcp-run-report-functional.spec.ts
  */
 
 import fs from 'fs'
@@ -46,7 +46,7 @@ import {
 } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const TERMINAL_STATUSES = ['passed', 'failed', 'stopped']

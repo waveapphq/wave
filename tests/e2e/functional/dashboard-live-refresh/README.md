@@ -4,7 +4,7 @@ Verify that the Dashboard's Recent Executions section auto-updates without any u
 
 ## Prerequisites
 
-- Backend + frontend stack running (host mode spins them up via `playwright.functional.config.ts`).
+- Backend + frontend stack running (the shard container starts them).
 - E2E environment seeded via `ensureEnvironment` in the test setup.
 
 ## Steps

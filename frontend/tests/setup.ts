@@ -19,7 +19,6 @@ import { useLayoutSessionStore } from '../src/stores/layout-session-store'
 // @testing-library/react checks for Jest's presence; this tricks it into working with Vitest
 // See: https://github.com/testing-library/user-event/issues/1115
 declare global {
-  // eslint-disable-next-line no-var
   var jest: unknown
 }
 
@@ -76,27 +75,6 @@ beforeAll(() => {
 beforeAll(async () => {
   await initializeTreeSitter()
 })
-
-// Handle React's concurrent mode error recovery exceptions
-// These are thrown in development mode when error boundaries recover from errors
-// NOTE: We don't mock console.error here because individual tests may spy on it
-// and need to see the actual calls
-
-// Suppress the unhandled exception that React throws during error recovery
-// This is caught at the process level since window.onerror doesn't catch it in Node
-if (typeof process !== 'undefined') {
-  process.on('uncaughtException', (error) => {
-    if (
-      error.message &&
-      error.message.includes('There was an error during concurrent rendering')
-    ) {
-      // Suppress this expected React 19 error recovery exception
-      return
-    }
-    // Re-throw other uncaught exceptions
-    throw error
-  })
-}
 
 // Mock auth store with configurable state
 // Tests can override authMockState before rendering

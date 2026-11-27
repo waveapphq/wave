@@ -50,7 +50,7 @@ async function seedLibrary(page: Page): Promise<string> {
 async function seedTest(page: Page, functionId: string): Promise<string> {
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-PROFILE-01 ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-PROFILE-01 ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'V-FN-PROFILE-01 host with one local + one shared Function.',
       workflow: {

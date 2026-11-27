@@ -14,6 +14,7 @@
  * 3. After the Test save, a reload and a drill back in, the Edit windows show `guest` and 42.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -33,7 +34,7 @@ const BASE = `http://localhost:${BACKEND_PORT}`
 
 function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8'))
-  return { ...fixture, name: `V-CANVAS-FN-PARAM-EDIT-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
+  return { ...fixture, name: `V-CANVAS-FN-PARAM-EDIT-01 ${Date.now()}-${randomUUID().slice(0, 6)}` }
 }
 
 async function seedFixture(request: APIRequestContext): Promise<string> {

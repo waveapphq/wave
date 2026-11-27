@@ -23,7 +23,7 @@
  *
  * REQ: REQ-3.4.1.17 Log plugin
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/log-plugin/v-plugin-log-execution.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/log-plugin/v-plugin-log-execution.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

@@ -168,7 +168,7 @@ function blockOf(fixture: Fixture, description: string): FixtureNode {
   return found[0]
 }
 
-/** Each Search dials the host-mode address its case names and stores no secret; the fills come from config. */
+/** Each Search uses its case's 127.0.0.1 address and stores no secret; config fills it. */
 function prepareFixture(fixture: Fixture, key: OpenSearchApiToken): Fixture {
   const searches = fixture.workflow.nodes.filter((node) => node.data.elementType === 'opensearch')
   expect(searches.map((node) => node.data.description), 'one Search per case, in case order').toEqual(
@@ -179,7 +179,7 @@ function prepareFixture(fixture: Fixture, key: OpenSearchApiToken): Fixture {
     const values = node.data.config.values
     const what = `"${c.block}"`
     expect(node.data.label, `${what} is named as it is described`).toBe(c.block)
-    expect(values.url, `${what} carries the host-mode address the import rewrites`).toBe(c.url)
+    expect(values.url, `${what} carries the 127.0.0.1 address the import rewrites`).toBe(c.url)
     expect(values.index, `${what} reads the run's own index`).toBe(openSearchIndexName(token, 'app-logs'))
     expect(values.username, `${what} logs in as it means to`).toBe(c.username)
     expect(values.verify_ssl, `${what} sets Verify Server Certificate`).toBe(c.verify)

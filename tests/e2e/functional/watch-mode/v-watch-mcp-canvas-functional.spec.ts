@@ -16,7 +16,7 @@
  *  3. A watched change keeps them the same way, every frame it plays shows both descriptions open,
  *     and only the Block whose message changed takes a turn.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-canvas-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-canvas-functional.spec.ts
  */
 
 import type { APIRequestContext, BrowserContext } from '@playwright/test'
@@ -41,7 +41,7 @@ import {
   type ViewSample,
 } from './helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const WATCHED_CHANGE = 'amend_test_live_from_recipe'
 const FAST_AMEND = 'amend_test_from_recipe'

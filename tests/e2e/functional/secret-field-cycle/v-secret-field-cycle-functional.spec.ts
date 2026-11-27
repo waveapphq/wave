@@ -12,7 +12,7 @@
  * placeholder everywhere.
  *
  * Phase: functional-workflow (imports its own fixture; two runs + config edits).
- * Run: ./scripts/e2e-targeted-local.sh functional/secret-field-cycle/v-secret-field-cycle-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/secret-field-cycle/v-secret-field-cycle-functional.spec.ts
  */
 
 import { test, expect, type Page, type Locator } from '../../helpers/playwright-fixtures'

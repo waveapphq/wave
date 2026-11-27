@@ -25,7 +25,7 @@
  *         and the release table reports Chart `wave-demo-0.1.0`, App Version
  *         `1.0.0` and Status `deployed` in the run's own namespace.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/file-picker/v-file-picker-helm.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/file-picker/v-file-picker-helm.spec.ts
  */
 
 import fs from 'node:fs'

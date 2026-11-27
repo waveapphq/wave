@@ -6,7 +6,7 @@ import { runToken } from '../../helpers/element-types'
 import { callTool } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP port sits a fixed offset above the shard's backend port.
 export const MCP_PORT = Number(BACKEND_PORT) + 765
 
 export type Doc = Record<string, any>

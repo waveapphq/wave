@@ -339,7 +339,7 @@ function expectStackRows(
   expect(values.password, `"${name}" stores no password`).toBe('')
 }
 
-/** The fixture is the Test the pass criteria describe, written for the host-mode address. */
+/** The fixture is the Test the pass criteria describe, written for the 127.0.0.1 sentinel address. */
 function expectFixtureBlocks(fixture: Fixture): void {
   const sentinel = oracleAddresses(SSH_FIXTURE_HOST_SENTINEL)
   for (const block of PROGRAM_BLOCKS) {

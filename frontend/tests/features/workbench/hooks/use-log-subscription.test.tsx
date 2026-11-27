@@ -215,7 +215,9 @@ describe('useLogSubscription Hook', () => {
 
       // Nothing reaches the console panel; the frame is recorded for developers.
       expect(mockAddEntry).not.toHaveBeenCalled()
-      expect(consoleWarn).toHaveBeenCalled()
+      expect(consoleWarn).toHaveBeenCalledExactlyOnceWith('useLogSubscription dropped a log frame', {
+        unrecognizedField: 'value',
+      })
       consoleWarn.mockRestore()
     })
   })
@@ -270,7 +272,10 @@ describe('useLogSubscription Hook', () => {
 
         expect(mockAddEntry).not.toHaveBeenCalled()
         expect(mockAddEntries).not.toHaveBeenCalled()
-        expect(consoleWarn).toHaveBeenCalled()
+        expect(consoleWarn).toHaveBeenCalledExactlyOnceWith(
+          'useLogSubscription dropped a log frame',
+          payload
+        )
         consoleWarn.mockRestore()
       })
     }
@@ -299,7 +304,10 @@ describe('useLogSubscription Hook', () => {
       deliver([readable, { unrecognizedField: 'value' }])
 
       expect(mockAddEntries).toHaveBeenCalledWith([readable])
-      expect(consoleWarn).toHaveBeenCalled()
+      expect(consoleWarn).toHaveBeenCalledExactlyOnceWith(
+        'useLogSubscription dropped 1 of 2 log entries',
+        [readable, { unrecognizedField: 'value' }]
+      )
       consoleWarn.mockRestore()
     })
 
@@ -315,7 +323,10 @@ describe('useLogSubscription Hook', () => {
       expect(mockSetPaginationHasMore).toHaveBeenCalledWith(true)
       expect(mockSetPaginationCursor).toHaveBeenCalledWith('cursor-abc')
       expect(mockSetPaginationLoading).toHaveBeenCalledWith(false)
-      expect(consoleWarn).toHaveBeenCalled()
+      expect(consoleWarn).toHaveBeenCalledExactlyOnceWith(
+        'useLogSubscription dropped 1 of 1 log entries',
+        [{ unrecognizedField: 'value' }]
+      )
       consoleWarn.mockRestore()
     })
 
@@ -691,7 +702,6 @@ async function mockPageRequestInFlight(): Promise<void> {
 
   describe('Error Handling', () => {
     it('handles subscription errors gracefully', async () => {
-      // Mock console.error to prevent stderr output
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       mockSubscribe.mockImplementation(() => {
@@ -705,6 +715,10 @@ async function mockPageRequestInFlight(): Promise<void> {
         renderHook(() => useLogSubscription('session-123', 'INFO'))
       }).not.toThrow()
 
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        'Failed to subscribe to log topic:',
+        expect.objectContaining({ message: 'Subscription failed' })
+      )
       consoleError.mockRestore()
     })
 
@@ -718,7 +732,10 @@ async function mockPageRequestInFlight(): Promise<void> {
 
       renderHook(() => useLogSubscription('session-123', 'INFO'))
 
-      expect(consoleError).toHaveBeenCalled()
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        'Failed to subscribe to log topic:',
+        expect.objectContaining({ message: 'Subscription failed' })
+      )
       consoleError.mockRestore()
     })
 
@@ -744,6 +761,10 @@ async function mockPageRequestInFlight(): Promise<void> {
       const entry = mockAddEntry.mock.calls.at(-1)?.[0] as { id: string; timestamp: string }
       expect(entry.id).not.toBe('')
       expect(Number.isNaN(Date.parse(entry.timestamp))).toBe(false)
+      expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+        'Failed to subscribe to log topic:',
+        expect.objectContaining({ message: 'Subscription failed' })
+      )
       consoleError.mockRestore()
     })
 

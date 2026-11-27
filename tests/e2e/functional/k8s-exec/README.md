@@ -33,17 +33,17 @@ gap this suite exists to close.
   (`tests/e2e/services/kwok/pki/`). The specs read them through
   `helpers/config.ts`; fixture JSON never commits PEM or token values.
 - Fixtures carry the literal `https://127.0.0.1:9460` URL; the `injectHttp`
-  import option rewrites it for container-shard mode.
+  import option rewrites it to the shard's gateway.
 
 ### Editing anything under `tests/e2e/services/kwok/` needs a full image rebuild
 
 The manifests, Stages, log files, `kwok.yaml` and `tokens.csv` are copied into
 the image at BUILD time and applied from inside the container at startup, and
 the kwok controller itself is rebuilt from patched source in the same build.
-Editing one and running `scripts/e2e-stack.sh up` leaves the old image serving
+Editing one and running `scripts/e2e/e2e-stack.sh up` leaves the old image serving
 and the cluster exactly as it was - the specs then fail against a cluster that
 serves no exec at all, and it reads like a plugin bug. The sequence is
-`scripts/e2e-stack.sh build`, then `down`, then `up --wait kwok`.
+`scripts/e2e/e2e-stack.sh build`, then `down`, then `up --wait kwok`.
 
 ### Why the Script legs need the patched kwok
 

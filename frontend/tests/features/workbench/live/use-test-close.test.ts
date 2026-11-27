@@ -715,6 +715,10 @@ describe('useTestClose', () => {
       await act(async () => { await result.current.handleSwitchTestSave() })
 
       expect(state.reset).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Direct save failed:',
+        expect.objectContaining({ message: 'save failed' })
+      )
       consoleSpy.mockRestore()
     })
 

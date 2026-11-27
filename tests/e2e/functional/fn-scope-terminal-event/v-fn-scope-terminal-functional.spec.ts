@@ -15,6 +15,7 @@
  *      right status (subscribe BEFORE the run - no event replay).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, FRONTEND_URL } from '../../helpers/config'
 import { openSessionEventCollector } from '../../helpers/ws-events'
@@ -117,7 +118,7 @@ async function seedTest(
 ): Promise<string> {
   const body = buildInnerNodes(scenario)
   const seed = {
-    name: `V-FN-SCOPE-TERMINAL-${scenario} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-SCOPE-TERMINAL-${scenario} ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: `Scoped run terminal event coverage (${scenario})`,
     variables: {},

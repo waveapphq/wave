@@ -48,7 +48,7 @@
  *   - Split mode with precedence: OR expression in split mode
  *   - Branching engine: sourceHandle-aware edge routing
  *
- * Run manually with: ./scripts/e2e-targeted-local.sh functional/assert-control/v-ctrl-assert-functional.spec.ts
+ * Run manually with: ./scripts/e2e/e2e-targeted-local.sh functional/assert-control/v-ctrl-assert-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

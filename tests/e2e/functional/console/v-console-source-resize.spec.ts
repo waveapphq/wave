@@ -40,6 +40,7 @@
  *      requirement.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -68,7 +69,7 @@ async function importAndOpen(
   const baseName = (fixture as { name?: string }).name ?? 'Console Resize'
   const uniqueFixture = {
     ...fixture,
-    name: `${baseName} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${baseName} ${Date.now()}-${randomUUID().slice(0, 6)}`,
   }
 
   await page.request.delete(`http://localhost:${BACKEND_PORT}/workbench/session/`).catch(() => {})

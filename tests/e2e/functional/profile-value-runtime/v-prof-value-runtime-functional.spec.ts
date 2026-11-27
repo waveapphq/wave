@@ -12,7 +12,7 @@
  * REQ-4.7.4, REQ-4.7.10, REQ-3.1.3.14 (exact numeric pipeline).
  *
  * Phase: functional-workflow (imports its own profile + test via API, runs in isolation).
- * Run: ./scripts/e2e-targeted-local.sh functional/profile-value-runtime/v-prof-value-runtime-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/profile-value-runtime/v-prof-value-runtime-functional.spec.ts
  */
 
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'

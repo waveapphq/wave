@@ -28,6 +28,7 @@
  * Phase: no-data (seeds via API so the DB state is irrelevant).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -88,7 +89,7 @@ function buildSeed(name: string): Record<string, unknown> {
 }
 
 async function seed(page: Page): Promise<string> {
-  const name = `zz-11541-s2-fn-cfg-01-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `zz-11541-s2-fn-cfg-01-${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, { data: buildSeed(name) })
   const body = await resp.json().catch(() => null)
   expect(resp.ok(), `POST /tests failed: ${resp.status()} ${JSON.stringify(body)}`).toBeTruthy()
@@ -127,7 +128,7 @@ function emptyLocalFunction(id: string, label: string, y: number): Record<string
 }
 
 async function seedTwoFunctions(page: Page): Promise<string> {
-  const name = `zz-11541-s2-fn-cfg-01-two-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `zz-11541-s2-fn-cfg-01-two-${Date.now()}-${randomUUID().slice(0, 6)}`
   const resp = await page.request.post(`${BACKEND_URL}/tests`, {
     data: {
       name,

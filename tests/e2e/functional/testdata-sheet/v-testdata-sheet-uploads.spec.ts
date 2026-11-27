@@ -25,7 +25,7 @@
  * 6. Files dropped on a folder row upload into that folder, not the root, and
  *    their row sits under that folder in the tree while they arrive.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-uploads.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-uploads.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

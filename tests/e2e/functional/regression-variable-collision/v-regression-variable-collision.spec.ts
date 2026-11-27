@@ -12,7 +12,7 @@
  * - Adding Suite B alongside Suite A triggers a 409 collision
  * - Suite C has `timeout` as integer (matching Suite A) - adding succeeds
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/regression-variable-collision/v-regression-variable-collision.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/regression-variable-collision/v-regression-variable-collision.spec.ts
  */
 
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'

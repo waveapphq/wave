@@ -10,7 +10,7 @@
  * artifacts, and proves the reference resolved: the node succeeds and the
  * recording server receives exactly the planted bytes.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-artifact-containment.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/http-plugin/v-plugin-http-artifact-containment.spec.ts
  */
 
 import http from 'node:http'

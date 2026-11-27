@@ -17,6 +17,7 @@
  * 6. The node widens by one handle slot per lane
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -92,7 +93,7 @@ const WIDTH_NODES = [
 async function seedAndOpen(page: Page, nodes: Array<Record<string, unknown>>): Promise<void> {
   await page.request.delete(`${BASE}/workbench/session/`).catch(() => {})
   const fixture = {
-    name: `V-CTRL-SWITCH-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-SWITCH-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Switch lane rendering fixture.',
     workflow: {

@@ -13,7 +13,7 @@
  *    stopping an upload, clearing a notice and recording a refusal each answer
  *    404 with error code `NOT_FOUND` and the message `Test not found: {id}`.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-upload-state.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/testdata-sheet/v-testdata-sheet-upload-state.spec.ts
  */
 
 import { randomUUID } from 'crypto'

@@ -18,6 +18,7 @@
  *    and contains 2 do not. A true check paints success, a false one warning.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasBoxStable } from '../../helpers/canvas'
 import { ensureEnvironment } from '../../helpers/config'
@@ -97,7 +98,7 @@ test.describe('V-CHECK-LENGTH-CONTAINS: length equals and contains on a typed li
     await test.step('a blank Test open on the canvas', async () => {
       await ensureEnvironment(request)
       testId = await createValidTest(request, {
-        name: `zz-V-CHECK-LENGTH-CONTAINS ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: `zz-V-CHECK-LENGTH-CONTAINS ${Date.now()}-${randomUUID().slice(0, 6)}`,
         nodes: [],
         edges: [],
       })
@@ -159,7 +160,7 @@ test.describe('V-CHECK-LENGTH-CONTAINS: length equals and contains on a typed li
     await test.step('a Test declaring nums_null, open on the canvas', async () => {
       await ensureEnvironment(request)
       testId = await createValidTest(request, {
-        name: `zz-V-CHECK-LENGTH-CONTAINS 2d ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: `zz-V-CHECK-LENGTH-CONTAINS 2d ${Date.now()}-${randomUUID().slice(0, 6)}`,
         nodes: [],
         edges: [],
         variables: { nums_null: { type: 'array', scope: 'test', value: null } },

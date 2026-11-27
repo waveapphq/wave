@@ -11,6 +11,7 @@
  * a persisted edge with ``sourceHandle === "pass"`` (the first free split-mode
  * handle).
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { dropLogAt, expandPalette, getWorkflowNodes } from '../../helpers/edge-drag'
@@ -69,7 +70,7 @@ test.describe('V-CTRL-ASSERT-MODE-SWITCH-01: split-mode Assert auto-edge', () =>
     page,
   }) => {
     // Seed a Test with the Assert already in split mode + a valid assertion row.
-    const seedName = `V-CTRL-ASSERT-MODE-SWITCH ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const seedName = `V-CTRL-ASSERT-MODE-SWITCH ${Date.now()}-${randomUUID().slice(0, 6)}`
     const createResp = await page.request.post(`${BACKEND_URL}/tests`, { data: buildSeed(seedName) })
     expect(createResp.ok(), `POST /tests failed: ${createResp.status()}`).toBeTruthy()
     const createBody = await createResp.json()
@@ -161,7 +162,7 @@ test.describe('V-CTRL-ASSERT-MODE-SWITCH-01: split-mode Assert auto-edge', () =>
   }) => {
     // Seed an Assert in SPLIT mode + a valid assertion row, so the modal will
     // save cleanly when we flip mode to "single".
-    const seedName = `V-CTRL-ASSERT-MODE-SWITCH-FLIP ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const seedName = `V-CTRL-ASSERT-MODE-SWITCH-FLIP ${Date.now()}-${randomUUID().slice(0, 6)}`
     const createResp = await page.request.post(`${BACKEND_URL}/tests`, { data: buildSeed(seedName) })
     expect(createResp.ok(), `POST /tests failed: ${createResp.status()}`).toBeTruthy()
     const createBody = await createResp.json()
@@ -243,7 +244,7 @@ test.describe('V-CTRL-ASSERT-MODE-SWITCH-01: split-mode Assert auto-edge', () =>
     // ``data.config.values.mode === undefined`` in the store. Saving treats that as
     // "split" and keeps every wired egress.
 
-    const seedName = `V-CTRL-ASSERT-EDIT-PRESERVE ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const seedName = `V-CTRL-ASSERT-EDIT-PRESERVE ${Date.now()}-${randomUUID().slice(0, 6)}`
     // Seed a fresh Assert (NO mode set - mimics palette drop) already wired
     // to a pass-Log and a fail-Log. Adding an expression and saving keeps both edges.
     const passLogId = 'pass-log-fresh'

@@ -22,7 +22,7 @@
  *    numbers preserved, template rendered, expression evaluated).
  * 4. Every node shows execution status `success`.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/variable-setter-types/v-plugin-varset-types-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/variable-setter-types/v-plugin-varset-types-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

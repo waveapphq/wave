@@ -56,7 +56,7 @@ async function seedLibrary(request: APIRequestContext): Promise<SeededFn> {
 async function seedEditModeRenameTest(request: APIRequestContext, shared: SeededFn): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-PUBLISH-VERSION-GATE ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-PUBLISH-VERSION-GATE ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Edit-mode draft renames the input',
       workflow: {
@@ -199,7 +199,7 @@ test.describe('V-FN-PUBLISH-VERSION-GATE (functional): bump gating + blocked aff
     // isValidSemver helper, so 1.0.0-01 is invalid (Publish stays disabled).
     const seed = await request.post(`${BACKEND_URL}/tests`, {
       data: {
-        name: `V-FN-PUBLISH-VERSION-GATE local ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: `V-FN-PUBLISH-VERSION-GATE local ${Date.now()}-${randomUUID().slice(0, 4)}`,
         version: '1.0.0',
         description: 'A local Function to open the from-Local publish dialog',
         workflow: {

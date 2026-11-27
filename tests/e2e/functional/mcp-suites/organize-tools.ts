@@ -7,7 +7,7 @@ import { BACKEND_PORT, BACKEND_URL } from '../../helpers/config'
 import { callToolItems, type McpToolResult } from '../../helpers/mcp'
 import { setMasking } from '../secret-reveal-controls/masking-flags'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP port sits a fixed offset above the shard's backend port.
 export const MCP_PORT = Number(BACKEND_PORT) + 765
 
 /** The placeholder every read shows for a secret that holds a value. */

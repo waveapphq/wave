@@ -1,10 +1,4 @@
-/**
- * The workflow behind STOPPED-READ-SILENT, as data.
- *
- * One Parallel section whose reader lane carries a short time limit and holds a
- * K8s Get the stub answers long after that limit. The sibling lane finishes at
- * once, so the only thing the section waits on is the read.
- */
+/** STOPPED-READ-SILENT: a short Parallel lane holding a K8s Get the stub answers late. */
 
 import {
   chainEdges,
@@ -24,18 +18,16 @@ import {
   K8S_STUB_PORT,
 } from '../../helpers/config'
 
-/** The stub as fixtures carry it; `injectHttp` rewrites the host per mode. */
+/** The stub as fixtures carry it; `injectHttp` rewrites the host to the shard's gateway. */
 const STUB_BASE = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_STUB_PORT}`
 
 /** Seconds the stub sits on the resource read before answering. */
 export const READ_DELAY_SECONDS = 8
 
-/** Milliseconds the reader lane is allowed. Long enough for Connect and
- *  discovery, far short of the read's answer. */
+/** The reader lane's time limit: enough for Connect, far short of the read's answer. */
 export const BRANCH_LIMIT_MS = 2500
 
-/** The read's own timeout, above the stub delay, so the read SUCCEEDS on the
- *  host and writes its INFO line - late. */
+/** The read's own timeout, above the stub delay, so the read succeeds late and still writes its INFO line. */
 export const READ_TIMEOUT_SECONDS = 30
 
 /** Nothing is seeded: the stub answers any namespace. */
@@ -68,8 +60,7 @@ export const STOPPED_VARS = {
 /** The bookend the sibling lane stamps; it lands before the section is cut. */
 export const QUIET_MARKER = 'k8s-stopped-e2e-quiet'
 
-/** The line the exit lane would stamp. An expired lane skips the exit, so it
- *  must never appear. */
+/** The line the exit lane would stamp; an expired lane skips the exit, so it must never appear. */
 export const EXIT_MARKER = 'k8s-stopped-e2e-exit'
 
 /** The Parallel control's own line for a lane that ran out of time. */

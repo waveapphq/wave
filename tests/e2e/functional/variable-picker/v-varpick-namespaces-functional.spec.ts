@@ -13,6 +13,7 @@
  * REQ: REQ-3.5.1.20 (shared variable picker, VARPICK-1, VARPICK-2)
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL } from '../../helpers/config'
@@ -23,7 +24,7 @@ const SWITCH_ID = 'vp-switch'
 const WHILE_ID = 'vp-while'
 const LOG_ID = 'vp-log'
 
-const UNIQUE = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const UNIQUE = `${Date.now()}-${randomUUID().slice(0, 6)}`
 
 interface Seeded {
   testId: string

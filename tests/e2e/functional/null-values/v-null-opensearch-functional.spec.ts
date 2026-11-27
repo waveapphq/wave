@@ -119,7 +119,7 @@ function prepareFixture(fixture: Fixture): Fixture {
     expect(node.data.label, `${what} is named as it is described`).toBe(node.data.description)
     expect(node.data.templateFields, `${what} fills {{ }} in its Query row`).toEqual(['query'])
     expect(node.data.expressionFields, `${what} has no expression row`).toEqual([])
-    expect(values.url, `${what} carries the host-mode address the import rewrites`).toBe(DIRECT_URL)
+    expect(values.url, `${what} carries the 127.0.0.1 address the import rewrites`).toBe(DIRECT_URL)
     expect(values.username, `${what} logs in as wave`).toBe(OPENSEARCH_USER)
     expect(values.password, `${what} stores no password`).toBe('')
     expect(values.ca_cert, `${what} stores no CA`).toBe('')

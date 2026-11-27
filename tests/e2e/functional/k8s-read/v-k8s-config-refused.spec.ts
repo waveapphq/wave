@@ -37,6 +37,7 @@
  * REQ: REQ-3.1.2.4
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
@@ -78,7 +79,7 @@ const REQUIRED_PREFIX = 'Required parameter'
 
 /** A unique Test name, so a re-run never collides with a leftover record. */
 function uniqueName(leg: string): string {
-  return `V-K8S-CONFIG-REFUSED ${leg} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `V-K8S-CONFIG-REFUSED ${leg} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 /** The same Block, saved switched off. A switched-off Block is skipped by both

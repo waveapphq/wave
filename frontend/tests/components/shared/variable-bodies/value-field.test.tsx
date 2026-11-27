@@ -26,7 +26,7 @@ vi.mock('@/hooks/use-viewport', () => ({
 // Inline scalar body stand-in: emits a typed value through onChange so the
 // field's value pass-through wiring can be asserted without CodeMirror.
 vi.mock('@/components/shared/variable-bodies/scalar-edit-body', () => ({
-  ScalarEditBody: ({ value, type, onChange, onValidChange, onInvalidText, blank }: any) => (
+  ScalarEditBody: ({ value, type, onChange, onValidChange, onInvalidText, blank }: React.ComponentProps<typeof import('@/components/shared/variable-bodies/scalar-edit-body').ScalarEditBody>) => (
     <div
       data-testid="scalar-edit-body"
       data-type={type}
@@ -42,7 +42,7 @@ vi.mock('@/components/shared/variable-bodies/scalar-edit-body', () => ({
       >
         int
       </button>
-      <button data-testid="emit-unfinished" onClick={() => onInvalidText('-')}>
+      <button data-testid="emit-unfinished" onClick={() => onInvalidText!('-')}>
         unfinished
       </button>
     </div>

@@ -25,7 +25,7 @@ const FN_NODE_ID = 'fn-publish-required-1'
 async function seedLocalFunction(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-PUBLISH-REQUIRED ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-PUBLISH-REQUIRED ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Local function for publish-required coverage',
       workflow: {

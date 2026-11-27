@@ -16,6 +16,7 @@
  * Phase: no-data (asserts purely on the BE 422 envelope; no UI interaction).
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL } from '../../helpers/config'
 
@@ -130,7 +131,7 @@ function innerLogInFunctionTest(name: string): Record<string, unknown> {
 
 test.describe('V-CANVAS-FN-ERRMSG-01: save validation error envelope', () => {
   test('root Log w/ no message: REQUIRED_PARAM_MISSING + node_label', async ({ request }) => {
-    const name = `V-CANVAS-FN-ERRMSG-01-root ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CANVAS-FN-ERRMSG-01-root ${Date.now()}-${randomUUID().slice(0, 6)}`
     const resp = await request.post(`${BACKEND_URL}/tests`, { data: rootLogTest(name) })
     expect(resp.status(), 'expected 422 for missing required param').toBe(422)
     const envelope = (await resp.json()) as SaveErrorEnvelope
@@ -149,7 +150,7 @@ test.describe('V-CANVAS-FN-ERRMSG-01: save validation error envelope', () => {
   test('inner Log w/ no message inside Function: detail entry carries function_node_*', async ({
     request,
   }) => {
-    const name = `V-CANVAS-FN-ERRMSG-01-inner ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const name = `V-CANVAS-FN-ERRMSG-01-inner ${Date.now()}-${randomUUID().slice(0, 6)}`
     const resp = await request.post(`${BACKEND_URL}/tests`, { data: innerLogInFunctionTest(name) })
     expect(resp.status(), 'expected 422 for missing required param inside Function').toBe(422)
     const envelope = (await resp.json()) as SaveErrorEnvelope

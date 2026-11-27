@@ -28,6 +28,7 @@
  *    `Max Size: Enter a valid integer value`.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { numberInput, rowAlerts, rowError, saveButton } from '../../helpers/config-sheet'
 import { BACKEND_URL } from '../../helpers/config'
@@ -271,7 +272,7 @@ test.describe('V-NUMBER-BLOCKS-SAVE-FUNCTIONAL: a Block number field keeps the n
 /** Write the stored fixture as it is, past the Save check, the way an older file or an outside tool leaves it. */
 async function persistStored(request: APIRequestContext, fixture: Record<string, any>): Promise<string> {
   return rawPersistTest(request, {
-    name: `zz-11541-s8-stored-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `zz-11541-s8-stored-${Date.now()}-${randomUUID().slice(0, 4)}`,
     nodes: fixture.workflow.nodes,
     edges: fixture.workflow.edges,
     variables: fixture.variables,

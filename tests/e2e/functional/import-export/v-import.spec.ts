@@ -8,7 +8,7 @@
  *   - An import over an existing name with an unknown conflict choice is skipped
  *
  * REQ: REQ-5.2.4.9 Test Import and Export
- * Run: ./scripts/e2e-targeted-local.sh functional/import-export/v-import.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/import-export/v-import.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

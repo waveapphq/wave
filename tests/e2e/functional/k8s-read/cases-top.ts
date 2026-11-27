@@ -1,13 +1,4 @@
-/**
- * R4 case table - every K8s Top option the sweep proves, as data.
- *
- * The table IS the checklist. Each leg names its option ids (the id families
- * are defined in the suite README), the session it runs under, and the exact
- * Block values.
- * The spec builds one chained workflow from this table with the shared node
- * factories; the checked-in `fixture-top-golden.json` pins the emitted node
- * shape so the generated form stays reviewable against a hand-authored one.
- */
+/** Every K8s Top option the sweep proves, as data; the id families are in the suite README. */
 
 import {
   chainEdges,
@@ -21,7 +12,7 @@ import {
 import { SEEDED } from '../../helpers/k8s-seed'
 import { HTTP_FIXTURE_HOST_SENTINEL, K8S_API_PORT } from '../../helpers/config'
 
-/** The fixture-side API URL. `injectHttp` rewrites it in container-shard mode. */
+/** The fixture-side API URL. `injectHttp` rewrites it to the shard's gateway. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
 /** One mebibyte in bytes - Top reports memory in bytes, never in Mi. */
@@ -41,9 +32,7 @@ export const NODE_CAPACITY = { cpu: 32, memory: 274877906944 }
 /** The name every leg reads when it is meant to miss. */
 export const MISSING_NAME = 'nope'
 
-/** Which credential a leg runs under. `junk` is a hand-written kubeconfig, not
- *  a Connect output: a junk bearer token 401s on /version, so K8s Connect
- *  cannot produce that session. */
+/** Which credential a leg runs under; `junk` is a hand-written kubeconfig K8s Connect cannot produce. */
 export type TopSession = 'admin' | 'limited' | 'junk'
 
 const SESSION_VARIABLE: Record<TopSession, string> = {
@@ -62,16 +51,13 @@ export interface TopLeg {
   session: TopSession
   /** Everything the Block carries beyond `session`. */
   values: Record<string, unknown>
-  /** The sheet cannot author this shape, so it is written into the fixture
-   *  directly - the same route G-54 takes on Get. */
+  /** The sheet cannot author this shape, so it goes into the fixture directly, as for G-54 on Get. */
   fixtureOnly?: boolean
-  /** The leg records a failure instead of succeeding: it binds the core
-   *  outputs and its Block is expected to paint amber. */
+  /** The leg records a failure instead of succeeding, binds the core outputs and is expected to paint amber. */
   records?: boolean
 }
 
-/** One row per leg. Successes first: a hard failure stops the run, so the
- *  recorded-failure legs sit at the tail where they cannot hide a success. */
+/** One row per leg, successes first, since a hard failure stops the run. */
 export const TOP_LEGS: readonly TopLeg[] = [
   {
     key: 't01',
@@ -191,8 +177,7 @@ export const okVar = (leg: TopLeg): string => `${leg.key}_ok`
 export const errorVar = (leg: TopLeg): string => `${leg.key}_err`
 export const reasonVar = (leg: TopLeg): string => `${leg.key}_reason`
 
-/** A hand-written kubeconfig in the shape K8s Connect emits, so a session can
- *  carry a credential Connect itself would refuse to build. */
+/** A hand-written kubeconfig in the shape K8s Connect emits, for a credential Connect would refuse. */
 export function handWrittenSession(token: string, namespace: string): string {
   return JSON.stringify({
     apiVersion: 'v1',
@@ -243,8 +228,7 @@ export const NODE_COLUMN_TYPES = [
   'integer',
 ] as const
 
-/** Cell positions per heading, so an inserted column moves one index map
- *  instead of every assertion that reads a row. */
+/** Cell positions per heading, so an inserted column changes one map. */
 export const POD_CELL = { name: 0, cpu: 1, memory: 2 } as const
 export const CONTAINER_CELL = { name: 0, container: 1, cpu: 2, memory: 3 } as const
 export const NODE_CELL = {
@@ -302,8 +286,7 @@ function connectNode(id: string, tokenVariable: string, opts: TopSweepMaterial, 
   })
 }
 
-/** Build the whole sweep: two Connect Blocks, one Top Block plus one marker
- *  per leg, and the bookend. */
+/** Build the whole sweep: two Connect Blocks, one Top Block and marker per leg, and the bookend. */
 export function buildTopSweepFixture(material: TopSweepMaterial): Record<string, unknown> {
   const variables: Record<string, FixtureVariable> = {
     k8s_admin_token: { value: material.adminToken, type: 'string', scope: 'test', secret: true },

@@ -173,17 +173,6 @@ export default defineConfig({
     // Match the 4-core GitHub runner; locally, cores and free memory set the cap.
     maxWorkers: process.env.GITHUB_ACTIONS === 'true' ? 4 : LOCAL_TEST_WORKERS,
     minWorkers: process.env.GITHUB_ACTIONS === 'true' ? 2 : LOCAL_TEST_WORKERS,
-    // Known Radix UI test warning: https://github.com/radix-ui/primitives/issues/1952
-    onConsoleLog(log) {
-      if (log.includes('DialogContent') && log.includes('DialogTitle')) {
-        return false // Suppress this log
-      }
-      // React lazy loading notices under waitFor are informational.
-      if (log.includes('A suspended resource finished loading inside a test')) {
-        return false
-      }
-      return true // Keep other logs
-    },
     coverage: {
       provider: 'v8',
       reporter: [
@@ -194,7 +183,7 @@ export default defineConfig({
         'lcov', // For SonarQube integration
       ],
       reportsDirectory: './coverage',
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['src/**/*.{ts,tsx}', 'scripts/**/*.mjs'],
       exclude: [],
       all: true,
       thresholds: {

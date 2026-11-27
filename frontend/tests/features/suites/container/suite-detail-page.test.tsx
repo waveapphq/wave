@@ -1025,7 +1025,7 @@ describe('SuiteDetailPage - blocking reads', () => {
 
   it('reports the reason when the suite export fails', async () => {
     vi.mocked(exportSuite).mockRejectedValue(new Error('Export failed: Not Found'))
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     renderWithRouter()
     await waitFor(() => expect(screen.getByTestId('suite-detail-page')).toBeInTheDocument())
@@ -1034,11 +1034,15 @@ describe('SuiteDetailPage - blocking reads', () => {
     fireEvent.click(await screen.findByTestId('export-button'))
 
     expect(await screen.findByText('Export failed: Not Found')).toBeInTheDocument()
+    expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+      'Export failed:',
+      expect.objectContaining({ message: 'Export failed: Not Found' })
+    )
   })
 
   it('passes a non-Error export rejection through verbatim', async () => {
     vi.mocked(exportSuite).mockRejectedValue('not an error object')
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     renderWithRouter()
     await waitFor(() => expect(screen.getByTestId('suite-detail-page')).toBeInTheDocument())
@@ -1048,6 +1052,7 @@ describe('SuiteDetailPage - blocking reads', () => {
 
     expect(await screen.findByText('not an error object')).toBeInTheDocument()
     expect(screen.getByText('Export Failed')).toBeInTheDocument()
+    expect(consoleError).toHaveBeenCalledExactlyOnceWith('Export failed:', 'not an error object')
   })
 
   // ==========================================================================

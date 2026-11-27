@@ -13,7 +13,7 @@ Proves profile value binding at run time: a `table` param resolves to a
 
 ## Execution
 
-`./scripts/e2e-targeted-local.sh functional/profile-value-runtime/<spec>.spec.ts` from the root of the clone, or via `./scripts/ci-playwright-local.sh`.
+`./scripts/e2e/e2e-targeted-local.sh functional/profile-value-runtime/<spec>.spec.ts` from the root of the clone, or via `./scripts/gate/15-playwright.sh full`.
 
 ## What it validates
 

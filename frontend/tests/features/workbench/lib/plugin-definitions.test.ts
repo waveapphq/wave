@@ -800,9 +800,8 @@ describe('Plugin Definitions - REQ-3.4.4.1', () => {
 
 describe('Plugin Type Exports', () => {
   it('exports PluginCategory type', async () => {
-    const module = await import('@/features/workbench/lib/plugin-definitions')
     // Type check: this should compile if the type is exported
-    const category: (typeof module)['PLUGIN_CATEGORIES'][number]['id'] = 'network'
+    const category: (typeof import('@/features/workbench/lib/plugin-definitions'))['PLUGIN_CATEGORIES'][number]['id'] = 'network'
     expect(category).toBe('network')
   })
 

@@ -35,7 +35,7 @@ vi.mock('@/hooks/use-viewport', () => ({
 
 // Inline scalar body stand-in: emits a typed value through onChange.
 vi.mock('@/components/shared/variable-bodies/scalar-edit-body', () => ({
-  ScalarEditBody: ({ value, type, onChange, blank }: any) => (
+  ScalarEditBody: ({ value, type, onChange, blank }: React.ComponentProps<typeof import('@/components/shared/variable-bodies/scalar-edit-body').ScalarEditBody>) => (
     <div data-testid="scalar-edit-body" data-type={type} data-value={String(value)} data-blank={blank ?? ''}>
       <button data-testid="scalar-emit-int" onClick={() => onChange(42)}>int</button>
       <button data-testid="scalar-emit-true" onClick={() => onChange(true)}>true</button>
@@ -43,12 +43,17 @@ vi.mock('@/components/shared/variable-bodies/scalar-edit-body', () => ({
   ),
 }))
 
+// The stand-in calls onSave with only the arguments each case needs.
+type SheetStandInProps = Omit<React.ComponentProps<typeof import('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet').ValueEditorSheet>, 'onSave'> & {
+  onSave: (...args: unknown[]) => void
+}
+
 // The shared "Edit value" sheet stand-in: exposes its props + a save/save-template
 // /close so the cell's open + save(value, isTemplate) routing can be asserted.
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {
   const { createPortal } = await import('react-dom')
   return {
-    ValueEditorSheet: ({ type, value, isTemplate, allowTemplate, availableVariables, captureEsc, onSave, onClose }: any) =>
+    ValueEditorSheet: ({ type, value, isTemplate, allowTemplate, availableVariables, captureEsc, onSave, onClose }: SheetStandInProps) =>
       createPortal(
         <div
           data-testid="value-editor-sheet"

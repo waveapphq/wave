@@ -17,6 +17,7 @@
  *    and the run passes.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { operatorOptions, sheetLiteralRow } from '../../helpers/condition-builder'
 import { ensureEnvironment } from '../../helpers/config'
@@ -61,7 +62,7 @@ test.describe('V-NULL-CHECK-TABLE: the four table checks on a null, an empty and
       await test.step(`a blank Test whose hosts is ${state.name}`, async () => {
         await ensureEnvironment(request)
         testId = await createValidTest(request, {
-          name: `zz-V-NULL-CHECK-TABLE ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: `zz-V-NULL-CHECK-TABLE ${Date.now()}-${randomUUID().slice(0, 6)}`,
           nodes: [],
           variables: { hosts: { type: 'table', scope: 'test', value: state.value } },
         })

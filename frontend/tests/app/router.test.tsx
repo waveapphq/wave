@@ -172,11 +172,9 @@ vi.mock('@/features/settings/page/network-proxy-blocks-tab', () => ({
 // Save original fetch to restore it after tests that override it
 const originalFetch = global.fetch
 
-// Silence console.error for expected network errors in route rendering
 beforeEach(() => {
   // Restore original fetch before each test to prevent state leakage
   global.fetch = originalFetch
-  vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -314,19 +312,71 @@ describe('Router Configuration', () => {
   })
 })
 
+// What the detail routes read: each record carries the status its page shows.
+const ROUTE_SUITE = {
+  id: 'suite-456',
+  name: 'Router Suite',
+  description: null,
+  version: '1.0.0',
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  tests: [],
+  tests_count: 0,
+  status: 'never_run',
+  last_run: null,
+  tags: [],
+  variables: {},
+  metadata: {},
+}
+const ROUTE_REGRESSION = {
+  id: 'regression-789',
+  name: 'Router Regression',
+  description: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  suites: [],
+  suites_count: 0,
+  tests_count: 0,
+  status: 'never_run',
+  last_run: null,
+  tags: [],
+  variables: {},
+}
+const ROUTE_EXECUTION = {
+  id: 'exec-101',
+  name: 'Router Suite',
+  entity_type: 'suite',
+  entity_id: 'suite-456',
+  environment_id: 'env-1',
+  status: 'passed',
+  counts: { total: 0, passed: 0, failed: 0, pending: 0, skipped: 0, excluded: 0 },
+  started_at: '2026-01-01T00:00:00Z',
+  completed_at: '2026-01-01T00:01:00Z',
+  duration: 60,
+  triggered_by: 'manual',
+  tests: [],
+  suites: [],
+}
+const ROUTE_DETAILS: ReadonlyArray<readonly [RegExp, unknown]> = [
+  [/^\/suites\/suite-456$/, ROUTE_SUITE],
+  [/^\/regressions\/regression-789$/, ROUTE_REGRESSION],
+  [/^\/executions\/exec-101$/, ROUTE_EXECUTION],
+]
+
 describe('Route Rendering', () => {
   // All route rendering tests need a working fetch mock because MainLayout/sidebar
   // components may trigger API calls during render. Without this, the global
   // fallback mock from setup.ts rejects all calls, which can prevent lazy-loaded
   // page components from rendering (especially under CI timing).
   beforeEach(() => {
-    global.fetch = vi.fn().mockImplementation(() => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      const path = new URL(url).pathname
       return Promise.resolve({
         ok: true,
         status: 200,
         json: () => Promise.resolve({
           success: true,
-          data: [],
+          data: ROUTE_DETAILS.find(([pattern]) => pattern.test(path))?.[1] ?? [],
           pagination: { total: 0, page: 1, per_page: 25, total_pages: 1 },
         }),
       })
@@ -490,14 +540,12 @@ describe('Route Rendering', () => {
     it.each([
       // SuitesPage component uses suites-page testid
       ['renders suites list at /suites', '/suites', 'suites-page'],
-      // SuiteDetailPage shows loading state while fetching suite data
-      ['renders suite detail at /suites/:suiteId', '/suites/suite-456', 'suite-detail-loading'],
+      ['renders suite detail at /suites/:suiteId', '/suites/suite-456', 'suite-detail-page'],
       // Edit route uses the same SuiteDetailPage component
-      // It shows loading state while fetching suite data
       [
         'renders suite detail at /suites/:suiteId/edit (same component as detail)',
         '/suites/suite-456/edit',
-        'suite-detail-loading',
+        'suite-detail-page',
       ],
     ])('%s', async (_name, path, testId) => {
       const router = createMemoryRouter(routeConfig, {
@@ -527,17 +575,15 @@ describe('Route Rendering', () => {
   describe('Regressions Routes', () => {
     it.each([
       ['renders regressions list at /regressions', '/regressions', 'regressions-page'],
-      // RegressionDetailPage shows loading state while fetching regression
-      // data (no API mock is configured for this router-level smoke test).
       [
         'renders regression detail at /regressions/:regressionId',
         '/regressions/regression-789',
-        'regression-detail-loading',
+        'regression-detail-page',
       ],
       [
         'renders regression edit at /regressions/:regressionId/edit',
         '/regressions/regression-789/edit',
-        'regression-detail-loading',
+        'regression-detail-page',
       ],
     ])('%s', async (_name, path, testId) => {
       const router = createMemoryRouter(routeConfig, {
@@ -594,9 +640,12 @@ describe('Route Rendering', () => {
 
       render(<RouterProvider router={router} />)
 
+      // The loading state shares the page's test id, so the loaded status badge proves the page.
       await waitFor(() => {
+        expect(screen.queryByTestId('execution-detail-loading')).not.toBeInTheDocument()
         expect(screen.getByTestId('execution-detail-page')).toBeInTheDocument()
       })
+      expect(screen.getAllByText('Passed').length).toBeGreaterThan(0)
     })
 
     it('renders the historical test canvas page at /executions/history/:runId', async () => {
@@ -866,12 +915,12 @@ describe('Route Rendering', () => {
       [
         'hides breadcrumb on /suites/:suiteId/edit (suite detail has its own header)',
         '/suites/suite-456/edit',
-        'suite-detail-loading',
+        'suite-detail-page',
       ],
       [
         'hides route breadcrumb on /regressions/:regressionId/edit (detail manages own breadcrumb)',
         '/regressions/regression-789/edit',
-        'regression-detail-loading',
+        'regression-detail-page',
       ],
       // Breadcrumb should be hidden on list pages per design
       [
@@ -1045,11 +1094,9 @@ describe('TestsListPage Integration', () => {
   }
 
   let originalFetch: typeof global.fetch
-  let fetchCallCount = 0
 
   beforeEach(() => {
     originalFetch = global.fetch
-    fetchCallCount = 0
   })
 
   afterEach(() => {
@@ -1060,7 +1107,6 @@ describe('TestsListPage Integration', () => {
     // Mock fetch to fail first time (for /tests), then succeed on retry
     let testsCallCount = 0
     global.fetch = vi.fn().mockImplementation((url: string) => {
-      fetchCallCount++
       if (url.includes('/tests')) {
         testsCallCount++
         if (testsCallCount === 1) {
@@ -1478,7 +1524,6 @@ describe('TestsListPage Integration', () => {
   })
 
   it('handles bulk duplicate action error', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
       // Clone API fails
@@ -1539,11 +1584,9 @@ describe('TestsListPage Integration', () => {
       expect(mockToastError).toHaveBeenCalledWith('Internal Server Error', 'Duplicate Failed')
     })
 
-    consoleSpy.mockRestore()
   })
 
   it('handles bulk duplicate action error with non-Error thrown', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
       // Clone API throws a string (non-Error)
@@ -1601,7 +1644,6 @@ describe('TestsListPage Integration', () => {
       expect(mockToastError).toHaveBeenCalledWith('network failure', 'Duplicate Failed')
     })
 
-    consoleSpy.mockRestore()
   })
 
   it('handles bulk export action', async () => {
@@ -1621,7 +1663,6 @@ describe('TestsListPage Integration', () => {
       return Promise.reject(new Error('Unknown URL'))
     })
 
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const user = userEvent.setup()
     const router = createMemoryRouter(routeConfig, {
       initialEntries: ['/tests'],
@@ -1655,7 +1696,6 @@ describe('TestsListPage Integration', () => {
     await waitFor(() => {
       expect(screen.getByText(/Export/i)).toBeInTheDocument()
     })
-    consoleSpy.mockRestore()
   })
 
   it('handles bulk run action', async () => {
@@ -3566,7 +3606,6 @@ describe('SuitesListPage Integration', () => {
   })
 
   it('handles bulk export', async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/suites')) {
@@ -3614,7 +3653,6 @@ describe('SuitesListPage Integration', () => {
       expect(screen.getByText(/Export Suite/i)).toBeInTheDocument()
     })
 
-    consoleSpy.mockRestore()
   })
 
   it('handles bulk run navigation', async () => {
@@ -4088,7 +4126,6 @@ describe('SuitesListPage Integration', () => {
   })
 
   it('does not open the Run dialog when the suite tests read fails', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/suites/') && url.includes('/tests')) {
@@ -4129,7 +4166,6 @@ describe('SuitesListPage Integration', () => {
     // file stubs out.
     expect(screen.queryByRole('dialog')).toBeNull()
 
-    consoleSpy.mockRestore()
   })
 
   it('handles duplicate suite from row actions', async () => {
@@ -4341,6 +4377,16 @@ describe('SuitesListPage Integration', () => {
 
   it('handles edit suite from row actions', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
+      const path = new URL(url).pathname
+      if (path === '/suites/suite-1') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, data: { ...ROUTE_SUITE, id: 'suite-1' } }),
+        })
+      }
+      if (path === '/suites/suite-1/tests') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: [] }) })
+      }
       if (url.includes('/suites')) {
         return Promise.resolve({
           ok: true,
@@ -4376,6 +4422,7 @@ describe('SuitesListPage Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/suites/suite-1')
     })
+    expect(await screen.findByTestId('suite-detail-page')).toBeInTheDocument()
   })
 
   it('handles new suite button click', async () => {

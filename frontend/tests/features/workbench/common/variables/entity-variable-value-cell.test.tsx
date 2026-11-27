@@ -36,7 +36,7 @@ vi.mock('@/features/workbench/common/variables/variable-value-cell', async (impo
   const actual =
     await importOriginal<typeof import('@/features/workbench/common/variables/variable-value-cell')>()
   return {
-    VariableValueCell: (props: any) => {
+    VariableValueCell: (props: React.ComponentProps<typeof import('@/features/workbench/common/variables/variable-value-cell').VariableValueCell>) => {
       if (sharedCell.real) return <actual.VariableValueCell {...props} />
       const { type, value, secret, elementTypes, onChange, onClearSecretValue } = props
       return (
@@ -97,7 +97,7 @@ describe('parseEntityCellValue', () => {
     expect(parseEntityCellValue('table', [{ a: 1 }])).toEqual([{ a: 1 }])
   })
 
-  it('parses a complex value held as a JSON string (legacy / edited shape)', () => {
+  it('parses a complex value held as a JSON string', () => {
     expect(parseEntityCellValue('array', '[1,2,3]')).toEqual([1, 2, 3])
     expect(parseEntityCellValue('map', '{"a":1}')).toEqual({ a: 1 })
   })

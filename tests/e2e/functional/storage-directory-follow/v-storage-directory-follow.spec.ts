@@ -17,8 +17,7 @@
  * DESTRUCTIVE: this spec deletes files under the running backend's data
  * directory. Every path it touches is built by `recordDir`, which refuses any
  * path that is not `<STORAGE_BASE_PATH>/<one of three entity dirs>/<a uuid
- * this spec created>`. STORAGE_BASE_PATH is already per-stack, so nothing here
- * can reach another shard's data.
+ * this spec created>`. STORAGE_BASE_PATH is the shard container's own data folder.
  *
  * Not asserted: a record file modified in place being served fresh (an open bug).
  * Not asserted: atomic saves (an open bug).

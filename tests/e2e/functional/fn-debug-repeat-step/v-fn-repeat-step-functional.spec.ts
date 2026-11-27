@@ -21,6 +21,7 @@
  *      the VarSetter once and Continue did not run it again.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { getLogTexts } from '../../helpers/log-reader'
@@ -31,7 +32,7 @@ const FN_NODE_ID = 'fn-repeat-step-1'
 
 async function seedTest(request: APIRequestContext): Promise<string> {
   const seed = {
-    name: `V-FN-REPEAT-STEP ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-REPEAT-STEP ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function with body VarSetter incrementing counter',
     variables: {},

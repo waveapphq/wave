@@ -20,7 +20,7 @@
  *    dot segment in front: content and delete answer 400 with the id, and the
  *    session file stays.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/artifact-browser/v-artifact-id-containment-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/artifact-browser/v-artifact-id-containment-functional.spec.ts
  */
 
 import fs from 'fs'

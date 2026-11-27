@@ -30,7 +30,7 @@ those assertions compare whole console messages, not substrings.
   execution environment (`ensureEnvironment` creates it if absent).
 - `/bin/sh` (dash) and `/bin/bash` on the machine the backend runs on. The E2E
   image (Ubuntu 22.04) carries both.
-- The E2E backend runs as the non-root `ciuser` (`scripts/Containerfile.e2e`).
+- The E2E backend runs as the non-root `ciuser` (`scripts/images/Containerfile.e2e`).
   SH-13 relies on it: a script's write into its own Test Data must fail with
   "Permission denied".
 - The backend is started with `WAVE_CONFIG_FILE`, `WAVE_ADMIN_ALLOWED` and
@@ -44,7 +44,7 @@ those assertions compare whole console messages, not substrings.
     `https://http-target:9443/delay/60` (self-signed, `verify_ssl` false).
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd http-target
+  ./scripts/e2e/e2e-stack.sh up --wait sshd http-target
   ```
 
 - SH-17 and SH-18 share the `sshd` host with every other suite that opens a

@@ -14,6 +14,7 @@
  *    identity attached.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
@@ -21,7 +22,7 @@ import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 function declareEmptyRecipe(name: string): string {

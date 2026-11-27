@@ -18,11 +18,11 @@ REQ-3.4.1.15; OS-7 to OS-11, OS-13).
   WAVE Test CA).
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait opensearch
+  ./scripts/e2e/e2e-stack.sh up --wait opensearch
   ```
 
-- The fixture carries the host-mode address `https://127.0.0.1:9477`; the
-  import (`injectHttp`) rewrites it to `OPENSEARCH_TARGET_HOST` per mode. The
+- The fixture carries the sentinel address `https://127.0.0.1:9477`; the
+  import (`injectHttp`) rewrites it to `OPENSEARCH_TARGET_HOST`. The
   password and the CA come from `helpers/config.ts`; the spec fills them at
   load, so the fixture stores neither.
 - The sheet case types nothing that the import would rewrite: its Test is

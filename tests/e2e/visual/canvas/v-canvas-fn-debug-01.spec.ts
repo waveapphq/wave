@@ -18,6 +18,7 @@
  *      execution into the body with no manual drilling.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page, type APIRequestContext } from '../../helpers/playwright-fixtures'
 import { waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -44,7 +45,7 @@ function logNode(id: string, message: string, x: number): Record<string, unknown
 
 function buildSeed(): Record<string, unknown> {
   return {
-    name: `V-CANVAS-FN-DEBUG-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CANVAS-FN-DEBUG-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Local Function_1 (body A -> B) followed by an after-Log for auto-drill coverage.',
     variables: {},

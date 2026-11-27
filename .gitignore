@@ -47,9 +47,8 @@ skills-lock.json
 CLAUDE.local.md
 .claude/
 
-# Markers the local CI scripts leave between runs
-.ci-be-coverage-ready
-.ci-fe-coverage-ready
+# Logs and artifacts of the gate scripts
+ci-output/
 
 # E2E test outputs
 tests/e2e/reports/

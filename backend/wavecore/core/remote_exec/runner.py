@@ -192,7 +192,7 @@ def select_wheels(probe: dict[str, Any], database_type: str, host: str) -> list[
         if not path.is_file():
             raise FileNotFoundError(
                 f"Remote wheel {path.name} is missing from {WHEELS_DIR}: "
-                "run scripts/fetch-remote-wheels.sh"
+                "run scripts/lib/fetch-remote-wheels.sh"
             )
     return paths
 

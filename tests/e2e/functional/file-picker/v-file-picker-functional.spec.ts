@@ -49,7 +49,7 @@
  *        Select disabled, and after Cancel the row still holds `/srv/in.csv`; a
  *        row holding `artifact://x` opens on the Artifacts tab with path `x`.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/file-picker/v-file-picker-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/file-picker/v-file-picker-functional.spec.ts
  */
 
 import fs from 'node:fs'

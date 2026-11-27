@@ -29,7 +29,7 @@
  *     appears until the glide ends. Then the new Blocks appear one at a time, in flow order, each
  *     at its final place, while every Block that was there stays at its final place.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-flow-order-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/recipe-authoring/v-mcp-recipe-flow-order-functional.spec.ts
  */
 
 import fs from 'fs'
@@ -42,7 +42,7 @@ import { callTool, callToolAsync, enableMcpUntilRestart, resetMcpSettings } from
 import { SEL, ownershipState, resetOwnership, waitUntilHeld } from '../../helpers/ownership'
 import { openHolder, openWatcher, recordView, uniqueName, viewSamples, type ViewSample } from '../watch-mode/helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const CONNECT = 'Connect to App Server'

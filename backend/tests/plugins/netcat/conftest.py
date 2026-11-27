@@ -3,7 +3,6 @@
 import asyncio
 import gc
 import socket
-import warnings
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -28,9 +27,7 @@ _UDP_REPLIES: dict[str, Replies] = {"udp-echo": lambda data: [data], "udp-silent
 @pytest.fixture(scope="module", autouse=True)
 def _earlier_garbage_collected() -> None:
     """Collect what earlier test files left behind, so a leak reported here is this file's."""
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", ResourceWarning)
-        gc.collect()
+    gc.collect()
 
 
 @pytest.fixture(autouse=True)

@@ -63,6 +63,11 @@ vi.mock('@/features/workbench/api/opensearch-tools', () => ({
   cancelFields: vi.fn(() => Promise.resolve({ status: 'canceled' })),
 }))
 
+// The stand-in calls onSave with only the arguments each case needs.
+type SheetStandInProps = Omit<React.ComponentProps<typeof import('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet').ValueEditorSheet>, 'onSave'> & {
+  onSave: (...args: unknown[]) => void
+}
+
 // The shared "Edit value" sheet stand-in (portaled so it is queryable). Exposes
 // its threaded props + a literal-save / template-save / close.
 vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-editor-sheet', async () => {
@@ -96,7 +101,7 @@ vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-edit
       elementTypes,
       onSave,
       onClose,
-    }: any) =>
+    }: SheetStandInProps) =>
       createPortal(
         <div
           data-testid="value-editor-sheet"
@@ -109,11 +114,11 @@ vi.mock('@/features/workbench/common/variables/variable-inspect-modal/value-edit
           data-string-values-only={String(!!stringValuesOnly)}
           data-element-types={JSON.stringify(elementTypes ?? null)}
           data-quick-insert-keys={(mapEntryOptions?.quickInserts ?? [])
-            .flatMap((menu: any) => menu.items.map((item: any) => item.key))
+            .flatMap((menu) => menu.items.map((item) => item.key))
             .join(',')}
           data-has-input-variables={String(inputVariables !== undefined)}
           data-input-variables={(inputVariables ?? [])
-            .map((variable: any) => `${variable.name}:${variable.type}`)
+            .map((variable) => `${variable.name}:${variable.type}`)
             .join(',')}
           data-input-variable-types={JSON.stringify(inputVariableTypes ?? null)}
           data-has-export-names={String(exportNames !== undefined)}

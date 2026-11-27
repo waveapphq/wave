@@ -515,6 +515,10 @@ describe('useTestRun', () => {
         'Validation Error'
       )
       expect(params.startRun).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Pre-run validation failed:',
+        expect.objectContaining({ message: 'Network error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -579,6 +583,10 @@ describe('useTestRun', () => {
         'Validation Error'
       )
       expect(params.startRun).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Pre-run validation failed:',
+        expect.objectContaining({ message: 'Internal server error' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -602,6 +610,7 @@ describe('useTestRun', () => {
         'Failed to validate test before running.',
         'Validation Error'
       )
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith('Pre-run validation failed:', undefined)
       consoleSpy.mockRestore()
     })
 

@@ -14,7 +14,7 @@ one bounded field (1 to 65535, SQL-14).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/profile-field-errors/v-profile-field-errors-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/profile-field-errors/v-profile-field-errors-functional.spec.ts`.
 2. Name: open Create Profile, pick the database Type, then type in Name, clear
    it and press Tab to leave it; type a Name again.
 3. Port: type a Name, then type `70000` into the port row, then `5432`, then

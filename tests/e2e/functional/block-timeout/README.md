@@ -48,7 +48,7 @@ decided by a fraction of a second.
 
 The stub's server is copied into its image at BUILD time, so the `vdelay`
 directive this suite depends on only exists after
-`scripts/e2e-stack.sh build`, then `down`, then `up --wait`. Skipping the
+`scripts/e2e/e2e-stack.sh build`, then `down`, then `up --wait`. Skipping the
 rebuild leaves the old image serving and every request answers 500 naming the
 unknown directive, which reads like a Connect bug.
 

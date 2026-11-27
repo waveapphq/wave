@@ -38,7 +38,7 @@ async function seedLibrary(request: APIRequestContext, name: string) {
 async function createBlankTest(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-LIBRARY-CARD-NAME-TOOLTIP ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-LIBRARY-CARD-NAME-TOOLTIP ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Blank Test',
       workflow: { nodes: [], edges: [] },

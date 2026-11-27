@@ -19,7 +19,7 @@
  * A second test (HTTP-13, FIELD-10): a typed suite the TLS versions cannot offer
  * is refused at save with `TLS_CIPHER_OUT_OF_RANGE` and nothing is stored.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/http-tls/v-http-tls-ciphers-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/http-tls/v-http-tls-ciphers-functional.spec.ts
  */
 
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'

@@ -11,7 +11,7 @@ it (real-service harness, REQ-3.4.1.3 / REQ-5.1.5).
   `perl`, `node` (22). The second test targets the SFTP-disabled host (:9447).
 - `fixture.json` is imported via `POST /tests` and validated via
   `POST /tests/{id}/validate?context=run` (zero errors) before each run. SSH
-  hosts carry the `127.0.0.1` sentinel, rewritten by `injectServiceHost` per mode.
+  hosts carry the `127.0.0.1` sentinel, rewritten by `injectServiceHost`.
   Each run replaces `__TOKEN__` with a fresh token.
 
 ## Execution

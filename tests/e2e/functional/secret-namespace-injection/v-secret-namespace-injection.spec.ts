@@ -19,6 +19,7 @@
  *    session variables read
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import { getLogTexts } from '../../helpers/log-reader'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -71,7 +72,7 @@ test.describe('V-SECRET-NAMESPACE-INJECTION', () => {
     await page.request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => {})
     const testId = await importFixtureTest(page, loadFixture())
 
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const stamp = `${Date.now()}-${randomUUID().slice(0, 6)}`
     const suiteResp = await page.request.post(`${BACKEND_URL}/suites`, {
       data: {
         name: `Secret NS Suite ${stamp}`,

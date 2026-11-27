@@ -20,6 +20,7 @@
  *   9. PUT /executions/{id}/stop; confirm terminal state = 'stopped'.
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Locator } from '../../helpers/playwright-fixtures'
 import { BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import fs from 'fs'
@@ -42,7 +43,7 @@ async function getEnvironmentId(request: APIRequestContext): Promise<string> {
 
 async function importTest(request: APIRequestContext, suffix: string): Promise<string> {
   const fixture = loadFixture()
-  fixture.name = `${fixture.name as string} ${suffix} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  fixture.name = `${fixture.name as string} ${suffix} ${Date.now()}-${randomUUID().slice(0, 5)}`
   const response = await request.post(`${BACKEND_URL}/tests`, { data: fixture })
   expect(response.ok(), `POST /tests failed: ${response.status()}`).toBeTruthy()
   const body = await response.json()
@@ -70,7 +71,7 @@ async function createSuite(
   label: string,
   testIds: string[],
 ): Promise<string> {
-  const name = `${label} ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  const name = `${label} ${Date.now()}-${randomUUID().slice(0, 5)}`
   const response = await request.post(`${BACKEND_URL}/suites`, {
     data: { name, description: 'run-regression functional suite', tests: testIds },
   })
@@ -84,7 +85,7 @@ async function createRegression(
   request: APIRequestContext,
   suiteIds: string[],
 ): Promise<string> {
-  const name = `Runnable Regression ${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  const name = `Runnable Regression ${Date.now()}-${randomUUID().slice(0, 5)}`
   const response = await request.post(`${BACKEND_URL}/regressions`, {
     data: {
       name,

@@ -1,5 +1,6 @@
 /** Shared steps of the one number rule specs (REQ-3.1.3.14): save refusals, raw JSON bodies, sheet reads and DEBUG lines. */
 
+import { randomUUID } from 'node:crypto'
 import { execFileSync } from 'child_process'
 import path from 'path'
 import { expect, type APIRequestContext, type Locator, type Page } from './playwright-fixtures'
@@ -97,7 +98,7 @@ export async function deleteFunctionQuietly(request: APIRequestContext, function
 
 /** A Function name under the 32-character cap: `zz-11541-s8-<what>-<8 hex>`. */
 export function functionName(what: string): string {
-  return `zz-11541-s8-${what}-${Math.random().toString(16).slice(2, 10)}`
+  return `zz-11541-s8-${what}-${randomUUID().slice(0, 8)}`
 }
 
 /** A Function body for POST /functions with the given declarations and an empty flow. */
@@ -150,7 +151,7 @@ export function oneNodeTest(
   expect(node, `fixture node "${description}"`).toBeTruthy()
   Object.assign(node.data.config.values, values)
   return {
-    name: `zz-11541-s8-${description.toLowerCase().replace(/\W+/g, '-')}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `zz-11541-s8-${description.toLowerCase().replace(/\W+/g, '-')}-${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'One number rule save probe',
     workflow: { nodes: [node], edges: [{ id: `e-start-${node.id}`, source: 'start-node', target: node.id }] },

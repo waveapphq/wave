@@ -29,6 +29,7 @@
  *     only to bring a new Block into view - each Block is in view once it lands.
  */
 
+import { randomUUID } from 'node:crypto'
 import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -55,7 +56,7 @@ import {
   type ViewSample,
 } from './helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const RECIPE_PATH = path.resolve(__dirname, 'recipe-watch-build.yaml')
 const CLIENT_PATH = path.resolve(__dirname, '../recipe-authoring/mcp_recipe_client.py')
@@ -97,14 +98,14 @@ function buildAsync(recipe: string, url: string): Promise<McpToolResult> {
 }
 
 function uniqueRecipe(): { recipe: string; name: string } {
-  const name = `${BASE_NAME} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `${BASE_NAME} ${Date.now()}-${randomUUID().slice(0, 6)}`
   const recipe = fs.readFileSync(RECIPE_PATH, 'utf-8').replace(BASE_NAME, name)
   return { recipe, name }
 }
 
 /** A linear recipe of a few log Blocks: a test that fits the tab. */
 function shortRecipe(count: number): string {
-  const name = `Watch Build Framed ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const name = `Watch Build Framed ${Date.now()}-${randomUUID().slice(0, 6)}`
   const steps = Array.from(
     { length: count },
     (_, index) => `  - block: log\n    settings: {message: framed-${index + 1}}`,

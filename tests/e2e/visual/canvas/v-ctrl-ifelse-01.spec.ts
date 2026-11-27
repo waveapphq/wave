@@ -16,6 +16,7 @@
  * S8 - Half-built conditions block Save and never reach storage
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { dragPaletteItemToCanvas, waitForCanvasLoad } from '../../helpers/canvas'
 import { BACKEND_PORT } from '../../helpers/config'
@@ -29,7 +30,7 @@ const GUARD_NODE_ID = 'ie-guard'
  *  S8 starts from a saveable state and only the rows it adds can block Save. */
 function buildGuardFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-IFELSE-01-S8 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-IFELSE-01-S8 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'If/Else condition completeness guard.',
     workflow: {

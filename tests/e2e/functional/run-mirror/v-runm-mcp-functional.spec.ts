@@ -35,6 +35,7 @@
  *    shows what it showed before the run once the run ends.
  */
 
+import { randomUUID } from 'node:crypto'
 import { spawn } from 'child_process'
 import path from 'path'
 import type { APIRequestContext, BrowserContext } from '@playwright/test'
@@ -113,7 +114,7 @@ function pacedFixture(ms: number): Record<string, unknown> {
 }
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 function logRecipe(name: string, messages: string[]): string {

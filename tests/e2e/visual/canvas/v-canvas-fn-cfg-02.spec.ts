@@ -31,7 +31,7 @@ const FN_NODE_ID = 'fn-cfg-shared-1'
 
 function buildSeed(functionId: string, libName: string): Record<string, unknown> {
   return {
-    name: `V-CANVAS-FN-CFG-02 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CANVAS-FN-CFG-02 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'V-CANVAS-FN-CFG-02 seed: Published Function instance',
     workflow: {

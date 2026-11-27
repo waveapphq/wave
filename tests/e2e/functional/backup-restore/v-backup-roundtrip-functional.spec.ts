@@ -53,7 +53,7 @@
  *    click on Restore asks first; Cancel leaves the Test as changed here, and Restore then
  *    Overwrite gives it the backup's description.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/backup-restore/v-backup-roundtrip-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/backup-restore/v-backup-roundtrip-functional.spec.ts
  */
 
 import fs from 'fs'

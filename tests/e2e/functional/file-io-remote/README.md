@@ -18,11 +18,11 @@ decision FIO-10).
     interpreter floor and its `/tmp` is writable by the `wave` user.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd
+  ./scripts/e2e/e2e-stack.sh up --wait sshd
   ```
 
 - The SSH block carries the fixture host sentinel; the `injectSsh` import option
-  rewrites it for container-shard mode. The spec asserts the fixture's host,
+  rewrites it to the shard's gateway. The spec asserts the fixture's host,
   port, user and password against `SSH_FIXTURE_HOST_SENTINEL`, `SSH_MAIN_PORT`,
   `SSH_STACK_USER` and `SSH_STACK_PASSWORD` from `helpers/config.ts`, so a stack
   change cannot leave a stale literal behind.
@@ -91,7 +91,7 @@ in teardown, which cascades to the test's data folder. No server state is reset.
 
 ```bash
 # from the repository root
-./scripts/e2e-targeted-local.sh functional/file-io-remote/v-plugin-fileio-remote-functional.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/file-io-remote/v-plugin-fileio-remote-functional.spec.ts
 ```
 
 The suite runs in the `functional-workflow` project.

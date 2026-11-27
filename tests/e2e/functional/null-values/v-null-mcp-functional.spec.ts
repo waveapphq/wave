@@ -22,6 +22,7 @@
  *    values, and the test's stored variables do not change.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'
@@ -29,7 +30,7 @@ import { BACKEND_PORT, BACKEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../.
 import { callTool, enableMcpUntilRestart, type McpToolResult, resetMcpSettings } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const OWED_RECIPE = 'recipe-mcp-owed-secret-variables.yaml'
@@ -67,7 +68,7 @@ interface ExecutionRow {
 }
 
 function uniqueName(base: string): string {
-  return `${base} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${base} ${Date.now()}-${randomUUID().slice(0, 6)}`
 }
 
 function loadRecipe(file: string, baseName: string, name: string): string {

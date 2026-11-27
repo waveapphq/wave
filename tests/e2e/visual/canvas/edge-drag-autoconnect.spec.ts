@@ -7,6 +7,7 @@
  * REQ: REQ-3.1.1.2 Edge connections and relocation
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect } from '../../helpers/playwright-fixtures'
 import {
   resetWorkbench,
@@ -116,7 +117,7 @@ test.describe('Edge Drag: Auto-Connect', () => {
     await page.request.delete(`${BASE}/workbench/session/`).catch(() => {})
 
     const fixture = {
-      name: `T11 auto-connect lane ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `T11 auto-connect lane ${Date.now()}-${randomUUID().slice(0, 6)}`,
       version: '1.0.0',
       description: 'A wide Switch whose outer lanes must be reachable by proximity.',
       workflow: {

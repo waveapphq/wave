@@ -5,6 +5,7 @@
  * Self-contained per the per-dir helper convention (see watch-mode/helpers.ts).
  */
 
+import { randomUUID } from 'node:crypto'
 import { expect, type Page } from '../../helpers/playwright-fixtures'
 import type { Browser, BrowserContext, APIRequestContext } from '@playwright/test'
 import { BACKEND_URL, FRONTEND_URL, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
@@ -15,7 +16,7 @@ import path from 'path'
 /** Load fixture.json with a uniquified test name (names are globally unique). */
 export function loadFixture(): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixture.json'), 'utf-8'))
-  fixture.name = `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

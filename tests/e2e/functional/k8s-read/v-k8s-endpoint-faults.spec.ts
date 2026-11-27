@@ -64,9 +64,7 @@ import {
 import fs from 'fs'
 import path from 'path'
 
-/** The stub as fixtures carry it. The literal 127.0.0.1:9461 form is what the
- *  container-shard URL rewrite recognizes; injectHttp turns it into the slirp
- *  gateway address there and leaves it alone on the host. */
+/** The stub as fixtures carry it; injectHttp rewrites 127.0.0.1:9461 to the slirp gateway. */
 const STUB_BASE = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_STUB_PORT}`
 
 /** The namespace the K8s Connect Block sets, and therefore the one every read

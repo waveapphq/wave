@@ -2,7 +2,7 @@
 
 All external-protocol E2E coverage runs
 against the real compose service stack - see `../services/README.md` (managed
-by `scripts/e2e-stack.sh`).
+by `scripts/e2e/e2e-stack.sh`).
 
 ## Why this directory still exists
 

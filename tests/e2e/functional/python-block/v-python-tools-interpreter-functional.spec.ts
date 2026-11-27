@@ -12,7 +12,7 @@
  * 1. Rename with such a row answers 200 with the edits WAVE's own interpreter gives.
  * 2. Completion with such a row answers the members WAVE's own interpreter gives.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/python-block/v-python-tools-interpreter-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/python-block/v-python-tools-interpreter-functional.spec.ts
  */
 
 import { test, expect, type APIRequestContext } from '../../helpers/playwright-fixtures'

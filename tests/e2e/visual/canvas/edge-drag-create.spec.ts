@@ -7,6 +7,7 @@
  * REQ: REQ-3.1.1.2 Edge connections and relocation
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import {
   setupTriangleLayout,
@@ -50,7 +51,7 @@ async function seedAndOpen(
 ): Promise<string> {
   await page.request.delete(`${BASE}/workbench/session/`).catch(() => {})
   const fixture = {
-    name: `${name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `${name} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: name,
     workflow: { nodes, edges },

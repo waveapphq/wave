@@ -24,7 +24,7 @@ LIST-2; REQ-4.5.14, REQ-4.5.16, REQ-4.7.14, REQ-4.7.16, REQ-5.2.1.42, REQ-5.2.1.
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/network-settings-pages/v-network-settings-pages-functional.spec.ts`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/network-settings-pages/v-network-settings-pages-functional.spec.ts`.
 2. Criterion 1: trust 30 more hosts, open SSH Hosts, then Certificates, at 1280x800. Wheel
    over the hosts table body (SSH Hosts) and over the authorities choice
    (Certificates).

@@ -108,7 +108,7 @@ npm ci
 Remote Execution carries database drivers to the remote host. To use Oracle, SQL Server or SQLite inside Remote Execution, run this from the repository root:
 
 ```bash
-./scripts/fetch-remote-wheels.sh
+./scripts/lib/fetch-remote-wheels.sh
 ```
 
 ### 2. Create the config file

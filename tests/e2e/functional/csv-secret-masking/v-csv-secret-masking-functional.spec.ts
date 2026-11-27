@@ -29,7 +29,7 @@
  * (validation-runtime-enum, secret-field-cycle, secret-field-masking, secret-reveal-controls)
  * and at the backend by tests/plugins/test_enum_validator.py + tests/api/workbench/test_secret_runtime.py.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/csv-secret-masking/v-csv-secret-masking-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/csv-secret-masking/v-csv-secret-masking-functional.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

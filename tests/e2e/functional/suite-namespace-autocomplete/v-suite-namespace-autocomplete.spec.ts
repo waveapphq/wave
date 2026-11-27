@@ -13,7 +13,7 @@
  * - Type 'suite.' in the expression editor
  * - Verify autocomplete shows suite.api_host and suite.max_retries
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/suite-namespace-autocomplete/v-suite-namespace-autocomplete.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/suite-namespace-autocomplete/v-suite-namespace-autocomplete.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

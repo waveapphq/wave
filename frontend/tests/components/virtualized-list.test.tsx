@@ -1045,9 +1045,6 @@ describe('VirtualizedList Component', () => {
       })
 
       it('throws error when VirtualizedTableBody is used outside VirtualizedTable', () => {
-        // Suppress console.error for this test since we expect an error
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
         expect(() => {
           render(
             <VirtualizedTableBody>
@@ -1059,8 +1056,6 @@ describe('VirtualizedList Component', () => {
             </VirtualizedTableBody>
           )
         }).toThrow('VirtualizedTableBody must be used within a VirtualizedTable')
-
-        consoleSpy.mockRestore()
       })
 
       it('handles non-element children in VirtualizedTableBody gracefully', () => {
@@ -1760,9 +1755,6 @@ describe('VirtualizedList Component', () => {
     })
 
     it('throws error when useVirtualization is used outside VirtualizedList', () => {
-      // Suppress console.error for this test since we expect an error
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
       const TestComponent = () => {
         useVirtualization() // This should throw
         return <div>Should not render</div>
@@ -1771,8 +1763,6 @@ describe('VirtualizedList Component', () => {
       expect(() => {
         render(<TestComponent />)
       }).toThrow('useVirtualization must be used within a VirtualizedList')
-
-      consoleSpy.mockRestore()
     })
   })
 
@@ -2808,7 +2798,7 @@ describe('VirtualizedList Component', () => {
     })
 
     it('handles sticky first column with mixed thead children (tr and non-tr)', () => {
-      // Suppress expected React warning about invalid HTML (text nodes in thead)
+      // React reports the invalid markup (text nodes in thead)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       const items = generateItems(10)
@@ -2843,6 +2833,12 @@ describe('VirtualizedList Component', () => {
       const firstCol = screen.getByTestId('first-col')
       expect(firstCol).toHaveClass('sticky')
 
+      // React names the invalid markup the test renders on purpose.
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'In HTML, text nodes cannot be a child of <%s>.\nThis will cause a hydration error.%s',
+        'thead',
+        expect.any(String)
+      )
       consoleSpy.mockRestore()
     })
 
@@ -2878,7 +2874,7 @@ describe('VirtualizedList Component', () => {
     })
 
     it('handles VirtualizedTableBody returning non-tr elements', () => {
-      // Suppress expected React warning about invalid HTML (text in tr)
+      // React reports the invalid markup (text in tr)
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       const items = generateItems(10)
@@ -2906,6 +2902,12 @@ describe('VirtualizedList Component', () => {
       const table = screen.getByTestId('virtualized-table')
       expect(table).toBeInTheDocument()
 
+      // React names the invalid markup the test renders on purpose.
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'In HTML, text nodes cannot be a child of <%s>.\nThis will cause a hydration error.%s',
+        'tr',
+        expect.any(String)
+      )
       consoleSpy.mockRestore()
     })
 

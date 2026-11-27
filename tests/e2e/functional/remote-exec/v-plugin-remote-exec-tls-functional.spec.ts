@@ -20,9 +20,10 @@
  *     server, and a remote response Set-Cookie credential masks over the
  *     replayed path.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/remote-exec/v-plugin-remote-exec-tls-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/remote-exec/v-plugin-remote-exec-tls-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import {
   waitForLogText,
@@ -71,7 +72,7 @@ function loadFixture(name: string, withMaterial: boolean): Record<string, any> {
     fixture.variables.client_key_pem.value = TLS_LAB_CLIENT_KEY_PEM
     fixture.variables.auth_pw.value = AUTH_PW
   }
-  fixture.name = `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

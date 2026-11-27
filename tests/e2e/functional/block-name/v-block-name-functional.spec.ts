@@ -28,6 +28,7 @@
  *    that name alone as its Source.
  */
 
+import { randomUUID } from 'node:crypto'
 import { leaveExpressionEditor } from '../../helpers/code-editor'
 import fs from 'fs'
 import path from 'path'
@@ -517,7 +518,7 @@ test.describe('V-BLOCK-NAME-FUNCTIONAL: a block is named by its Name (EXEC-26)',
     await page.request.delete(`${BACKEND_URL}/workbench/session/`).catch(() => undefined)
     const file: Fixture = {
       ...fixture,
-      name: `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`,
     }
 
     const testId = await test.step('the Tests page imports the file', async () => {

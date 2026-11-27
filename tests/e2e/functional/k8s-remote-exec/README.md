@@ -84,7 +84,7 @@ does not repeat any of them. It adds:
   must be named on the up command:
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd kwok k8s-gateway sshd-banner sshd-badpy k8s-stub
+  ./scripts/e2e/e2e-stack.sh up --wait sshd kwok k8s-gateway sshd-banner sshd-badpy k8s-stub
   ```
 
 - The cluster's CA and its static admin token are checked-in TEST-ONLY
@@ -92,8 +92,8 @@ does not repeat any of them. It adds:
   token values. Every direct Connect verifies the certificate against that CA.
   The gateway Connect carries no TLS fields at all.
 - The SSH Block carries the fixture host sentinel, which the `injectSsh` import
-  option rewrites for container-shard mode. The in-stack URLs are outside the
-  HTTP rewrite allowlist and stay literal in every mode.
+  option rewrites to the shard's gateway. The in-stack URLs are outside the
+  HTTP rewrite allowlist and stay literal.
 
 ### The interpreter floor is not proved here
 
@@ -104,7 +104,7 @@ has no host to fire against. Its unit tests own it.
 ### Editing anything under `tests/e2e/services/kwok/` needs a full image rebuild
 
 The manifests, log files and tokens are copied into the image at BUILD time.
-The sequence is `scripts/e2e-stack.sh build`, then `down`, then
+The sequence is `scripts/e2e/e2e-stack.sh build`, then `down`, then
 `up --wait sshd kwok k8s-gateway`.
 
 ## Steps
@@ -329,7 +329,7 @@ its Scripts only echo.
 
 ```bash
 # from the root of the clone
-./scripts/e2e-targeted-local.sh functional/k8s-remote-exec/<spec>.spec.ts
+./scripts/e2e/e2e-targeted-local.sh functional/k8s-remote-exec/<spec>.spec.ts
 ```
 
 The suite runs in the `functional-workflow` project and needs its directory

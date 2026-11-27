@@ -47,7 +47,7 @@ async function seedLibrary(request: APIRequestContext): Promise<SeededFn> {
 async function seedTest(request: APIRequestContext, shared: SeededFn): Promise<string> {
   const resp = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-EDIT-FAILURE ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-EDIT-FAILURE ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Saved Shared instance so the BE edit-mode route is reached (not a 404)',
       workflow: {

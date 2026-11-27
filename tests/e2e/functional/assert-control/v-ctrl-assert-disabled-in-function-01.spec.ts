@@ -12,6 +12,7 @@
  *   3. Inner fail-branch Log did NOT run (its message does NOT appear)
  *   4. session ends ``passed``
  */
+import { randomUUID } from 'node:crypto'
 import { test, expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, E2E_ENV_NAME, ensureEnvironment } from '../../helpers/config'
 import { waitForCanvasLoad } from '../../helpers/canvas'
@@ -26,7 +27,7 @@ const INNER_FAIL_LOG_ID = 'inner-fail-log'
 
 function buildFixture(): Record<string, unknown> {
   return {
-    name: `V-CTRL-ASSERT-DISABLED-IN-FUNCTION-01 ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `V-CTRL-ASSERT-DISABLED-IN-FUNCTION-01 ${Date.now()}-${randomUUID().slice(0, 6)}`,
     version: '1.0.0',
     description: 'Disabled split-mode Assert INSIDE a local Function body',
     workflow: {

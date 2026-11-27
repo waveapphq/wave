@@ -102,7 +102,7 @@ const STALE_NODE_ID = 'fn-enum-stale'
 const RUN_FN_ID = 'fn-enum-run'
 const RUN_MARKER = 'zz-enum-run-done'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 interface EnumCase {

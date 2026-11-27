@@ -17,6 +17,7 @@
  *    with TARGET_NOT_RECIPE_EXPRESSIBLE.
  */
 
+import { randomUUID } from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import type { APIRequestContext } from '@playwright/test'
@@ -28,7 +29,7 @@ const MCP_PORT = Number(BACKEND_PORT) + 765
 
 function loadFixture(file: string): Record<string, unknown> {
   const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, file), 'utf-8'))
-  fixture.name = `${fixture.name} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  fixture.name = `${fixture.name} ${Date.now()}-${randomUUID().slice(0, 6)}`
   return fixture
 }
 

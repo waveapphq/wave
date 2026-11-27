@@ -11,7 +11,7 @@
  * - Adding the same test to Suite B triggers a 409 collision
  * - Suite C has `timeout` as integer (matching Suite A) - adding succeeds
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/suite-variable-collision/v-suite-variable-collision.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/suite-variable-collision/v-suite-variable-collision.spec.ts
  */
 
 import { test, expect } from '../../helpers/playwright-fixtures'

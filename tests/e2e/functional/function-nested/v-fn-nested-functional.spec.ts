@@ -81,7 +81,7 @@ function buildNestedLocalInLocalTest(): Record<string, unknown> {
   // Outer Local Function whose body contains a Middle Local Function whose
   // body contains a single Log line ("deepest").
   return {
-    name: `V-FN-NESTED-LiL ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-NESTED-LiL ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Local Function nested inside Local Function',
     variables: {},
@@ -178,7 +178,7 @@ function buildNestedLocalInLocalTest(): Record<string, unknown> {
 
 function buildSharedInLocalTest(shared: SeededLibrary): Record<string, unknown> {
   return {
-    name: `V-FN-NESTED-SiL ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: `V-FN-NESTED-SiL ${Date.now()}-${randomUUID().slice(0, 4)}`,
     version: '1.0.0',
     description: 'Shared Function nested inside Local Function',
     variables: {},

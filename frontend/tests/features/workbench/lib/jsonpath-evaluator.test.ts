@@ -161,7 +161,7 @@ describe('evaluateJsonPath', () => {
 
     it('handles non-Error exceptions from JSONPath', () => {
       vi.mocked(JSONPath).mockImplementation(() => {
-        throw 'string error' // eslint-disable-line no-throw-literal
+        throw 'string error'
       })
       const result = evaluateJsonPath('{"key": 1}', '$[invalid')
       expect(result.success).toBe(false)
@@ -172,7 +172,7 @@ describe('evaluateJsonPath', () => {
     it('handles non-Error exceptions from JSON.parse', () => {
       const origParse = JSON.parse
       vi.spyOn(JSON, 'parse').mockImplementation(() => {
-        throw 42 // eslint-disable-line no-throw-literal
+        throw 42
       })
       const result = evaluateJsonPath('{}', '$.key')
       expect(result.success).toBe(false)
@@ -248,7 +248,7 @@ describe('validateJsonPathSyntax', () => {
 
   it('handles non-Error exceptions', () => {
     vi.mocked(JSONPath).mockImplementation(() => {
-      throw 'not an error object' // eslint-disable-line no-throw-literal
+      throw 'not an error object'
     })
     const result = validateJsonPathSyntax('$.bad')
     expect(result).toBe('Invalid JSONPath expression')

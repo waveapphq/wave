@@ -79,21 +79,26 @@ WAVE_ADMIN_ALLOWED=true poetry run uvicorn wavecore.api.app:app --reload --reloa
 npx vitest run tests/lib/api.test.ts
 ```
 
-From the root of the clone, `./scripts/ci-frontend-local.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions.
+From the root of the clone, `./scripts/gate/09-frontend-tests.sh` runs every test and fails below 100% coverage of lines, branches and statements, or below 96% of functions, and when a test writes anything to stderr. It prints `Progress: <N>%` of test files done about once a minute (`WAVE_CI_PROGRESS_SECONDS` sets the interval), each failed test as it happens, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`. These lines come from `scripts/vitest-progress-reporter.mjs`. `./scripts/gate/run.sh frontend` runs every gate check a frontend change needs, in number order.
 
 ### Running E2E/Visual Tests (Playwright)
 
-E2E specs live in `tests/e2e/` and run in containers. From the root of the clone: `./scripts/e2e-targeted-local.sh <spec>` for one spec, `./scripts/ci-playwright-local.sh` for all. See `tests/e2e/README.md`.
+E2E specs live in `tests/e2e/` and run in containers. From the root of the clone: `./scripts/e2e/e2e-targeted-local.sh <spec>` for one spec, `./scripts/gate/15-playwright.sh <spec> ...` for a spec list and `./scripts/gate/15-playwright.sh full` for all. See `tests/e2e/README.md`.
 
 ### Code Quality
 
 ```bash
+# Lint the source and the unit tests (src/ and tests/)
+npm run lint
+
 # Type checking
 npm run type-check
 
 # Build production bundle
 npm run build
 ```
+
+From the root of the clone, `./scripts/gate/05-frontend-static.sh` runs the lint and the type check, and reports each tool; `./scripts/gate/07-frontend-build.sh` runs the build.
 
 ## Project Structure
 

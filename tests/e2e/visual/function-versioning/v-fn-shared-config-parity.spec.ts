@@ -42,7 +42,7 @@ async function seedLibraryAndTest(
 
   const seed = await request.post(`${BACKEND_URL}/tests`, {
     data: {
-      name: `V-FN-SHARED-CONFIG-PARITY ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `V-FN-SHARED-CONFIG-PARITY ${Date.now()}-${randomUUID().slice(0, 4)}`,
       version: '1.0.0',
       description: 'Shared instance for config parity coverage',
       workflow: {

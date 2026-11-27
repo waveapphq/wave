@@ -15,9 +15,10 @@
  *     with its exact MASKED_SECRET_VALUE finding and no other error, the tab never shows the
  *     assistant's banner and keeps the session, and nothing is written.
  *
- * Run: ./scripts/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-secrets-functional.spec.ts
+ * Run: ./scripts/e2e/e2e-targeted-local.sh functional/watch-mode/v-watch-mcp-secrets-functional.spec.ts
  */
 
+import { randomUUID } from 'node:crypto'
 import type { APIRequestContext, BrowserContext } from '@playwright/test'
 import { test, expect, type Page } from '../../helpers/playwright-fixtures'
 import { BACKEND_PORT, BACKEND_URL } from '../../helpers/config'
@@ -38,7 +39,7 @@ import {
   watchForText,
 } from './helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const MASK = '********'
 const SAVE_BUTTON = '[data-testid="toolbar-save-button"]'
@@ -169,7 +170,7 @@ test.describe('V-WATCH-MCP-SECRETS-FUNCTIONAL: secrets in a watched build or cha
     request,
   }) => {
     await enableMcpUntilRestart(page, MCP_PORT)
-    const secret = `kept-secret-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    const secret = `kept-secret-${Date.now()}-${randomUUID().slice(0, 8)}`
     let takerSaw = NOT_WATCHED
     let watcherSaw = NOT_WATCHED
     const taker = await openWatcher(browser, track, async (opened) => {

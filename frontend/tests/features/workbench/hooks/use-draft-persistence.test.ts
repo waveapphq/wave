@@ -315,7 +315,6 @@ describe('useDraftPersistence', () => {
   // ===========================================================================
   describe('Edge Cases', () => {
     it('handles invalid JSON in localStorage gracefully', () => {
-      // Suppress expected console.warn for invalid JSON parsing
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
       localStorageMock.setItem(DRAFT_STORAGE_KEY, 'invalid json {{{')
@@ -324,6 +323,10 @@ describe('useDraftPersistence', () => {
 
       // Should return null instead of throwing
       expect(result.current.draft).toBeNull()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load draft from localStorage:',
+        expect.any(SyntaxError)
+      )
       consoleSpy.mockRestore()
     })
 
@@ -343,7 +346,10 @@ describe('useDraftPersistence', () => {
       })
 
       // Verify warn was called for the storage error
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to save draft to localStorage:',
+        expect.objectContaining({ message: 'QuotaExceeded' })
+      )
       consoleSpy.mockRestore()
     })
 
@@ -366,7 +372,10 @@ describe('useDraftPersistence', () => {
       }).not.toThrow()
 
       // Verify warn was called for the storage error
-      expect(consoleSpy).toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledExactlyOnceWith(
+        'Failed to clear draft from localStorage:',
+        expect.objectContaining({ message: 'Storage error' })
+      )
       consoleSpy.mockRestore()
     })
 

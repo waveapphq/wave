@@ -29,11 +29,11 @@ blocks and the default lanes of each lane control).
 - The scopes spec's Remote Execution case needs the `sshd` service of the
   real-service stack (see `tests/e2e/services/README.md`); the fixture carries
   the `127.0.0.1` sentinel in the SSH Session Open Host row and
-  `injectServiceHost` rewrites it per mode. User and password are the
+  `injectServiceHost` rewrites it. User and password are the
   `helpers/config.ts` constants.
 
   ```bash
-  ./scripts/e2e-stack.sh up --wait sshd
+  ./scripts/e2e/e2e-stack.sh up --wait sshd
   ```
 
 - The specs run at a 1600 x 1000 viewport and collapse the sidebar and the
@@ -42,7 +42,7 @@ blocks and the default lanes of each lane control).
 
 ## Steps
 
-1. Run `./scripts/e2e-targeted-local.sh functional/canvas-lanes/<spec>`.
+1. Run `./scripts/e2e/e2e-targeted-local.sh functional/canvas-lanes/<spec>`.
 2. Each case seeds a Test through `POST /tests` holding only what is not under
    test: the configured control (three instances, one per way of building a
    link), a For around each instance so the three run in one pass, the Logs a
