@@ -34,7 +34,7 @@ COVERAGE = "scripts/lib/run-coverage-backend.sh"
 SONAR_ENV = "scripts/lib/sonar-env.sh"
 CONTAINER_PATH = "/workspace/backend"
 
-# Prints pytest progress for a few seconds, then writes coverage.xml with container paths.
+# Prints pytest progress, then writes coverage.xml with container paths.
 RUN_COVERAGE = f"""
 lines = [
     "tests/api/test_a.py ........ [ 25%]",
@@ -44,7 +44,6 @@ lines = [
 ]
 for line in lines:
     print(line, flush=True)
-    time.sleep(float(os.environ.get("STUB_PYTEST_PAUSE", "0.8")))
 root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 with open(os.path.join(root, "backend", "coverage.xml"), "w", encoding="utf-8") as handle:
     handle.write(
@@ -267,13 +266,12 @@ def logged_lines(result: Run) -> list[str]:
     return file_lines(Path(paths[0])) if paths else []
 
 
-# A green run, a short green run and a red run.
+# A green run and a red run.
 STOP_CASES = [
     {},
-    {"STUB_PYTEST_PAUSE": "0.2"},
     {"STUB_FAIL": "pytest"},
 ]
-STOP_IDS = ["green", "short-run", "failing-tests"]
+STOP_IDS = ["green", "failing-tests"]
 
 # The real pkill, then a pause: a shell that reports a killed job always has time to print it,
 # as on a busy machine, so the report shows up on every run and not only when the race is lost.

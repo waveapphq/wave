@@ -401,7 +401,7 @@ npm run lint
 ## Testing Requirements
 
 - **Unit Tests**: 100% code coverage (see Code Coverage Policy)
-- **Coverage Reports**: Generated in both HTML and JSON formats
+- **Coverage Reports**: Gate 08 prints the backend report and writes `backend/coverage.xml`; gate 09 writes the frontend reports to `frontend/coverage/`
 - **API and Service Tests**: API, storage, WebSocket and plugin tests run in the backend suite; tests against real services run as functional E2E tests
 - **E2E Tests**: Required for critical user workflows
 - **Playwright Visual Tests**: Follow conventions in `tests/e2e/README.md`. Reference design decisions by ID (e.g., LIST-6, CANVAS-9).

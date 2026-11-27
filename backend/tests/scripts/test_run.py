@@ -393,6 +393,24 @@ class TestOneContainer:
 
         assert container_runs(stubs) == []
 
+    @pytest.mark.parametrize("number", CONTAINER_GATES)
+    @pytest.mark.parametrize("outcome", ["passed", "failed (late)"])
+    def test_a_result_line_written_after_the_script_ends_counts(
+        self, repo: Repo, stubs: Stubs, tmp_path: Path, number: int, outcome: str
+    ) -> None:
+        commit_change(repo, "backend/wavecore/app.py", "frontend/src/app.ts", "tests/e2e/x.ts")
+        code = 0 if outcome == "passed" else 1
+        line = f"{number:02d} {check_name(number)}: {outcome}"
+        # Like a gate's own log tee, the line leaves after the script itself has ended.
+        (repo.root / gate_path(number)).write_text(
+            f"#!/bin/bash\nexec > >(sleep 0.2; cat)\necho '{line}'\nexit {code}\n", encoding="utf-8"
+        )
+
+        result = gate(repo, stubs, tmp_path)
+        row = table_rows(result).get(number, ["", "", ""])
+
+        assert row[2] == outcome, result.lines
+
     def test_a_container_check_failing_stops_the_ones_after_it(
         self, repo: Repo, stubs: Stubs, tmp_path: Path
     ) -> None:

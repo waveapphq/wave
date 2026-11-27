@@ -111,10 +111,7 @@ CORS is pre-configured for ports 3000 and 3001 in `config/config.example.yaml`.
 
 **Coverage Requirements:**
 - **100% code coverage** is required for all modules
-- `./scripts/gate/08-backend-tests.sh`, run from the root of the clone, writes the coverage reports to:
-  - Terminal (with missing line numbers)
-  - HTML format: `htmlcov/index.html`
-  - JSON format: `coverage.json`
+- `./scripts/gate/08-backend-tests.sh`, run from the root of the clone, prints the coverage report with the missing line numbers and writes `coverage.xml` for SonarQube
 - Tests must pass AND coverage must be 100% before committing
 
 ## Project Structure

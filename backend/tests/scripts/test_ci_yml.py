@@ -1,6 +1,9 @@
 """Tests for .github/workflows/ci.yml: the gate's jobs, their names, stages, needs and skips."""
 
 import re
+import subprocess
+import tomllib
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -187,6 +190,86 @@ class TestCoverageArtifacts:
         }
 
         assert len(names) == len(SONAR), names
+
+
+GRAMMAR = "02 Grammar and Comments"
+# The jobs that install the backend's dependencies with Poetry.
+BACKEND_INSTALLS = ["04 Backend static", "08 Backend tests"]
+LOCK = "backend/poetry.lock"
+
+
+def steps_until(name: str, run_line: str) -> list[dict[str, Any]]:
+    """A job's steps before the first one whose run line holds the text."""
+    found = job(name).get("steps", [])
+    for index, step in enumerate(found):
+        if run_line in str(step.get("run", "")):
+            return list(found[:index])
+    return list(found)
+
+
+class TestPoetryCache:
+    """The jobs that install the backend restore its virtual environment, keyed on the lock."""
+
+    def test_every_poetry_install_is_a_job_with_the_cache(self) -> None:
+        installing = [n for n in NAMES if "poetry install" in runs(n)]
+
+        assert installing == BACKEND_INSTALLS, installing
+
+    @pytest.mark.parametrize("name", BACKEND_INSTALLS)
+    def test_the_cache_is_restored_before_the_install(self, name: str) -> None:
+        before = steps_until(name, "poetry install")
+        caches = [
+            s
+            for s in before
+            if str(s.get("uses", "")).startswith("actions/cache@")
+            and s.get("with", {}).get("path") == "backend/.venv"
+        ]
+
+        assert len(caches) == 1, before
+
+    @pytest.mark.parametrize("name", BACKEND_INSTALLS)
+    def test_the_cache_key_holds_the_lock_and_the_python_version(self, name: str) -> None:
+        (cache,) = [
+            s
+            for s in uses(name, "actions/cache")
+            if s.get("with", {}).get("path") == "backend/.venv"
+        ]
+        key = str(cache["with"].get("key", ""))
+
+        assert f"hashFiles('{LOCK}')" in key, key
+        assert "steps.python.outputs.python-version" in key, key
+        assert [s.get("id") for s in uses(name, "actions/setup-python")] == ["python"]
+
+    @pytest.mark.parametrize("name", BACKEND_INSTALLS)
+    def test_the_environment_is_the_cached_folder(self, name: str) -> None:
+        assert job(name).get("env", {}).get("POETRY_VIRTUALENVS_IN_PROJECT") == "true", job(name)
+
+
+class TestGrammarInstall:
+    """Job 02 installs only typos, at the version the backend's lock pins."""
+
+    def test_it_does_not_install_the_backend(self) -> None:
+        assert "poetry install" not in runs(GRAMMAR), runs(GRAMMAR)
+
+    def test_it_installs_typos_at_the_locked_version(self) -> None:
+        assert re.search(r'pip install "typos==\$version"', runs(GRAMMAR)), runs(GRAMMAR)
+
+    def test_the_version_comes_from_the_lock(self, tmp_path: Path) -> None:
+        (line,) = [ln for ln in runs(GRAMMAR).splitlines() if ln.strip().startswith("version=")]
+        lock = tomllib.loads((CLONE / LOCK).read_text(encoding="utf-8"))
+        pinned = next(p["version"] for p in lock["package"] if p["name"] == "typos")
+        (tmp_path / "poetry.lock").write_text(
+            '[[package]]\nname = "black"\nversion = "1.0"\n\n'
+            f'[[package]]\nname = "typos"\nversion = "{pinned}"\n',
+            encoding="utf-8",
+        )
+        script = f"{line.strip()}\nprintf '%s' \"$version\""
+
+        found = subprocess.run(
+            ["bash", "-c", script], cwd=tmp_path, capture_output=True, text=True, check=True
+        )
+
+        assert found.stdout == pinned, found.stderr
 
 
 class TestOtherWorkflows:

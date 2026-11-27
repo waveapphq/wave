@@ -12,6 +12,7 @@ interface FakeError {
   name: string
   message: string
   stack: string
+  diff?: string
 }
 
 interface FakeModule {
@@ -37,6 +38,7 @@ interface ProgressReporter {
   onTestRunStart: (specifications: ReadonlyArray<unknown>) => void | Promise<void>
   onTestModuleEnd: (testModule: FakeModule) => void | Promise<void>
   onTestCaseResult: (testCase: FakeTestCase) => void | Promise<void>
+  onUserConsoleLog: (log: { type: 'stdout' | 'stderr'; content: string }) => void
   onTestRunEnd: (
     testModules: ReadonlyArray<FakeModule>,
     unhandledErrors: ReadonlyArray<unknown>,
@@ -457,5 +459,54 @@ describe('vitest progress reporter, test count line', () => {
     await finishRun(reporter, second)
 
     expect(countLines()).toEqual(['Tests: 1 passed, 0 failed, 1 skipped (2 files)'])
+  })
+})
+
+describe('vitest progress reporter, error text', () => {
+  it('prints an assertion diff under its message', async () => {
+    const reporter = await startRun()
+    const diff = '- Expected\n+ Received\n\n- 4\n+ 3'
+
+    await reporter.onTestCaseResult(
+      fakeTestCase(fakeModule(FILES[0]), 'adds two numbers', { ...fakeError('expected 3 to be 4'), diff }),
+    )
+
+    expect(output).toContain(`AssertionError: expected 3 to be 4\n${diff}\n    at math.test.ts:12:5`)
+  })
+
+  it('prints a thrown value that is not an Error by its text, with no stack', async () => {
+    const reporter = await startRun()
+
+    await reporter.onTestRunEnd([], ['a plain string was thrown'], 'failed')
+
+    expect(output).toContain('Unhandled error\nError: a plain string was thrown\nTests:')
+  })
+})
+
+describe('vitest progress reporter, console output', () => {
+  it.each([
+    ['stdout', 'a log line\n', 'a log line\n'],
+    ['stdout', 'a log line', 'a log line\n'],
+    ['stderr', 'a warning\n', 'a warning\n'],
+    ['stderr', 'a warning', 'a warning\n'],
+  ] as const)('passes a test\'s %s line %j through as one whole line', async (type, content, written) => {
+    const reporter = await startRun()
+    const own = type === 'stderr' ? process.stderr : process.stdout
+    const other = type === 'stderr' ? process.stdout : process.stderr
+
+    reporter.onUserConsoleLog({ type, content })
+
+    expect(own.write).toHaveBeenCalledWith(written)
+    expect(other.write).not.toHaveBeenCalled()
+  })
+})
+
+describe('vitest progress reporter, empty run', () => {
+  it('prints 0% for a run with no test files', async () => {
+    await startRun([])
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(progressLines()).toEqual(['Progress: 0%'])
   })
 })

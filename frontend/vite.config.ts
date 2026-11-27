@@ -183,7 +183,7 @@ export default defineConfig({
         'lcov', // For SonarQube integration
       ],
       reportsDirectory: './coverage',
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['src/**/*.{ts,tsx}', 'scripts/**/*.mjs'],
       exclude: [],
       all: true,
       thresholds: {

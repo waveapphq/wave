@@ -220,7 +220,14 @@ if not command:
 child = {k: v for k, v in os.environ.items() if not k.startswith("WAVE_")}
 child.update(env)
 cwd = on_host(workdir) if workdir else os.getcwd()
-sys.exit(subprocess.run([on_host(a) for a in command], cwd=cwd, env=child).returncode)
+main = subprocess.Popen([on_host(a) for a in command], cwd=cwd, env=child, start_new_session=True)
+code = main.wait()
+# As in a container, every process left when the main one ends is killed.
+try:
+    os.killpg(main.pid, 9)
+except ProcessLookupError:
+    pass
+sys.exit(code)
 """
 
 

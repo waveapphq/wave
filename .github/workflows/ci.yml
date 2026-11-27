@@ -96,9 +96,11 @@ jobs:
           curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 -
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install dependencies
+      - name: Install typos at the version backend/poetry.lock pins
         working-directory: ./backend
-        run: poetry install
+        run: |
+          version="$(python3 -c 'import tomllib; print(next(p["version"] for p in tomllib.load(open("poetry.lock", "rb"))["package"] if p["name"] == "typos"))')"
+          poetry run pip install "typos==$version"
 
       - name: Check the text
         run: ./scripts/gate/02-grammar.sh
@@ -124,6 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       WAVE_IN_CI_CONTAINER: '1'
+      POETRY_VIRTUALENVS_IN_PROJECT: 'true'
 
     steps:
       - uses: actions/checkout@v7
@@ -131,6 +134,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
+        id: python
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -139,6 +143,12 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 -
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Restore the backend dependencies
+        uses: actions/cache@v6
+        with:
+          path: backend/.venv
+          key: backend-venv-${{ runner.os }}-python-${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install dependencies
         working-directory: ./backend
@@ -238,6 +248,7 @@ jobs:
     env:
       WAVE_IN_CI_CONTAINER: '1'
       CI_PYTEST_WORKERS: logical
+      POETRY_VIRTUALENVS_IN_PROJECT: 'true'
 
     steps:
       - uses: actions/checkout@v7
@@ -246,6 +257,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
+        id: python
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -254,6 +266,12 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | POETRY_VERSION=2.5.1 python3 -
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Restore the backend dependencies
+        uses: actions/cache@v6
+        with:
+          path: backend/.venv
+          key: backend-venv-${{ runner.os }}-python-${{ steps.python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install dependencies
         working-directory: ./backend

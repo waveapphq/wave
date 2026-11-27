@@ -161,9 +161,11 @@ run_container() { # run_container <number>...: the needed container checks in on
     return 1
   fi
   # keep-id maps the host user to ciuser, so the container writes files the host user owns.
+  # cat ends only when a script's log tee has written its last line; the container's end kills it.
   podman run --rm --userns=keep-id -v "$ROOT:/workspace" -w /workspace \
     -e WAVE_IN_CI_CONTAINER=1 -e WAVE_CI_PROGRESS_SECONDS -e CI_PYTEST_WORKERS "$IMAGE" \
-    bash -c 'for script in "$@"; do /workspace/scripts/gate/"$script" || exit; done' gates "${scripts[@]}" 2>&1 \
+    bash -c 'for script in "$@"; do /workspace/scripts/gate/"$script" 2>&1 | cat; code=${PIPESTATUS[0]}; [ "$code" -eq 0 ] || exit "$code"; done' \
+    gates "${scripts[@]}" 2>&1 \
     | sed -u "s#^Log: /workspace/#Log: $ROOT/#" | tee "$OUT_DIR/container"
   code=${PIPESTATUS[0]}
   # The container writes /workspace paths; a SonarQube scan on the host reads the clone's paths.
