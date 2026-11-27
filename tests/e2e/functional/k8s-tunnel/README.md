@@ -67,8 +67,8 @@ would have carried the wrong value.
   tunnel Block's own output - never a fixed port, because every worker's
   backend binds the same loopback.
 - The direct Connect carries the literal `https://127.0.0.1:9460`, which the
-  `injectHttp` import option rewrites for container-shard mode. The tunneled
-  URL is outside that allowlist and stays literal in every mode.
+  `injectHttp` import option rewrites to the shard's gateway. The tunneled
+  URL is outside that allowlist and stays literal.
 
 ### Editing anything under `tests/e2e/services/kwok/` needs a full image rebuild
 
@@ -149,7 +149,7 @@ tunnel closed that way reports `closed=false`.
   them. Every object this suite writes there lives in `wave-e2e-<suffix>`.
 - The TUNNELED side has no seeding path. `helpers/k8s-seed.ts` builds its URL
   from the published cluster's host and port, and the tunnel listener lives on
-  the WAVE backend's own loopback, which in container-shard mode is inside the
+  the WAVE backend's own loopback, which is inside the
   shard container. So the run creates its namespace on that cluster with an
   Apply Block and removes it with a Delete Block, both inside the workflow.
 - The namespace name is the SAME on both clusters. Two apiservers means the name

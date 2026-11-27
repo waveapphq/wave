@@ -2,8 +2,6 @@ name: CI
 
 on:
   pull_request:
-    # Edited covers a change of the base branch, which job 01 checks.
-    types: [opened, edited, synchronize, reopened]
     branches: [master, 'release/**']
   push:
     branches: [master, 'release/**']

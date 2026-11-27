@@ -4,7 +4,7 @@ Seed a Test carrying nested local Functions, exercise drill-down via every affor
 
 ## Prerequisites
 
-Global setup resets the per-worker DB before all tests; no separate seed script. The spec self-seeds via `POST /tests` using `fixture.json`.
+Global setup resets the shard's DB before all tests; no separate seed script. The spec self-seeds via `POST /tests` using `fixture.json`.
 
 ## Steps
 

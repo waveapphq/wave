@@ -1,44 +1,9 @@
-/**
- * Playwright test fixtures for multi-stack parallel execution.
- *
- * Playwright's `use.baseURL` in the config is evaluated once in the main
- * process, so it cannot vary per worker. To route each worker to its own
- * FE+BE stack in the N-stack CI layout, we override `baseURL` as a
- * worker-scoped fixture that reads `workerInfo.workerIndex`.
- *
- * Stack N layout (synced with playwright.config.ts webServer array):
- *   - Worker i -> Frontend port 3000+i, Backend port 8000+i
- *   - Each backend has its own WAVE_STORAGE_BASE_PATH so DB state is
- *     isolated per worker.
- *
- * Test files import from this module instead of '@playwright/test' so that
- * `page.goto('/path')` resolves to the correct per-worker frontend URL.
- *
- * Every test also starts from a FREE workbench editing slot. That slot is a
- * single global one: a tab that opens the workbench while a previous test's
- * tab still holds it becomes a read-only watcher, and a watcher is never
- * promoted - so the mutation affordances it needs are simply not rendered.
- * The specs that deliberately drive ownership build their holders inside the
- * test, after this has run.
- */
+/** Test fixtures: retried API reads, and a free workbench slot before every test, since a second tab only watches. */
 
 import { test as base, expect, type APIRequestContext } from '@playwright/test'
+import { BACKEND_URL } from './config'
 
-// Route each worker to its stack via `parallelIndex`, which is the bounded
-// concurrent slot (0..workers-1). Using `workerIndex` here is wrong because
-// that value keeps incrementing every time Playwright spawns a new worker
-// (e.g. for a new project after dependencies complete), and would index
-// past N_STACKS. parallelIndex stays within [0, workers-1] for the current
-// project's parallel wave.
-const N_STACKS = Number(process.env.WAVE_E2E_N_STACKS || '4')
-const BASE_FE_PORT = Number(process.env.WAVE_E2E_FRONTEND_PORT || '3000')
-
-// Under high shard counts the per-container backend can briefly reset a
-// connection when CPU-starved. Retry ONLY connection-level errors on
-// idempotent reads (GET/HEAD) - never writes (a reset mid-write may have
-// already applied, so retrying a POST could duplicate an entity) and never
-// HTTP status codes or assertions, so real failures and races still surface
-// (the suite keeps retries:0 for test logic).
+// Retry only dropped connections on reads: a retried write could duplicate an entity.
 const RETRYABLE_NETWORK_ERROR =
   /ECONNRESET|ECONNREFUSED|ECONNABORTED|EPIPE|ETIMEDOUT|socket hang up|ENETUNREACH/i
 const RETRY_METHODS = new Set(['get', 'head'])
@@ -72,7 +37,6 @@ function withConnectionRetry(ctx: APIRequestContext): APIRequestContext {
   })
 }
 
-const BASE_BE_PORT = Number(process.env.WAVE_E2E_BACKEND_PORT || '8000')
 const OWNERSHIP_RESET_ID = 'e2e-fixture-reset'
 
 /** Force the single global workbench editing slot free (force, then release). */
@@ -90,19 +54,13 @@ async function freeWorkbenchSlot(ctx: APIRequestContext, backend: string): Promi
 }
 
 export const test = base.extend<{ freeWorkbenchSession: void }>({
-  baseURL: async ({}, use, testInfo) => {
-    const stack = testInfo.parallelIndex % N_STACKS
-    await use(`http://localhost:${BASE_FE_PORT + stack}`)
-  },
   request: async ({ request }, use) => {
     await use(withConnectionRetry(request))
   },
-  // Auto fixture: runs for EVERY test, including the many that only take
-  // `{ page }`, so no spec has to remember to claim a clean slot.
+  // Auto fixture, so no spec has to claim a free slot itself.
   freeWorkbenchSession: [
-    async ({ request }, use, testInfo) => {
-      const stack = testInfo.parallelIndex % N_STACKS
-      await freeWorkbenchSlot(request, `http://localhost:${BASE_BE_PORT + stack}`)
+    async ({ request }, use) => {
+      await freeWorkbenchSlot(request, BACKEND_URL)
       await use(undefined)
     },
     { auto: true },
@@ -111,6 +69,5 @@ export const test = base.extend<{ freeWorkbenchSession: void }>({
 
 export { expect }
 
-// Re-export common types so specs can do `import { test, expect, type Page }
-// from '.../playwright-fixtures'` without pulling in @playwright/test directly.
+// Re-exported so specs need no direct @playwright/test import.
 export type { Page, Locator, APIRequestContext, TestInfo, Route } from '@playwright/test'

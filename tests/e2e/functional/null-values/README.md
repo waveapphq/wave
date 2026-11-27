@@ -17,7 +17,7 @@ null leg of the settings spec is the one exception, see below).
 
 ## Pre-requisites
 
-- Backend and frontend on the per-worker ports (Playwright fixtures).
+- Backend and frontend on the shard's ports (Playwright fixtures).
 - E2E stack services, brought up by the targeted / CI scripts:
 
 | Spec | Fixture / recipe | Services |

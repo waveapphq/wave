@@ -1,18 +1,4 @@
-/**
- * The K8s write suite's case tables, its fixture builder and the assertions
- * every write spec shares.
- *
- * The table IS the checklist. Each leg names the `KW-` ids it proves (the id
- * matrix is in the suite README), the credential it runs under, the exact
- * Block values, and how its outputs are bound. The spec builds one chained
- * workflow per proof from these tables with the shared node factories;
- * `fixture-write-golden.json` pins the emitted node shape so the generated
- * form stays reviewable against a hand-authored one.
- *
- * Three exported groups: the object names and manifests the cluster receives,
- * the leg tables one per proof, and the console-line and Summary-table
- * assertions the specs read their results through.
- */
+/** The K8s write suite's case tables, fixture builder and shared assertions; each leg names the `KW-` ids it proves (matrix in the suite README). */
 
 import { expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { expectNodeStatus, getNodeStatuses } from '../../helpers/k8s-run'
@@ -43,7 +29,7 @@ import {
   K8S_API_PORT,
 } from '../../helpers/config'
 
-/** The fixture-side API URL. `injectHttp` rewrites it in container-shard mode. */
+/** The fixture-side API URL. `injectHttp` rewrites it to the shard's gateway. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
 /** The implicit node every chain leaves from. */
@@ -55,8 +41,7 @@ export const MAX_BLOCK_NAME = 64
 /** The image the kwok cluster runs, matching the seeded workloads. */
 const POD_IMAGE = 'busybox:1.36'
 
-/** Which credential a leg runs under. `view` is bound to the read-only role,
- *  so every write it attempts is refused by the cluster. */
+/** Which credential a leg runs under; the limited one has the read-only role, so the cluster refuses its writes. */
 export type WriteSession = 'admin' | 'limited'
 
 export const SESSION_VARIABLE: Record<WriteSession, string> = {
@@ -69,8 +54,7 @@ const TOKEN_VARIABLE: Record<WriteSession, string> = {
   limited: 'k8s_limited_token',
 }
 
-/** Every object the suite writes. The run namespace isolates the namespaced
- *  ones, so only the cluster-scoped namespace carries the run suffix. */
+/** Every object the suite writes; only the cluster-scoped namespace needs the run suffix. */
 export const WRITTEN = {
   goldenConfigMap: 'wave-write-cm',
   goldenKey: 'mode',
@@ -113,11 +97,9 @@ type LegBase = {
   what: string
   /** Defaults to `admin`. */
   session?: WriteSession
-  /** The Block records its failure instead of raising: it binds the core
-   *  outputs and is expected to paint amber. */
+  /** The Block records its failure instead of raising, binds the core outputs and is expected to paint amber. */
   records?: boolean
-  /** The Block is expected to RAISE: a Try/Catch wraps it, the catch branch
-   *  stamps a marker and the caught message rides the then branch. */
+  /** The Block is expected to raise: a Try/Catch wraps it and the then branch carries the caught message. */
   guarded?: boolean
   /** Overrides the marker expression. */
   marker?: string
@@ -161,8 +143,7 @@ export function caughtPrefix(leg: WriteLeg): string {
   return `${markerLine(leg)} msg=`
 }
 
-/** A Block name is capped, so the ids ride the marker line and the Block
- *  carries the leg key. */
+/** A Block name is capped, so it carries the leg key and the ids ride the marker line. */
 export function blockName(leg: WriteLeg): string {
   const name = `${leg.key}: ${leg.what}`
   if (name.length > MAX_BLOCK_NAME) {
@@ -214,8 +195,7 @@ export const appsPath = (namespace: string, plural: string): string =>
   `/apis/apps/v1/namespaces/${namespace}/${plural}`
 export const clusterPath = (plural: string): string => `/api/v1/${plural}`
 
-/** The RESOURCE cell: kubectl's `type/name`, with the API group when there is
- *  one (`_k8s_common.type_name`). */
+/** The RESOURCE cell: kubectl's `type/name`, with the API group when there is one. */
 export const typeName = (kind: string, group: string, name: string): string =>
   `${kind.toLowerCase()}${group ? `.${group}` : ''}/${name}`
 
@@ -405,15 +385,13 @@ export function secretLegs(ctx: WriteContext): WriteLeg[] {
         if_exists: 'update',
         output_format: 'map',
       },
-      // The result rides the console on purpose: the written value has to come
-      // back masked there too, not only in the stored record.
+      // The result rides the console so the written value must come back masked there too.
       marker: `f'[KW-06|KW-07] secret count={${countVar('secret')}} data={${resultVar('secret')}}'`,
     },
   ]
 }
 
-/** KW-08 to KW-12: one Deployment through apply, scale, restart, status and
- *  a cascading delete. Every leg needs the one the leg before it left. */
+/** KW-08 to KW-12: one Deployment through apply, scale, restart, status and a cascading delete, each leg on the last one's result. */
 export function deploymentLegs(ctx: WriteContext): WriteLeg[] {
   return [
     {
@@ -628,8 +606,7 @@ export function clusterScopedLegs(ctx: WriteContext): WriteLeg[] {
         kind: 'Namespace',
         delete_by: 'name',
         name: ctx.namespaceC,
-        // Namespace removal is finalizer-driven, so the suite asserts the
-        // accepted delete and never a controller loop.
+        // Namespace removal is finalizer-driven, so only the accepted delete is asserted.
         wait_until_gone: false,
       },
     },
@@ -738,8 +715,7 @@ function blockNode(leg: WriteLeg, bindings: Record<string, string>): WorkflowNod
   })
 }
 
-/** Which outputs a leg binds, and the variable each one declares. A guarded
- *  leg binds nothing: it raises, so the engine never reaches the bindings. */
+/** Which outputs a leg binds; a guarded leg raises, so it binds nothing. */
 function legBindings(
   leg: WriteLeg,
   variables: Record<string, FixtureVariable>,
@@ -801,8 +777,7 @@ function defaultMarker(leg: WriteLeg): WorkflowNode {
   })
 }
 
-/** A Try/Catch-wrapped leg: the catch branch stamps its marker and the then
- *  branch prints the caught message, which is where the chain carries on. */
+/** A Try/Catch-wrapped leg: the catch branch stamps its marker and the then branch prints the caught message. */
 function guardedNodes(
   leg: WriteLeg,
   block: WorkflowNode,
@@ -839,8 +814,7 @@ function guardedNodes(
   }
 }
 
-/** Build a whole proof: the Connect Blocks it needs, one Block plus one marker
- *  per leg, and the bookend. */
+/** Build a whole proof: its Connect Blocks, one Block and marker per leg, and the bookend. */
 export function buildWriteFixture(
   legs: readonly WriteLeg[],
   material: WriteMaterial,
@@ -941,8 +915,7 @@ export const errorOf = (vars: SessionVariables, key: string): string =>
 export const reasonOf = (vars: SessionVariables, key: string): string =>
   String(cell(vars, reasonVar(key)).value)
 
-/** The Summary table a leg bound, asserted whole: the columns it declares,
- *  their types, and every cell of every row. */
+/** The Summary table a leg bound, asserted whole. */
 export function expectSummary(
   vars: SessionVariables,
   key: string,
@@ -966,8 +939,7 @@ export function expectSummary(
   expect(table.rows, `${key} Summary rows`).toEqual(expected.rows.map((row) => [...row]))
 }
 
-/** Every recorded failure reports the same core: success false, the cluster's
- *  message and reason, and the empty shapes for whatever it binds. */
+/** Every recorded failure reports success false, the cluster's message and reason, and empty shapes. */
 export function expectRecorded(
   vars: SessionVariables,
   key: string,
@@ -978,8 +950,7 @@ export function expectRecorded(
   expect(reasonOf(vars, key), `${key} reason`).toBe(expected.reason)
 }
 
-/** The empty shapes a recorded Apply or Delete leaves behind when nothing
- *  landed: no rows, no names, count zero. */
+/** The empty shapes a recorded Apply or Delete leaves when nothing landed. */
 export function expectEmptyWrite(
   vars: SessionVariables,
   key: string,
@@ -995,8 +966,7 @@ export function expectEmptyWrite(
   expect(table.rows, `${key} Summary rows`).toEqual([])
 }
 
-/** A guarded leg: the catch branch ran, and the caught message is the exact
- *  sentence the Block raised. */
+/** A guarded leg: the catch branch ran, and the caught message is the sentence the Block raised. */
 export function expectCaught(
   logs: readonly string[],
   leg: WriteLeg,
@@ -1030,8 +1000,7 @@ export function expectLine(logs: readonly string[], expectedLine: string): void 
   ).toBeTruthy()
 }
 
-/** Every leg's Block carries the status its case declares: amber for a
- *  recorded failure, green otherwise. A guarded leg raises, so it is skipped. */
+/** Every leg's Block shows its declared status; a guarded leg raises, so it is skipped. */
 export async function expectLegStatuses(page: Page, legs: readonly WriteLeg[]): Promise<void> {
   for (const leg of legs) {
     if (leg.guarded) continue
@@ -1048,8 +1017,7 @@ export async function expectNoAmber(page: Page): Promise<void> {
   ).toEqual([])
 }
 
-/** Remove a cluster-scoped namespace the suite applied, in case the run left
- *  it behind. Never throws: it runs beside the seeded teardown. */
+/** Remove a cluster-scoped namespace the suite applied and left behind; never throws. */
 export async function deleteNamespaceQuietly(
   request: APIRequestContext,
   name: string,

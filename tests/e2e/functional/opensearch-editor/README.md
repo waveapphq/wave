@@ -23,8 +23,8 @@ REQ-3.3.2.6, REQ-5.1.2; OS-11 to OS-13).
   ./scripts/e2e/e2e-stack.sh up --wait opensearch
   ```
 
-- The fixture carries the host-mode address `https://127.0.0.1:9477`; the
-  import (`injectHttp`) rewrites it to `OPENSEARCH_TARGET_HOST` per mode and
+- The fixture carries the sentinel address `https://127.0.0.1:9477`; the
+  import (`injectHttp`) rewrites it to `OPENSEARCH_TARGET_HOST` and
   never touches `https://127.0.0.1:9479`. The Cluster URL the spec types to fix
   a block is `https://<OPENSEARCH_TARGET_HOST>:<OPENSEARCH_PORT>`. Every Get
   fields pull runs on the WAVE server, so these addresses are the ones that

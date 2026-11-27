@@ -7,7 +7,7 @@ entries) and `POST /tests` (workbench host); no shared fixture script.
 
 ## Prerequisites
 
-- Dev servers up on the per-worker stack ports (handled by `playwright.config.ts`).
+- Backend + frontend stack running (the shard container starts them).
 - Backend with `WAVE_ADMIN_ALLOWED=true` so library + test seeds round-trip.
 
 ## Files in this directory

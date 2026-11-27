@@ -44,7 +44,7 @@ its own section at the end of this file.
 - The proxies are dialed at `HTTP_TARGET_HOST`. The proxy-only targets are
   `http-target` (9444 plain, 9443 HTTPS), `tls-lab` (9463, the chart
   repository), `kwok-internal` (6443) and `opensearch` (9200); they are the
-  same in host mode and in a container shard, so no fixture address is
+  compose service names the proxies resolve, so no fixture address is
   rewritten.
 - The fixtures store no secret: the spec fills the WAVE Test CA, the kwok
   token and CA and the OpenSearch password from `helpers/config.ts`, and

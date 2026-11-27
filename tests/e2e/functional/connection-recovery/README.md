@@ -7,7 +7,7 @@ probe, the offline banner, and the route-content remount on reconnection.
 
 ## Pre-requisites
 
-- A backend on the per-worker port (the standard playwright stack).
+- A backend on the shard's port (the standard playwright stack).
 - No fixture or seed required - the test only needs `/tests` to respond
   successfully when not mocked.
 
@@ -50,7 +50,7 @@ reach the user as different, actionable reasons.
 
 ## Pre-requisites
 
-- A backend on the per-worker port (the standard playwright stack).
+- A backend on the shard's port (the standard playwright stack).
 - No fixture or seed required.
 
 ## Execution steps

@@ -1,17 +1,4 @@
-/**
- * The Helm suite's leg model, its fixture builder and the assertions every
- * Helm spec shares.
- *
- * The table IS the checklist. Each leg names the `HL-` ids it proves (the id
- * matrix is in the suite README), the exact Block values, and how its outputs
- * are bound. A spec builds one chained workflow per proof from these legs with
- * the shared node factories, so a proof reads as a list of Blocks rather than
- * as JSON.
- *
- * Three exported groups: the endpoints and names the stack serves, the leg
- * model and its fixture builder, and the console-line and Result-table
- * assertions the specs read their results through.
- */
+/** The Helm suite's legs, fixture builder and shared assertions; each leg names the `HL-` ids it proves (matrix in the suite README). */
 
 import { expect, type APIRequestContext, type Page } from '../../helpers/playwright-fixtures'
 import { expectNodeStatus, finishRun, finishRunAnyVerdict, getNodeStatuses, startRun } from '../../helpers/k8s-run'
@@ -60,11 +47,10 @@ import {
 // Endpoints and names
 // ---------------------------------------------------------------------------
 
-/** The fixture-side API URL. `injectHttp` rewrites it in container-shard mode. */
+/** The fixture-side API URL. `injectHttp` rewrites it to the shard's gateway. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
-/** The chart repository, plain HTTP and no auth. Port 9463 sits outside
- *  `injectHttp`'s rewrite range, so the URL is mode-correct as built. */
+/** The chart repository, plain HTTP and no auth; port 9463 is outside `injectHttp`'s rewrite range. */
 export const CHART_REPO_URL = `http://${CHART_REPO_HOST}:${CHART_REPO_PORT}`
 
 /** The same repository over TLS, behind basic auth. */
@@ -116,8 +102,7 @@ export const RELEASE_TYPES = [
 export const TEST_COLUMNS = ['Name', 'Kind', 'Phase', 'Started', 'Completed'] as const
 export const TEST_TYPES = ['string', 'string', 'string', 'string', 'string'] as const
 
-/** A helm release name is capped at 53 characters, so the run suffix rides a
- *  short topic rather than the spec's own name. */
+/** A helm release name is capped at 53 characters, so the run suffix rides a short topic. */
 const MAX_RELEASE_NAME = 53
 
 export function releaseName(topic: string, suffix: string): string {
@@ -168,11 +153,9 @@ export type HelmLegBase = {
   ids: readonly string[]
   /** What the leg is, for the marker and the Block name. */
   what: string
-  /** The Block records its failure instead of raising: it binds the output
-   *  core and is expected to paint amber. */
+  /** The Block records its failure instead of raising and is expected to paint amber. */
   records?: boolean
-  /** The Block is expected to RAISE: a Try/Catch wraps it, the catch branch
-   *  stamps a marker and the caught message rides the then branch. */
+  /** The Block is expected to raise: a Try/Catch wraps it and the then branch carries the caught message. */
   guarded?: boolean
   /** Overrides the marker expression. */
   marker?: string
@@ -212,8 +195,7 @@ export const markerLine = (leg: HelmLeg): string => `${legMarker(leg)} ${leg.key
 /** The head of the line a guarded leg prints on its then branch. */
 export const caughtPrefix = (leg: HelmLeg): string => `${markerLine(leg)} msg=`
 
-/** A Block name is capped, so the ids ride the marker line and the Block
- *  carries the leg key. */
+/** A Block name is capped, so it carries the leg key and the ids ride the marker line. */
 export function blockName(leg: HelmLeg): string {
   const name = `${leg.key}: ${leg.what}`
   if (name.length > MAX_BLOCK_NAME) {
@@ -293,8 +275,7 @@ function blockNode(leg: HelmLeg, bindings: Record<string, string>): WorkflowNode
   })
 }
 
-/** Which outputs a leg binds, and the variable each one declares. A guarded
- *  leg binds nothing: it raises, so the engine never reaches the bindings. */
+/** Which outputs a leg binds; a guarded leg raises, so it binds nothing. */
 function legBindings(
   leg: HelmLeg,
   variables: Record<string, FixtureVariable>,
@@ -365,8 +346,7 @@ function defaultMarker(leg: HelmLeg): WorkflowNode {
   })
 }
 
-/** A Try/Catch-wrapped leg: the catch branch stamps its marker and the then
- *  branch prints the caught message, which is where the chain carries on. */
+/** A Try/Catch-wrapped leg: the catch branch stamps its marker and the then branch prints the caught message. */
 function guardedNodes(
   leg: HelmLeg,
   block: WorkflowNode,
@@ -398,8 +378,7 @@ function guardedNodes(
   }
 }
 
-/** Build a whole proof: the Connect it needs, whatever the spec puts in front,
- *  one Block plus one marker per leg, and the bookend. */
+/** Build a whole proof: its Connect, the spec's own Blocks, one Block and marker per leg, and the bookend. */
 export function buildHelmFixture(
   legs: readonly HelmLeg[],
   material: HelmMaterial,
@@ -539,8 +518,7 @@ function expectColumns(
   ).toEqual([...types])
 }
 
-/** The one release row, asserted whole: the columns, their types and every
- *  cell. `Updated` is helm's own deploy stamp, so it is asserted non-empty. */
+/** The one release row, asserted whole; `Updated` is helm's own deploy stamp, so only non-empty. */
 export function expectReleaseRow(
   vars: SessionVariables,
   key: string,
@@ -574,16 +552,14 @@ export function expectReleaseRow(
   expect(appVersion, `${key} App Version`).toBe(expected.appVersion)
 }
 
-/** The release table with its columns kept and no row, which is what a
- *  recorded failure leaves behind. */
+/** The release table with its columns and no row, as a recorded failure leaves it. */
 export function expectEmptyRelease(vars: SessionVariables, key: string): void {
   const table = tableOf(vars, key)
   expectColumns(table, key, RELEASE_COLUMNS, RELEASE_TYPES)
   expect(table.rows, `${key} Result rows`).toEqual([])
 }
 
-/** One test-hook table, asserted whole: the columns, their types and every
- *  hook's name, kind and phase, in document order. */
+/** One test-hook table, asserted whole, in document order. */
 export function expectTestRows(
   vars: SessionVariables,
   key: string,
@@ -600,8 +576,7 @@ export function expectTestRows(
   }
 }
 
-/** Every recorded failure reports the same core: success false, helm's own
- *  message and the Reason a workflow branches on. */
+/** Every recorded failure reports success false, helm's own message and the Reason. */
 export function expectRecorded(
   vars: SessionVariables,
   key: string,
@@ -617,8 +592,7 @@ export function expectRecorded(
   }
 }
 
-/** A guarded leg: the catch branch ran, and the caught message is the sentence
- *  the Block raised. */
+/** A guarded leg: the catch branch ran, and the caught message is the sentence the Block raised. */
 export function expectCaught(
   logs: readonly string[],
   leg: HelmLeg,
@@ -659,8 +633,7 @@ export function expectLine(logs: readonly string[], expectedLine: string): void 
   ).toBeTruthy()
 }
 
-/** Every leg's Block carries the status its case declares: amber for a
- *  recorded failure, green otherwise. A guarded leg raises, so it is skipped. */
+/** Every leg's Block shows its declared status; a guarded leg raises, so it is skipped. */
 export async function expectLegStatuses(page: Page, legs: readonly HelmLeg[]): Promise<void> {
   for (const leg of legs) {
     if (leg.guarded) continue
@@ -725,8 +698,7 @@ export async function runHelmFixtureAnyVerdict(
 const K8S_ROOT = `https://${K8S_API_HOST}:${K8S_API_PORT}`
 const K8S_HEADERS = { Authorization: `Bearer ${K8S_ADMIN_TOKEN}` }
 
-/** Remove a release's objects and its helm storage record, in case the run
- *  left them behind. Never throws: it runs beside the seeded teardown. */
+/** Remove a release's objects and helm storage record left behind; never throws. */
 export async function uninstallQuietly(
   request: APIRequestContext,
   opts: { namespace: string; release: string },

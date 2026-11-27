@@ -27,7 +27,7 @@ SQL-10).
   ```
 
 - The fixture carries the `127.0.0.1` sentinel in every Host row;
-  `injectServiceHost(fixture, SQL_TARGET_HOST)` rewrites it per mode. Ports,
+  `injectServiceHost(fixture, SQL_TARGET_HOST)` rewrites it. Ports,
   database, service name and user are the `helpers/config.ts` constants; the
   spec fills the password, the CA certificate and the client certificate and
   key from config at load, so the fixture stores none of them.

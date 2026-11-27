@@ -12,10 +12,10 @@ Fail the block (REQ-3.3.4.3, REQ-3.4.1.9).
   `netcat-echo` (TCP echo 9470, UDP echo 9471, UDP silent sink 9472) and
   `sshd` (9445, sends an `SSH-2.0-` banner on connect).
 - Nothing listens on port 9479. The blocks that dial it use Host `localhost`,
-  so they stay on the WAVE server's own loopback in every mode, where the
+  so they stay on the WAVE server's own loopback, where the
   operating system refuses them with `Connection refused`.
 - Blocks aimed at `netcat-echo` or `sshd` carry the `127.0.0.1` sentinel; the
-  import helper (`injectSsh`) rewrites it to the SSH gateway per mode.
+  import helper (`injectSsh`) rewrites it to the SSH gateway.
 - `netcat-payload.txt` is uploaded into the test's own Test Data by the spec;
   nothing is seeded beforehand, so `netcat-no-such-payload.txt` does not exist.
 

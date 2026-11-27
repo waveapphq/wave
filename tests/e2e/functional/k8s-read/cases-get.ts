@@ -1,18 +1,4 @@
-/**
- * R1 case table - every K8s Get option the sweep proves, as data.
- *
- * The table IS the checklist. Each leg names its option ids (the id families
- * are defined in the suite README), the session it runs under, the exact
- * Block values, and the plugin INFO line the read must print. The spec builds
- * one chained
- * workflow from this table with the shared node factories; the checked-in
- * `fixture-get-golden.json` pins the emitted node shape so the generated form
- * stays reviewable against a hand-authored one.
- *
- * Two exported halves: the Kind sweep and the shape legs (search, selector,
- * format, version, namespace). They ship in one file today; splitting them
- * into two specs is a one-line change if the file outgrows its 60 s budget.
- */
+/** Every K8s Get option the sweep proves, as data: the Kind sweep and the shape legs; the id families are in the suite README. */
 
 import {
   chainEdges,
@@ -26,11 +12,10 @@ import {
 import { SEEDED } from '../../helpers/k8s-seed'
 import { HTTP_FIXTURE_HOST_SENTINEL, K8S_API_PORT } from '../../helpers/config'
 
-/** The fixture-side API URL. `injectHttp` rewrites it in container-shard mode. */
+/** The fixture-side API URL. `injectHttp` rewrites it to the shard's gateway. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
-/** The read-only namespace baked into the kwok image, and the custom resource
- *  standing in it. Nothing writes to `restricted`, so both are stable. */
+/** The read-only namespace baked into the kwok image and its custom resource; nothing writes there. */
 export const CRD_NAMESPACE = 'restricted'
 export const CRD_KIND = 'WaveGadget'
 export const CRD_OBJECT = 'wave-gadget-0'
@@ -55,9 +40,7 @@ export const SECRET_TABLE_COLUMNS = ['Name', 'Type', 'Data', 'Age'] as const
 /** A kind no cluster serves, for the discovery miss. */
 export const MISSING_KIND = 'widgets'
 
-/** Which credential a leg runs under. `junk` and `empty` are hand-written
- *  session variables, not Connect outputs: a junk bearer token 401s on
- *  /version, so K8s Connect cannot produce that session at all. */
+/** Which credential a leg runs under; `junk` and `empty` are hand-written session variables K8s Connect cannot produce. */
 export type GetSession = 'admin' | 'limited' | 'anon' | 'junk' | 'empty'
 
 export const SESSION_VARIABLE: Record<GetSession, string> = {
@@ -68,9 +51,7 @@ export const SESSION_VARIABLE: Record<GetSession, string> = {
   empty: 'sess_empty',
 }
 
-/** The `result` type the Output Format and Search by pair declares.
- *  The fixture declares the bound variable with exactly this type, and the
- *  pre-run gate refuses a mismatch, so a run that STARTS proves it. */
+/** The `result` type the Output Format and Search by pair declares; the pre-run gate refuses a mismatch, so a started run proves it. */
 export type ResultType = 'map' | 'array' | 'table' | 'string'
 
 /** The plugin's own success line: `Read {n} {kind} object(s) from {path}`. */
@@ -93,15 +74,12 @@ export interface GetLeg {
   values: Record<string, unknown>
   /** Bind `result` and declare the variable with this type. */
   resultType?: ResultType
-  /** The sheet cannot author this shape, so it is written into the fixture
-   *  directly - the route G-54 and T-14 both take. */
+  /** The sheet cannot author this shape, so it goes into the fixture directly, as for G-54 and T-14. */
   fixtureOnly?: boolean
-  /** The leg records a failure instead of succeeding: it binds the core
-   *  outputs and its Block is expected to paint amber. */
+  /** The leg records a failure instead of succeeding, binds the core outputs and is expected to paint amber. */
   records?: boolean
   expectRead?: ExpectedRead
-  /** Overrides the marker expression, for a leg whose console line has to
-   *  carry more than its count. */
+  /** Overrides the marker expression, for a console line that carries more than its count. */
   marker?: string
 }
 
@@ -148,8 +126,7 @@ function kindList(
   }
 }
 
-/** The 23 stock Kinds, each carrying a rotated option. 17 are namespaced and
- *  6 are cluster-scoped, which is why six paths carry no namespace segment. */
+/** The 23 stock Kinds, each with a rotated option; the 6 cluster-scoped ones carry no namespace segment. */
 export function kindLegs(ctx: GetContext): GetLeg[] {
   return [
     {
@@ -191,8 +168,7 @@ export function kindLegs(ctx: GetContext): GetLeg[] {
       key: 'g15a',
       ids: ['G-15'],
       what: 'Secret by name, Map - the value must never surface',
-      // The result rides the console on purpose: the registered data value has
-      // to come back masked there too, not only in the stored record.
+      // The result rides the console so the data value must come back masked there too.
       marker: "f'[G-15] g15a count={g15a_count} data={g15a_result}'",
       session: 'admin',
       values: {
@@ -279,8 +255,7 @@ export function kindLegs(ctx: GetContext): GetLeg[] {
   ]
 }
 
-/** A custom-mode read of one Pod by name. The four name forms all have to
- *  resolve to the same plural, so they all print the same path. */
+/** A custom-mode read of one Pod by name; all four name forms must print the same path. */
 function customPodByName(key: string, ids: readonly string[], typed: string, ctx: GetContext): GetLeg {
   return {
     key,
@@ -508,16 +483,14 @@ export function getLegs(ctx: GetContext): GetLeg[] {
   return [...kindLegs(ctx), ...shapeLegs(ctx)]
 }
 
-/** The pod names the failure legs miss on. Each is unique to its leg, so the
- *  WARN line it writes can be counted on its own. */
+/** The pod names the failure legs miss on, one per leg, so each WARN line can be counted on its own. */
 export const MISSING_POD = 'wave-nope-s20'
 export const MISSING_POD_YAML = 'wave-nope-yaml'
 
 /** A field label no Pod carries. The cluster answers 400 with its own text. */
 export const BAD_FIELD_SELECTOR = 'spec.bogus=1'
 
-/** The eight empty-shape cells and their error wordings, plus the amber row.
- *  Split out of the sweep so neither file outgrows its runtime budget. */
+/** The eight empty-shape cells with their error wordings, plus the amber row, kept apart for the runtime budget. */
 export function failureLegs(): GetLeg[] {
   return [
     {
@@ -674,14 +647,12 @@ export function legMarker(leg: GetLeg): string {
   return `[${leg.ids.join('|')}]`
 }
 
-/** The unique head of one leg's console line: its ids and its key. Two legs
- *  can carry the same id list, so the key is what tells them apart. */
+/** The unique head of one leg's console line: its ids and its key, since two legs can share an id list. */
 export function markerLine(leg: GetLeg): string {
   return `${legMarker(leg)} ${leg.key}`
 }
 
-/** A Block name is capped at 64 characters, so the ids ride the marker line
- *  and the Block carries the leg key. */
+/** A Block name is capped at 64 characters, so it carries the leg key and the ids ride the marker line. */
 export function blockName(leg: GetLeg): string {
   const name = `${leg.key}: ${leg.what}`
   if (name.length > MAX_BLOCK_NAME) {
@@ -710,8 +681,7 @@ export function recordedLine(reason: string, message: string): string {
   return reason ? `Read failed (${reason}): ${message}` : `Read failed: ${message}`
 }
 
-/** A hand-written kubeconfig in the shape K8s Connect emits, so a session can
- *  carry a credential Connect itself would refuse to build. */
+/** A hand-written kubeconfig in the shape K8s Connect emits, for a credential Connect would refuse. */
 export function handWrittenSession(token: string, namespace: string): string {
   return JSON.stringify({
     apiVersion: 'v1',
@@ -777,8 +747,7 @@ function connectNode(session: GetSession, namespace: string): WorkflowNode {
   })
 }
 
-/** Build a whole sweep: the Connect Blocks it needs, one Get Block plus one
- *  marker per leg, and the bookend. */
+/** Build a whole sweep: its Connect Blocks, one Get Block and marker per leg, and the bookend. */
 export function buildGetFixture(
   legs: readonly GetLeg[],
   material: GetSweepMaterial,

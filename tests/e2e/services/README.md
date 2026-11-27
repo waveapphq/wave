@@ -7,7 +7,7 @@ socket).
 
 ## Licenses
 
-The `mssql` and `oracle` services use vendor images under the vendors' own terms. Building or running the stack means you accept them: the SQL Server Developer Edition license (`mssql/Containerfile` sets `ACCEPT_EULA=Y` and `MSSQL_PID=Developer`; Developer Edition is for development and test, not production) and the Oracle Free Use Terms and Conditions (the Oracle Database Free in `gvenzl/oracle-free`). `scripts/e2e/e2e-stack.sh up` and `run` build missing images by themselves, so the first run of any E2E script also does this.
+The `mssql` and `oracle` services use vendor images under the vendors' own terms. Building or running the stack means you accept them: the SQL Server Developer Edition license (`mssql/Containerfile` sets `ACCEPT_EULA=Y` and `MSSQL_PID=Developer`; Developer Edition is for development and test, not production) and the Oracle Free Use Terms and Conditions (the Oracle Database Free in `gvenzl/oracle-free`). `scripts/e2e/e2e-stack.sh up` builds missing images by itself, so the first run of any E2E script also does this.
 
 ## Test certificates
 
@@ -72,7 +72,7 @@ an admin anywhere: it owns its own database or schema and nothing else.
 
 | Constant | Value |
 |----------|-------|
-| `SQL_TARGET_HOST` | `127.0.0.1` in host mode, `10.0.2.2` in container shards (same rule as `HTTP_TARGET_HOST`) |
+| `SQL_TARGET_HOST` | `10.0.2.2`, the slirp gateway (same rule as `HTTP_TARGET_HOST`) |
 | `POSTGRES_PORT`, `MARIADB_PORT`, `ORACLE_PORT`, `MSSQL_PORT` | `9473`, `9474`, `9475`, `9476` (published) |
 | `POSTGRES_SERVICE` / `POSTGRES_INTERNAL_PORT` (and the `MARIADB_`, `ORACLE_`, `MSSQL_` siblings) | the compose DNS name and native port, for the tunnel far host and the remote-host leg |
 | `SQL_SEED_PROCEDURE` | `wave_add` |
@@ -89,7 +89,7 @@ TLS on postgres, mariadb and mssql uses one database leaf,
 `tls-lab/certs/database.crt` + `database.key`, signed by the WAVE Test CA (the
 `CA_CERT_PEM` trust anchor) and baked into each image where the server takes
 files by config. Its SAN covers `localhost`, `127.0.0.1`, `10.0.2.2`, `postgres`,
-`mariadb` and `mssql`, so verification passes on the direct leg in both modes and
+`mariadb` and `mssql`, so verification passes on the direct leg from a shard and
 on the tunnel and remote-host legs, where the server name is the compose DNS
 name. `tls-lab/certs/generate-database-cert.sh` reissues it without touching the
 tls-lab leaf. The tls-lab client pair (`TLS_LAB_CLIENT_CERT_PEM`,
@@ -179,8 +179,7 @@ persistent remote worker's own stream too, not only a one-shot probe.
 the interpreter check and then cannot start anything.
 
 Both are published like their siblings, so `SSH_TARGET_HOST` plus
-`SSH_BANNER_PORT` / `SSH_BADPY_PORT` reach them in host mode and in
-container-shard mode alike. Neither is in the trusted SSH hosts list
+`SSH_BANNER_PORT` / `SSH_BADPY_PORT` reach them from a shard. Neither is in the trusted SSH hosts list
 `setup/global-setup.ts` seeds, so they behave like `sshd-no-sftp` on first contact.
 
 ## kwok credentials & bootstrap (TEST-ONLY, `kwok/`)
@@ -627,15 +626,14 @@ there. Get's `search_by` defaults to `name`, so a list read must set
 TLS: the stub has its own CA (`k8s-stub/certs/ca.crt`, exported as
 `K8S_STUB_CA_PEM`), not the WAVE Test CA. The SAN covers `localhost`,
 `127.0.0.1`, the slirp gateway `10.0.2.2` and the compose name `k8s-stub`, so
-`verify_ssl` stays on in host mode, container-shard mode and in-network mode
-alike. There is no authentication: any token, or none, is accepted.
+`verify_ssl` stays on from a shard and in-network alike. There is no authentication: any token, or none, is accepted.
 
 Happy path: the stub serves core `v1`, `apps/v1`, `batch/v1`,
 `events.k8s.io/v1` and `metrics.k8s.io/v1beta1`. A list returns two objects named
 `stub-one` and `stub-two`. It NEVER returns a Table, which is what makes the
 table-refusal recipe work.
 
-`helpers/config.ts` exports `K8S_STUB_HOST` (mode-aware, like `K8S_API_HOST`),
+`helpers/config.ts` exports `K8S_STUB_HOST` (the slirp gateway, like `K8S_API_HOST`),
 `K8S_STUB_PORT`, `K8S_STUB_CONFIG_PREFIX`, `K8S_STUB_DEFAULT_MESSAGE`,
 `K8S_STUB_CA_PEM` and the three `K8S_STUB_STAMP_*` forms.
 
@@ -735,14 +733,12 @@ the CA (`generate-certs.sh` creates the CA only when absent).
 
 ## Reachability
 
-- **Host mode** (the configs run straight on the host, which CONTRIBUTING forbids
-  because it resets your dev backend's data): services publish on
-  `127.0.0.1`; fixtures use those directly.
-- **Container-shard mode** (CI): shards run with
-  `--network slirp4netns:allow_host_loopback=true` and reach the host-published
-  ports at the slirp gateway `10.0.2.2`. `helpers/config.ts` `SSH_TARGET_HOST`
-  resolves per mode and the `injectSsh` import option rewrites SSH fixture
-  `host` params (`127.0.0.1` -> `10.0.2.2`). `HTTP_TARGET_HOST` + the
+- Services publish on the host's `127.0.0.1`. Every Playwright run is a shard
+  container (`scripts/gate/15-playwright.sh`, `scripts/e2e/e2e-targeted-local.sh`)
+  run with `--network slirp4netns:allow_host_loopback=true`, which reaches the
+  host-published ports at the slirp gateway `10.0.2.2`. Fixtures carry the
+  `127.0.0.1` sentinel: `helpers/config.ts` `SSH_TARGET_HOST` is the gateway
+  and the `injectSsh` import option rewrites SSH fixture `host` params (`127.0.0.1` -> `10.0.2.2`). `HTTP_TARGET_HOST` + the
   `injectHttp` option do the same for URLs on the published HTTP-side ports
   (9449-9461 allowlist only - backend URLs are never rewritten). The stub's
   `/cfg/...` prefix survives that rewrite: only host and port are replaced. The
@@ -755,7 +751,7 @@ the CA (`generate-certs.sh` creates the CA only when absent).
   `localhost`, which the rewrite never touches.
 - Ping fixtures stand up no service: ICMP echo has no server. They target the
   dialing side's own loopback, the host as WAVE reaches it (`PING_GATEWAY_HOST`,
-  which resolves per mode exactly as `SSH_TARGET_HOST` does), and `192.0.2.1`,
+  which equals `SSH_TARGET_HOST`), and `192.0.2.1`,
   a TEST-NET-1 address routed nowhere. The remote leg pings `netcat-target` by
   name, which only `sshd` resolves. Unprivileged ICMP needs
   `net.ipv4.ping_group_range=1000 1000` on every container WAVE runs in: the two
@@ -769,8 +765,7 @@ the CA (`generate-certs.sh` creates the CA only when absent).
   rewrite leaves alone (`localhost`, as the Netcat tunnel nodes carry). The
   remote-host leg names the compose DNS service as the block's Host.
 - OpenSearch fixtures reach the published ports (9477 direct, 9478 gateway)
-  at `OPENSEARCH_TARGET_HOST`, which resolves per mode exactly as
-  `SQL_TARGET_HOST` does. The tunnel leg names `opensearch:9200`
+  at `OPENSEARCH_TARGET_HOST`, the slirp gateway like `SQL_TARGET_HOST`. The tunnel leg names `opensearch:9200`
   (`OPENSEARCH_SERVICE`, `OPENSEARCH_INTERNAL_PORT`) as the SSH Tunnel's far
   host and verifies the server name `opensearch`; the remote-host leg calls
   `https://opensearch:9200` from `sshd`. `OPENSEARCH_CONTAINER`
@@ -810,8 +805,8 @@ and it builds images with `podman build` (compose only references them by tag).
    `ports:` (if it should only be reachable inside the network).
 3. Add its build to `scripts/e2e/e2e-stack.sh` (`build_images`, `ensure_images`) and
    its name to `ALL_SERVICES`.
-4. Add endpoint constants to `helpers/config.ts` (host + port, mode-aware like
-   `SSH_TARGET_HOST`).
+4. Add endpoint constants to `helpers/config.ts` (host + port; the host is the
+   slirp gateway, like `SSH_TARGET_HOST`).
 5. If shards mutate the service, isolate per-test state (unique names/paths,
    per-shard namespaces) - the stack is shared across parallel shards.
 6. Document it in the table above.

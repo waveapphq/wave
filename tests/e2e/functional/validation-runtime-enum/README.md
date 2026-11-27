@@ -25,9 +25,7 @@ save check that refuses the same value written as a literal.
 
 ## Pre-requisites
 
-- Backend + frontend running (the functional config spawns them in
-  host-mode, or `WAVE_E2E_EXTERNAL_SERVICES=1` re-uses container-managed
-  services).
+- Backend + frontend running (the shard container starts them).
 - The shared E2E environment (`E2E_ENV_NAME`) exists. The test calls
   `ensureEnvironment(page.request)` which idempotently creates it.
 

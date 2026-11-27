@@ -13,7 +13,7 @@ Port (REQ-3.3.4.3, REQ-3.4.1.9; NETCAT-9, NETCAT-18).
     through a tunnel: TCP echo on 9470, nothing listening on 9479.
 - `fixture.json` is imported via `POST /tests` with `injectSsh` and validated via
   `POST /tests/{id}/validate?context=run` (zero errors) before the run. The SSH
-  session carries the `127.0.0.1` sentinel the import rewrites per mode; every
+  session carries the `127.0.0.1` sentinel the import rewrites; every
   Netcat Block dials Host `localhost`, which is never rewritten. The SSH password
   comes from the secret test variable `ssh_pwd`.
 - Both tunnels take an auto-assigned Local Port, so parallel shards never collide.

@@ -1,28 +1,16 @@
 #!/usr/bin/env bash
-# Gate 12: a CodeQL scan of the working tree with the checks GitHub's default code scanning runs,
-# for the languages the branch changes. Prints the alerts the target branch does not have and
-# fails when there is one.
+# Gate 12: a CodeQL scan of the branch's languages; fails on an alert the target branch does not have.
 #
 # Usage: ./scripts/gate/12-codeql.sh [--all] [--flows] [python] [javascript-typescript] [actions]
-#   No language: each language whose files the branch changes against its target branch, with
-#   uncommitted and new files: python (backend/, scripts/**/*.py), javascript-typescript
-#   (frontend/, tests/e2e/, scripts/**/*.mjs, .github/scripts/), actions (.github/workflows/).
+#   No language: each language the branch changes, uncommitted and new files included.
 #   --flows also prints each alert's path from input to problem.
-#   --all prints every alert of the working tree, fails when there is one, and does not
-#   scan the target branch; with no language it scans all three.
-#
-# Needs the CodeQL CLI on PATH (`codeql`), or CODEQL pointing at it.
-#   CODEQL_BASE      branch to compare with; default: origin/release/<version> for a
-#                    fix/<version>-* or feature/<version>-* branch, else origin/master
-#   CODEQL_WORK_DIR  scratch space for sources, databases and cached results
-#                    (default ~/.cache/wave-codeql; several GB while a scan runs)
-#   CODEQL_RAM       MB of memory CodeQL may use (default 6000)
-#   CODEQL_GITHUB_TOKEN  a GitHub token that can read code scanning alerts; with it, an
-#                    alert dismissed on GitHub for this branch or its pull request is
-#                    left out: the one result with its rule, file and line text that is
-#                    nearest its line, and the target branch's results come from GitHub's
-#                    own analysis of that commit, scanned here only when GitHub has none
-set -uo pipefail
+#   --all reports every alert of the working tree, with no target branch scan; no language means all three.
+# Needs the CodeQL CLI on PATH, or CODEQL pointing at it.
+#   CODEQL_BASE          branch to compare with (default origin/release/<version> for a fix or feature branch, else origin/master)
+#   CODEQL_WORK_DIR      scratch space, several GB while a scan runs (default ~/.cache/wave-codeql)
+#   CODEQL_RAM           MB of memory CodeQL may use (default 6000)
+#   CODEQL_GITHUB_TOKEN  a token that reads code scanning alerts: leaves out alerts dismissed on GitHub and reads the target branch's GitHub analysis
+set -euo pipefail
 
 NUMBER="12"
 CHECK="CodeQL"
@@ -56,6 +44,8 @@ result() { # result <exit code> [reason]
   echo "Log: $LOG"
   exit "$1"
 }
+# Any other failed command stops the check, as a setup error.
+trap 'result 2 "a command failed at line $LINENO, exit $?"' ERR
 
 command -v "$CODEQL" > /dev/null || result 2 "CodeQL CLI not found: install it and put 'codeql' on PATH, or set CODEQL"
 cd "$ROOT" || exit 2
@@ -101,7 +91,7 @@ head_src="$WORK/src-head"
 # The files a push would carry: tracked and new, never ignored build output.
 rm -rf "$head_src"; mkdir -p "$head_src"
 git ls-files -z --cached --others --exclude-standard \
-  | while IFS= read -r -d '' f; do [ -f "$f" ] && printf '%s\0' "$f"; done \
+  | while IFS= read -r -d '' f; do if [ -f "$f" ]; then printf '%s\0' "$f"; fi; done \
   | tar --null -T - -cf - | tar -xf - -C "$head_src"
 
 scan() { # scan <source dir> <language> <sarif out>; CodeQL's own output goes to a log beside the result

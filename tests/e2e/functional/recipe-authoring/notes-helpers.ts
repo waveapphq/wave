@@ -5,7 +5,7 @@ import { BACKEND_PORT, ensureEnvironment } from '../../helpers/config'
 import { controlBlock, pluginBlock, storedTest, type BlockFields, type Rec } from '../../helpers/fn-block'
 import { callTool, enableMcpUntilRestart, recipeData } from '../../helpers/mcp'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP port sits a fixed offset above the shard's backend port.
 export const MCP_PORT = Number(BACKEND_PORT) + 765
 
 export type Doc = Record<string, any>

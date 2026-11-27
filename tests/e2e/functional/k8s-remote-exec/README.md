@@ -92,8 +92,8 @@ does not repeat any of them. It adds:
   token values. Every direct Connect verifies the certificate against that CA.
   The gateway Connect carries no TLS fields at all.
 - The SSH Block carries the fixture host sentinel, which the `injectSsh` import
-  option rewrites for container-shard mode. The in-stack URLs are outside the
-  HTTP rewrite allowlist and stay literal in every mode.
+  option rewrites to the shard's gateway. The in-stack URLs are outside the
+  HTTP rewrite allowlist and stay literal.
 
 ### The interpreter floor is not proved here
 

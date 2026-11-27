@@ -8,7 +8,7 @@ everywhere. Nothing leaks on any surface.
 ## Pre-requisites
 - Real-service stack up (real OpenSSH `sshd` on :9445, see
   `tests/e2e/services/README.md`); shared env `E2E Execution Env`. The run
-  fixture's SSH host is rewritten per mode via `injectSsh` at import.
+  fixture's SSH host is rewritten via `injectSsh` at import.
 
 ## Execution
 - `fixture.json` (run): SSH Session Open with a declared credential LITERAL password

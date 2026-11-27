@@ -33,7 +33,7 @@ export default defineConfig({
 
   use: {
     ...desktopChrome,
-    // playwright-fixtures.ts sets baseURL per worker; this is the fallback.
+    // The shard's own frontend.
     baseURL: `http://localhost:${FRONTEND_PORT}`,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,

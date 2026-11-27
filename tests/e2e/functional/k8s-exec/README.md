@@ -33,7 +33,7 @@ gap this suite exists to close.
   (`tests/e2e/services/kwok/pki/`). The specs read them through
   `helpers/config.ts`; fixture JSON never commits PEM or token values.
 - Fixtures carry the literal `https://127.0.0.1:9460` URL; the `injectHttp`
-  import option rewrites it for container-shard mode.
+  import option rewrites it to the shard's gateway.
 
 ### Editing anything under `tests/e2e/services/kwok/` needs a full image rebuild
 

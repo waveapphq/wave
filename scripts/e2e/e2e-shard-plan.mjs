@@ -1,11 +1,9 @@
 #!/usr/bin/env node
-// Duration-weighted E2E shard planner: packs spec files into N bins (greedy LPT) for run-e2e-shard.sh.
-// The bin that gets the empty-db-dark item owns that project and runs it once per CI run.
+// Duration-weighted E2E shard planner (greedy LPT); one bin owns the empty-db-dark project for the whole run.
 // Usage:
-//   # one shard's slice (container self-plan):
-//   node e2e-shard-plan.mjs --shards N --shard-index K --out-dir DIR --weights F --e2e-dir D
-//   # all shards + balance summary (host preview):
-//   node e2e-shard-plan.mjs --shards N --artifacts DIR --weights F --e2e-dir D
+//   one shard's slice:  node e2e-shard-plan.mjs --shards N --shard-index K --out-dir DIR --weights F --e2e-dir D [--specs LIST]
+//   all shards preview: node e2e-shard-plan.mjs --shards N --artifacts DIR --weights F --e2e-dir D [--specs LIST]
+//   --specs LIST packs only these comma-separated spec paths relative to tests/e2e.
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -73,7 +71,7 @@ function listTests(playwrightArgs) {
   const [command, prefix] = playwrightCommand()
   const out = execFileSync(command, [...prefix, 'test', ...playwrightArgs, '--list', '--reporter=json'], {
     cwd: e2eDir,
-    env: { ...process.env, WAVE_E2E_EXTERNAL_SERVICES: '1', CI: '1' },
+    env: { ...process.env, CI: '1' },
     encoding: 'utf8',
     maxBuffer: 256 * 1024 * 1024,
   })

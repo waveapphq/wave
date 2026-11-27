@@ -24,9 +24,9 @@ OS-6, OS-8 to OS-11).
   ./scripts/e2e/e2e-stack.sh up --wait opensearch opensearch-gateway
   ```
 
-- Fixtures carry the host-mode addresses `https://127.0.0.1:9477` and
+- Fixtures carry the sentinel addresses `https://127.0.0.1:9477` and
   `http://127.0.0.1:9478/os`; the import (`injectHttp`) rewrites them to
-  `OPENSEARCH_TARGET_HOST` per mode and never touches 9479. Users, passwords,
+  `OPENSEARCH_TARGET_HOST` and never touches 9479. Users, passwords,
   the JWT, the CA and the tls-lab client pair come from `helpers/config.ts`;
   the spec fills them at load, so no fixture stores a secret or a PEM.
 - The block cannot write, so each spec seeds its own indexes as `admin`
@@ -227,7 +227,7 @@ followed by a Log `os-err-<case> reason={{ <case>_reason }} error={{ <case>_erro
 | Case | Block | Expected |
 |------|-------|----------|
 | URL-CREDS | Cluster URL `https://wave:<password>@127.0.0.1:9477`, a password no secret row holds, so run-wide masking cannot hide a leak | Validation `Cluster URL must not hold a username or password: put them in Username and Password`; that password text never appears in the run log, DEBUG included |
-| UNREACH | `https://127.0.0.1:9479` | Unreachable `Could not connect to OpenSearch at 127.0.0.1:9479: [Errno 111] Connection refused` (9479 is never rewritten, so every mode dials its own loopback) |
+| UNREACH | `https://127.0.0.1:9479` | Unreachable `Could not connect to OpenSearch at 127.0.0.1:9479: [Errno 111] Connection refused` (9479 is never rewritten, so the shard dials its own loopback) |
 | AUTH-401 | `wave` with a wrong password | AuthFailed `HTTP 401: Unauthorized` |
 | AUTH-403 | `wave-limited` on `-app-logs` | AuthFailed, starting `security_exception: no permissions for [indices:data/read/` |
 | SHARDS | Query DSL `{"term": {"latency_ms": "abc"}}` | RequestFailed `search_phase_execution_exception: all shards failed. First root cause: query_shard_exception: failed to create query: For input string: "abc". Query as sent: {"bool":{"filter":[<the range>,{"term":{"latency_ms":"abc"}}]}}` |

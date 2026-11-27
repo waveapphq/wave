@@ -26,7 +26,7 @@ Two projects, declared in this order and with NO Playwright `dependencies` betwe
 1. **`functional-destructive`** - Backup/restore and global variables (reset DB, CRUD operations)
 2. **`functional-workflow`** - Workflow execution + import/export tests (fixture-based, non-destructive)
 
-A dependency is deliberately absent: it would force `--shard` to replicate every destructive test into every shard. Isolation comes from per-worker state instead - each worker runs against its own backend stack with its own store root (`WAVE_STORAGE_BASE_PATH`), and a container shard runs a single worker against a single stack. Backup-restore also resets the database in `afterAll` to leave a clean state.
+A dependency is deliberately absent: it would force `--shard` to replicate every destructive test into every shard. Isolation comes from the shard instead - each shard container runs a single worker against its own backend stack with its own store root (`WAVE_STORAGE_BASE_PATH`). Backup-restore also resets the database in `afterAll` to leave a clean state.
 
 ## Test Categories
 

@@ -23,7 +23,7 @@ NETCAT-16, NETCAT-17).
   ./scripts/e2e/e2e-stack.sh up --wait sshd netcat-target
   ```
 
-- `fixture.json` - an SSH Session Open (Host `127.0.0.1`, rewritten per mode
+- `fixture.json` - an SSH Session Open (Host `127.0.0.1`, rewritten
   by `injectSsh`), an SSH Session Exec that writes `remote-payload.txt` under a
   per-run folder on the host, then a Remote Execution body of six Netcat blocks
   with Host `netcat-target`:

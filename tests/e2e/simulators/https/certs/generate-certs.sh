@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# Generate self-signed CA + server certificates for HTTPS simulator testing.
-# These are TEST-ONLY certs - never use for production.
-#
-# Usage: ./generate-certs.sh
-# Output: ca.key, ca.pem, server.key, server.crt (in current directory)
+# Test-only self-signed CA and server certificates for the HTTPS simulator; writes ca.key, ca.pem, server.key, server.crt here.
 
 set -euo pipefail
 
@@ -22,8 +18,7 @@ openssl req -newkey rsa:2048 -nodes \
   -keyout server.key -out server.csr \
   -subj "/CN=localhost/O=WAVE Test"
 
-# 3. Create extensions file for SAN (Subject Alternative Names)
-# 10.0.2.2 = slirp gateway (container-shard mode); http-target/http-echo = compose DNS.
+# 3. SAN extensions: 10.0.2.2 is the shards' slirp gateway, http-target and http-echo are compose DNS names.
 cat > server-ext.cnf <<EOF
 [v3_req]
 subjectAltName = DNS:localhost,IP:127.0.0.1,IP:10.0.2.2,DNS:http-target,DNS:http-echo

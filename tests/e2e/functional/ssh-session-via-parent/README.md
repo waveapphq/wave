@@ -8,7 +8,7 @@ a via-parent chain REALLY routes through the jump host.
 - Real-service stack up (see `tests/e2e/services/README.md`): main `sshd` (:9445) and the
   `nested-sshd` host, which has NO published port - reachable only through the jump.
 - Shared env `E2E Execution Env`. SSH hosts carry the `127.0.0.1` sentinel, rewritten by
-  `injectServiceHost` per mode; the `nested-sshd` service name is left as-is (in-stack DNS).
+  `injectServiceHost`; the `nested-sshd` service name is left as-is (in-stack DNS).
 
 ## Execution
 Imports `fixture.json`, validates, runs it (try/catch guards the two intentional failures).

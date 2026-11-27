@@ -1,12 +1,4 @@
-/**
- * The remote K8s workflows, as data.
- *
- * Every leg is one SSH Session Open followed by a Remote Execution container
- * whose body holds the K8s Blocks, with the console bookend on the container's
- * then branch. The cluster and the gateway are named by their compose DNS
- * names, which resolve only inside the stack network, so a Connect that
- * succeeds can only have run on the SSH host.
- */
+/** The remote K8s workflows as data: compose DNS names resolve only in the stack network, so a passing Connect ran on the SSH host. */
 
 import { expect, type Page } from '../../helpers/playwright-fixtures'
 import { getLogEntries } from '../../helpers/log-reader'
@@ -55,8 +47,7 @@ import {
 } from '../../helpers/config'
 import { SEEDED } from '../../helpers/k8s-seed'
 
-/** The published cluster as in-network hosts reach it. Both kwok clusters
- *  come from one image and serve on the same in-network port. */
+/** The published cluster as in-network hosts reach it; both kwok clusters serve on the same port. */
 export const K8S_DIRECT_URL = `https://${K8S_SERVICE}:${K8S_INTERNAL_PORT}`
 
 /** The plain-HTTP, path-prefixed front of the same cluster. */
@@ -65,8 +56,7 @@ export const K8S_GATEWAY_URL = `http://${K8S_GATEWAY_SERVICE}:${K8S_GATEWAY_PORT
 /** kwok is pinned to Kubernetes 1.33.0. */
 export const K8S_VERSION = 'v1.33.0'
 
-/** The service account the cluster lets a run token be minted for. It is
- *  bound to the view role, so it reads ConfigMaps and nothing more. */
+/** The service account a run token can be minted for; bound to the view role, it reads ConfigMaps only. */
 export const RUN_TOKEN_SERVICE_ACCOUNT = 'wave-tests'
 export const RUN_TOKEN_NAMESPACE = 'default'
 export const RUN_TOKEN_DURATION = 14400
@@ -74,8 +64,7 @@ export const RUN_TOKEN_DURATION = 14400
 /** The data the seeded ConfigMap carries (`seedRun(request, 'get')`). */
 export const CONFIG_MAP_DATA: Record<string, string> = { key: 'value' }
 
-/** The objects the write legs create. The run namespace is already unique, so
- *  the names are fixed. */
+/** The objects the write legs create; the run namespace is unique, so the names are fixed. */
 export const WRITTEN_REMOTE = {
   configMap: 'wave-remote-cm',
   configMapKey: 'locus',
@@ -92,8 +81,7 @@ export const WRITTEN_REMOTE = {
 /** The variable the secret leg's manifest reads its stringData through. */
 export const WRITE_SECRETS_CANARY_VAR = 'k8s_canary'
 
-/** An unquoted date and a trailing separator: the date must reach the cluster
- *  as text and the separator must open no second document. */
+/** An unquoted date that must stay text, and a trailing separator that must open no second document. */
 export const datedManifest = (name: string): string =>
   [
     'apiVersion: v1',
@@ -129,16 +117,14 @@ export const TWO_LINE_SCRIPT = (suffix: string): string =>
 export const TWO_LINE_STDOUT = (suffix: string): string => `kr10-out-${suffix}\n`
 export const TWO_LINE_STDERR = (suffix: string): string => `kr10-err-${suffix}\n`
 
-/** The same, and then a non-zero exit. The code is distinct from every exit
- *  the local exec suite uses, so a mixed-up assertion cannot pass. */
+/** The same, then an exit code no local exec case uses, so a mixed-up assertion cannot pass. */
 export const RC3_SCRIPT = (suffix: string): string =>
   [`echo kr10-rc3-out-${suffix}`, `echo kr10-rc3-err-${suffix} 1>&2`, 'exit 3', ''].join('\n')
 export const RC3_STDOUT = (suffix: string): string => `kr10-rc3-out-${suffix}\n`
 export const RC3_STDERR = (suffix: string): string => `kr10-rc3-err-${suffix}\n`
 export const RC3_EXIT = 3
 
-/** The sshd account's home. The container is shared by every parallel shard,
- *  so every path carries the run suffix. */
+/** The sshd account's home; every shard shares the container, so every path carries the run suffix. */
 export const SSH_HOST_HOME = '/home/wave'
 export const sshHostFile = (suffix: string, name: string): string =>
   `${SSH_HOST_HOME}/${suffix}-${name}`
@@ -169,8 +155,7 @@ export const APP_LOG = APP_LOG_LINES.map((line) => `${line}\n`).join('')
 /** The RFC3339 stamp kwok prefixes each line with when Timestamps is on. */
 export const LOG_STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}Z$/
 
-/** A YAML document opens on one of the two envelope keys; the cluster's own
- *  key order puts `kind` first on a single-object read. */
+/** A YAML document opens on one of the two envelope keys; a single-object read puts `kind` first. */
 export const YAML_HEAD_RE = /^apiVersion: /
 
 /** The columns a per-line read with Timestamps on declares. */
@@ -264,8 +249,7 @@ export const WRITE_SECRETS_MARKER = '[KR-9]'
 export const EXEC_MARKER = '[KR-10]'
 export const COPY_MARKER = '[KR-11]'
 
-/** The build-time material every leg carries. PEM and token bytes are never
- *  committed, so the checked-in golden holds empty strings here. */
+/** The build-time material every leg carries; the checked-in golden holds empty strings for the PEM and token bytes. */
 export interface RemoteMaterial {
   suffix: string
   caCert: string
@@ -597,8 +581,7 @@ interface RemoteWorkflowSpec {
   holdMs?: number
   /** The Blocks ahead of the SSH open, in chain order; they run on WAVE. */
   before?: readonly WorkflowNode[]
-  /** The Blocks between the SSH open and the container, in chain order; they
-   *  run on WAVE and can ride the session the open just returned. */
+  /** The Blocks between the SSH open and the container, in chain order; they run on WAVE. */
   preBody?: readonly WorkflowNode[]
   /** The SSH host's port; defaults to the main sshd service. */
   sshPort?: number
@@ -609,8 +592,7 @@ const ROW_STEP = 70
 const HEAD_X = -75
 const BODY_X = 120
 
-/** Build one remote workflow: the SSH open, the container, its body and its
- *  then branch, the bookend, and the variables every leg shares. */
+/** Build one remote workflow: the SSH open, the container with its body and then branch, the bookend and the shared variables. */
 function remoteWorkflow(spec: RemoteWorkflowSpec): Record<string, unknown> {
   const variables: Record<string, FixtureVariable> = {
     ssh_pwd: secretVar(SSH_STACK_PASSWORD),
@@ -713,8 +695,7 @@ export function nodeIds(fixture: Record<string, unknown>): string[] {
   return (fixture as FixtureShape).workflow.nodes.map((node) => node.id)
 }
 
-/** The Blocks inside the container: everything reachable from its body handle
- *  over plain edges, the same rule the canvas paints the locus badge by. */
+/** The Blocks inside the container: everything its body handle reaches over plain edges, as the canvas paints the locus badge. */
 export function remoteBodyIds(fixture: Record<string, unknown>): string[] {
   const { edges } = (fixture as FixtureShape).workflow
   const members: string[] = []
@@ -732,8 +713,7 @@ export function remoteBodyIds(fixture: Record<string, unknown>): string[] {
   return members
 }
 
-/** KR-1: every read Block inside one container, then a second session minted
- *  from a run token, then a read riding it. */
+/** KR-1: every read Block in one container, then a session minted from a run token and a read riding it. */
 export function buildReadFixture(
   material: RemoteMaterial & { namespaces: ReadNamespaces },
 ): Record<string, unknown> {
@@ -895,8 +875,7 @@ export function buildReadFixture(
   })
 }
 
-/** KR-2: one Get of the seeded Secret, whose value is the canary. The whole
- *  result rides the summary line on purpose: it has to come back masked there. */
+/** KR-2: one Get of the seeded Secret; the whole result rides the summary line, where it must come back masked. */
 export function buildSecretsFixture(
   material: RemoteMaterial & { namespace: string; holdMs: number },
 ): Record<string, unknown> {
@@ -954,8 +933,7 @@ export function buildSecretsFixture(
   })
 }
 
-/** KR-3: a plain-HTTP Connect through the path-prefixed gateway, a list read
- *  and a recorded miss riding it. */
+/** KR-3: a plain-HTTP Connect through the path-prefixed gateway, a list read and a recorded miss. */
 export function buildGatewayFixture(
   material: RemoteMaterial & { namespace: string },
 ): Record<string, unknown> {
@@ -1024,8 +1002,7 @@ export function buildGatewayFixture(
   })
 }
 
-/** KR-4: a Connect the plugin refuses before any request, then a Get that
- *  must never run. The bookend never prints: the run fails inside the body. */
+/** KR-4: a Connect the plugin refuses before any request, then a Get that must never run. */
 export function buildValidationFixture(
   material: RemoteMaterial & { namespace: string },
 ): Record<string, unknown> {
@@ -1068,8 +1045,7 @@ export function buildValidationFixture(
 // The host-diagnosis legs and the event-stamp leg
 // ---------------------------------------------------------------------------
 
-/** The claim the container makes about a host with no usable interpreter. A
- *  host whose python3 answers the version probe is never described this way. */
+/** What the container says about a host with no usable interpreter. */
 export const NO_INTERPRETER_CLAIM = 'no compatible Python interpreter'
 
 /** Every Block failure line carries this; a leg with no bookend gates on it. */
@@ -1084,8 +1060,7 @@ export const BADPY_DONE_MARKER = 'k8s-remote-badpy-e2e-done'
 export const STAMPS_DONE_MARKER = 'k8s-remote-stamps-e2e-done'
 export const STAMPS_MARKER = '[KR-7]'
 
-/** The one body Block the two host-diagnosis legs carry. It never runs: the
- *  container fails before the body starts. */
+/** The one body Block of the two host-diagnosis legs; it never runs. */
 export const HOST_IDS = { connect: 'connect-host' } as const
 export const HOST_VARS = { session: 'sess_host' } as const
 
@@ -1110,12 +1085,10 @@ export const STAMPS_VARS = {
   hourCount: 'ev_hour_n',
 } as const
 
-/** The stub as a Block running on WAVE reaches it; `injectHttp` rewrites the
- *  host per mode. */
+/** The stub as a Block on WAVE reaches it; `injectHttp` rewrites the host to the shard's gateway. */
 const STUB_LOCAL_BASE = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_STUB_PORT}`
 
-/** The same stub as in-network hosts reach it: its compose DNS name, whose SAN
- *  the stub certificate covers, on the same port. */
+/** The stub's compose DNS name, which its certificate covers. */
 const STUB_SERVICE = 'k8s-stub'
 const STUB_REMOTE_BASE = `https://${STUB_SERVICE}:${K8S_STUB_PORT}`
 
@@ -1185,8 +1158,7 @@ function hostLegBody(): WorkflowNode[] {
   ]
 }
 
-/** KR-5: the container on the host that prints a notice ahead of every
- *  command's output. The run fails; what matters is what it says. */
+/** KR-5: the container on the host that prints a notice before every command's output. */
 export function buildBannerFixture(material: RemoteMaterial): Record<string, unknown> {
   return remoteWorkflow({
     name: BANNER_FIXTURE_NAME,
@@ -1199,8 +1171,7 @@ export function buildBannerFixture(material: RemoteMaterial): Record<string, unk
   })
 }
 
-/** KR-6: the container on the host whose python3 answers the version probe and
- *  then fails to run anything, with its reason on stderr. */
+/** KR-6: the container on the host whose python3 answers the version probe, then fails to run anything. */
 export function buildBadpyFixture(material: RemoteMaterial): Record<string, unknown> {
   return remoteWorkflow({
     name: BADPY_FIXTURE_NAME,
@@ -1213,8 +1184,7 @@ export function buildBadpyFixture(material: RemoteMaterial): Record<string, unkn
   })
 }
 
-/** KR-7: the same Events read on WAVE and on the host, over stamps whose
- *  offset carries no colon, plus the hour-only form on the host. */
+/** KR-7: the same Events read on WAVE and on the host, over colonless and hour-only stamp offsets. */
 export function buildStampsFixture(material: RemoteMaterial): Record<string, unknown> {
   const v = STAMPS_VARS
   const variables: Record<string, FixtureVariable> = {
@@ -1331,10 +1301,7 @@ function getSecret(
   })
 }
 
-/** KR-8: every write Block inside one container - a ConfigMap applied from the
- *  form and read back, a manifest whose unquoted date stays text and whose
- *  trailing separator opens no second document, a delete, the miss it leaves,
- *  a Scale and a Rollout Status. */
+/** KR-8: every write Block in one container: Apply and read back, a dated manifest, a Delete and its miss, Scale and Rollout Status. */
 export function buildWriteFixture(
   material: RemoteMaterial & { namespace: string },
 ): Record<string, unknown> {
@@ -1541,9 +1508,7 @@ export function buildWriteFixture(
   })
 }
 
-/** KR-9: one planted value written as a Secret twice - once through the form's
- *  declared credential and once through a manifest's stringData reading a
- *  secret variable - then read back both times. */
+/** KR-9: one planted value written as a Secret through the form and through a manifest, read back both times. */
 export function buildWriteSecretsFixture(
   material: RemoteMaterial & { namespace: string; canary: string; holdMs: number },
 ): Record<string, unknown> {
@@ -1650,8 +1615,7 @@ export function buildWriteSecretsFixture(
   })
 }
 
-/** KR-10: the exec channel inside the container - an Exec, two Scripts and a
- *  refusal the cluster makes. */
+/** KR-10: the exec channel in the container: an Exec, two Scripts and a refusal the cluster makes. */
 export function buildExecFixture(
   material: RemoteMaterial & {
     namespace: string
@@ -1786,9 +1750,7 @@ function sshHostCommand(
   })
 }
 
-/** KR-11: one file from the SSH host into the pod and back, on one session.
- *  `podPath` is supplied by the caller so this module never imports another
- *  suite's path helper. */
+/** KR-11: one file from the SSH host into the pod and back; the caller supplies `podPath`. */
 export function buildCopyFixture(
   material: RemoteMaterial & {
     namespace: string
@@ -2002,8 +1964,7 @@ export function tableOf(
 /** The selector of the locus badge a Block inside a container carries (REQ-3.4.1.3). */
 const LOCUS_BADGE = '[data-testid="node-remote-locus-badge"]'
 
-/** Every Block inside the container shows exactly one `R` badge; the SSH
- *  Block, the container and the then branch show none; no `L` badge anywhere. */
+/** Every Block in the container shows one `R` badge, the rest none, and no `L` badge anywhere. */
 export async function expectLocusBadges(
   page: Page,
   fixture: Record<string, unknown>,
@@ -2024,8 +1985,7 @@ export async function expectLocusBadges(
   await expect(page.locator(LOCUS_BADGE), 'one badge per body member').toHaveCount(body.length)
 }
 
-/** A recorded read failure: the core outputs, exactly one WARN line with the
- *  cluster's wording, the Block amber, the run passed. */
+/** A recorded read failure: the core outputs, one WARN line in the cluster's words, the Block amber, the run passed. */
 export async function expectRecordedRead(
   page: Page,
   vars: SessionVariables,

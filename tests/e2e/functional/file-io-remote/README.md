@@ -22,7 +22,7 @@ decision FIO-10).
   ```
 
 - The SSH block carries the fixture host sentinel; the `injectSsh` import option
-  rewrites it for container-shard mode. The spec asserts the fixture's host,
+  rewrites it to the shard's gateway. The spec asserts the fixture's host,
   port, user and password against `SSH_FIXTURE_HOST_SENTINEL`, `SSH_MAIN_PORT`,
   `SSH_STACK_USER` and `SSH_STACK_PASSWORD` from `helpers/config.ts`, so a stack
   change cannot leave a stale literal behind.

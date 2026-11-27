@@ -1,19 +1,4 @@
-/**
- * The K8s exec-channel suite's case tables, its fixture builder and the
- * assertions the three exec specs share.
- *
- * The table IS the checklist. Each leg names the `KE-` ids it proves (the id
- * matrix is in the suite README), the exact Block values, and how its outputs
- * are bound. The spec builds one chained workflow per proof from these tables
- * with the shared node factories; `fixture-exec-golden.json` pins the emitted
- * node shape so the generated form stays reviewable against a hand-authored
- * one.
- *
- * Every positive leg binds EVERY output its Block declares, not just the
- * headline one: Exec and Script bind stdout, stderr, exit_code and success,
- * Copy binds summary and success, and a leg running under Record and continue
- * adds error and reason.
- */
+/** The K8s exec suite's case tables, fixture builder and shared assertions; each leg names the `KE-` ids it proves (matrix in the suite README). */
 
 import { expect, type Page } from '../../helpers/playwright-fixtures'
 import { type LogEntry } from '../../helpers/log-reader'
@@ -40,7 +25,7 @@ import {
   K8S_API_PORT,
 } from '../../helpers/config'
 
-/** The fixture-side API URL. `injectHttp` rewrites it in container-shard mode. */
+/** The fixture-side API URL. `injectHttp` rewrites it to the shard's gateway. */
 export const K8S_API_URL = `https://${HTTP_FIXTURE_HOST_SENTINEL}:${K8S_API_PORT}`
 
 /** The implicit node every chain leaves from. */
@@ -83,9 +68,7 @@ export const EXEC_TARGET = {
   [CONTAINER_SIDECAR]: 'sidecar-container',
 } as const
 
-/** The run-specific names the legs need. kwok runs every exec as a real process
- *  on the ONE kwok container filesystem, shared by every parallel shard, so
- *  every pod-side path the suite writes carries the run suffix. */
+/** The run-specific names the legs need; every shard shares the one kwok filesystem, so every pod-side path carries the run suffix. */
 export interface ExecContext {
   namespace: string
   suffix: string
@@ -159,8 +142,7 @@ type LegBase = {
   what: string
   /** The Block's own Name, for a leg whose engine line a spec reads (EXEC-26). */
   name?: string
-  /** The Block records its failure instead of raising: it binds error and
-   *  reason too, and is expected to paint amber. */
+  /** The Block records its failure instead of raising, binds error and reason too, and is expected to paint amber. */
   records?: boolean
   /** Overrides the marker expression. */
   marker?: string
@@ -196,8 +178,7 @@ export function markerLine(leg: ExecLeg): string {
   return `${legMarker(leg)} ${leg.key}`
 }
 
-/** A leg's Description: it is capped, so the ids ride the marker line and the
- *  Description carries the leg key. */
+/** A leg's Description is capped, so it carries the leg key and the ids ride the marker line. */
 export function blockName(leg: ExecLeg): string {
   const name = `${leg.key}: ${leg.what}`
   if (name.length > MAX_BLOCK_NAME) {
@@ -226,8 +207,7 @@ export const blockFailedLine = (leg: ExecLeg, message: string): string =>
 // Commands and scripts
 // ---------------------------------------------------------------------------
 
-/** One `sh -c` command line. The body is quoted so the whole script reaches
- *  the interpreter as a single argument after the Block's shell-style split. */
+/** One `sh -c` command line, quoted so the script survives the Block's shell-style split as one argument. */
 export const shellCommand = (body: string): string => `sh -c "${body}"`
 
 /** Write a file in the pod. No content here ever carries a quote. */
@@ -296,8 +276,7 @@ export const TOO_MANY_REASON = 'ArchiveTooManyEntries'
 /** The apiserver's own sentence for a pod that is not there. */
 export const podNotFound = (pod: string): string => `pods "${pod}" not found`
 
-/** The reason the cluster gives for a pod its exec fixture does not cover. The
- *  MESSAGE differs between the v4 and v5 transports, so nothing asserts it. */
+/** The reason the cluster gives for a pod its exec fixture does not cover; the message differs per transport, so it is not asserted. */
 export const NO_EXEC_REASON = 'InternalError'
 
 /** K8s Exec's own INFO line. */
@@ -343,8 +322,7 @@ export function goldenLegs(): ExecLeg[] {
 
 export const GOLDEN_STDOUT = 'golden-ok\n'
 
-/** KE-03 to KE-07: both streams, per-container targeting, a non-zero exit and
- *  the shell-style split. */
+/** KE-03 to KE-07: both streams, per-container targeting, a non-zero exit and the shell-style split. */
 export function commandLegs(): ExecLeg[] {
   return [
     {
@@ -451,9 +429,7 @@ export function hardFailLegs(): ExecLeg[] {
   ]
 }
 
-/** KE-11 to KE-14: two interpreters, a non-zero exit, and a recorded refusal.
- *  These run in the second exec-fixture pod, so the suite proves the selector
- *  grants both names. */
+/** KE-11 to KE-14: two interpreters, a non-zero exit and a recorded refusal, in the second exec-fixture pod. */
 export function scriptLegs(): ExecLeg[] {
   const base = { pod: EXEC_POD_B, container: CONTAINER_APP }
   return [
@@ -495,9 +471,7 @@ export function scriptLegs(): ExecLeg[] {
   ]
 }
 
-/** KE-15 to KE-17: a file out of the pod, a directory out of the pod, and a
- *  source path the pod does not hold. Each Copy leg follows the Exec leg that
- *  wrote what it takes. */
+/** KE-15 to KE-17: a file and a directory out of the pod, and a missing source path; each follows the Exec leg that wrote it. */
 export function pullLegs(ctx: ExecContext): ExecLeg[] {
   const dir = podDir(ctx)
   const seedDir = [
@@ -567,9 +541,7 @@ export function pullLegs(ctx: ExecContext): ExecLeg[] {
   ]
 }
 
-/** KE-19, KE-20: two pulls over the limit rows the sheets set. An earlier pull
- *  lands known bytes where the size pull's files land, so the refusal must put
- *  them back; the last leg removes the pod-side folders. */
+/** KE-19, KE-20: two pulls over the sheets' limits; the refusal must put the earlier pull's bytes back. */
 export function limitLegs(ctx: ExecContext): ExecLeg[] {
   const sizes = podFile(ctx, 'sizes')
   const prior = podFile(ctx, 'prior')
@@ -640,8 +612,7 @@ export function limitLegs(ctx: ExecContext): ExecLeg[] {
   ]
 }
 
-/** KE-18: an artifact an earlier Block wrote is pushed into the pod, and a
- *  K8s Exec reads it back out. */
+/** KE-18: an artifact an earlier Block wrote is pushed into the pod and read back by a K8s Exec. */
 export function pushLegs(ctx: ExecContext): ExecLeg[] {
   return [
     {
@@ -752,8 +723,7 @@ function blockNode(leg: ExecLeg, bindings: Record<string, string>): WorkflowNode
   })
 }
 
-/** Which outputs a leg binds, and the variable each one declares. Every leg
- *  binds EVERY output its Block declares outside the Record gate. */
+/** Which outputs a leg binds: every output its Block declares outside the Record gate. */
 function legBindings(
   leg: ExecLeg,
   variables: Record<string, FixtureVariable>,
@@ -805,8 +775,7 @@ function defaultMarker(leg: ExecLeg): WorkflowNode {
   })
 }
 
-/** Build a whole proof: the Connect Block, one Block plus one marker per leg,
- *  and the bookend. */
+/** Build a whole proof: the Connect Block, one Block and marker per leg, and the bookend. */
 export function buildExecFixture(
   legs: readonly ExecLeg[],
   material: ExecMaterial,
@@ -891,8 +860,7 @@ export function expectSuccess(vars: SessionVariables, key: string): void {
   expect(okOf(vars, key), `${key} must report success true`).toBe(true)
 }
 
-/** Every output an Exec or Script leg declares, asserted whole: both streams,
- *  the exit code and the success flag. */
+/** Every output an Exec or Script leg declares, asserted whole. */
 export function expectStreams(
   vars: SessionVariables,
   key: string,
@@ -904,8 +872,7 @@ export function expectStreams(
   expectSuccess(vars, key)
 }
 
-/** The core a recorded failure reports: success false and the cluster's own
- *  reason. Returns the error sentence so the caller can match it. */
+/** The core a recorded failure reports; returns the error sentence for the caller to match. */
 export function expectRecordedCore(
   vars: SessionVariables,
   key: string,
@@ -925,8 +892,7 @@ export function expectEmptyStreams(vars: SessionVariables, key: string): void {
   expect(exitOf(vars, key), `${key} exit code`).toBe(0)
 }
 
-/** The Summary a Copy leg bound: the three columns it always declares and
- *  their types, whatever the copy did. */
+/** The Summary a Copy leg bound: its three columns and their types, whatever the copy did. */
 export function copySummary(vars: SessionVariables, key: string): WaveTable {
   const found = cell(vars, summaryVar(key))
   expect(found.type, `${key} Summary must be a table`).toBe('table')
@@ -960,9 +926,7 @@ export function expectEmptyCopy(vars: SessionVariables, key: string): void {
 const warningsIn = (entries: readonly LogEntry[]): string[] =>
   entries.filter((entry) => entry.level === 'WARN').map((entry) => entry.message)
 
-/** Exactly one WARN line, the one this recorded failure writes. The console
- *  trims every entry it renders and a command's own stderr can end in a
- *  newline, so the expected line is trimmed too. */
+/** Exactly one WARN line, trimmed as the console trims every entry it renders. */
 export function expectRecordedWarning(
   entries: readonly LogEntry[],
   action: ExecAction,
@@ -1008,8 +972,7 @@ export function expectLine(logs: readonly string[], expectedLine: string): void 
   ).toBeTruthy()
 }
 
-/** Every leg's Block carries the status its case declares: amber for a
- *  recorded failure, green otherwise. */
+/** Every leg's Block shows its declared status: amber for a recorded failure, green otherwise. */
 export async function expectLegStatuses(page: Page, legs: readonly ExecLeg[]): Promise<void> {
   for (const leg of legs) {
     await expectNodeStatus(page, nodeId(leg), leg.records ? 'warning' : 'success')

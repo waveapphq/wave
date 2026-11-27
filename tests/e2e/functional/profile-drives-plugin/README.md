@@ -81,9 +81,8 @@ spec's `test.describe` title, so a failure names the profile type that broke.
   (true in `profile-opensearch.json`, false in
   `profile-opensearch-apikey.json`)) are declared in the JSON: they
   are the values under test, not environment material.
-- The host constants are already mode-aware (`10.0.2.2` under
-  `WAVE_E2E_EXTERNAL_SERVICES=1`, `127.0.0.1` otherwise), so the profile is
-  built for the right mode directly. The `injectSsh` / `injectHttp` import
+- The host constants are already the slirp gateway `10.0.2.2` a shard reaches
+  the services at, so the profile is built with them directly. The `injectSsh` / `injectHttp` import
   options rewrite the FIXTURE, and here the endpoint lives in the profile, so
   neither option is used.
 
@@ -164,7 +163,7 @@ spec's `test.describe` title, so a failure names the profile type that broke.
   referencing cannot be deleted) and then asserts the profile is gone. No
   existing profile is reused or mutated.
 - `importFixtureTest` uniquifies every test name, and runs execute in the
-  per-worker workbench session the worker fixture frees afterwards.
+  workbench session the worker fixture frees afterwards.
 - The suites only READ: `/echo` and the tls-lab listener hold no per-request
   state, the kubernetes suite reads `/version` only, so it creates no
   cluster object and needs no per-test namespace, and the database suite reads

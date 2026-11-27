@@ -9,7 +9,7 @@ remote-exec).
   `http-target`); shared env `E2E Execution Env`.
 
 ## Execution
-Imports `fixture.json` (SSH host injected per mode), validates (zero errors), opens it in the
+Imports `fixture.json` (SSH host injected), validates (zero errors), opens it in the
 workbench, runs it once.
 
 ## Validation

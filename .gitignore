@@ -47,7 +47,7 @@ skills-lock.json
 CLAUDE.local.md
 .claude/
 
-# Logs and artifacts of the local CI scripts
+# Logs and artifacts of the gate scripts
 ci-output/
 
 # E2E test outputs

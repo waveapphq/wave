@@ -1,6 +1,5 @@
 #!/bin/bash
-# Gate 15: the Playwright suite across podman containers, each with its own backend and one
-# Playwright worker: a list of spec files split across up to 8 shards, or the full suite.
+# Gate 15: the Playwright suite, or a list of spec files, split across podman containers of one worker each.
 #
 # Usage: ./scripts/gate/15-playwright.sh <spec path relative to tests/e2e> ...
 #        ./scripts/gate/15-playwright.sh full
@@ -70,6 +69,16 @@ for i in "${!SPECS[@]}"; do
   fi
 done
 [ "${#MISSING[@]}" -eq 0 ] || result 2 "spec not found: ${MISSING[*]}"
+
+[ -f "$E2E_DIR/package.json" ] || result 2 "E2E directory not found: $E2E_DIR"
+
+# The planner lists specs with the E2E Playwright CLI, and the shards use the host's node_modules.
+for dir in "$FRONTEND_DIR" "$E2E_DIR"; do
+  if [ ! -d "$dir/node_modules" ]; then
+    echo "📦 Installing npm dependencies in ${dir#"$PROJECT_ROOT"/}..."
+    (cd "$dir" && npm ci) || result 1 "the run stopped early"
+  fi
+done
 
 # Container runtime tunables - sized for a 32-core host by default.
 TOTAL_CORES=$(nproc)
@@ -237,29 +246,11 @@ else
 fi
 echo ""
 
-if [ ! -f "$E2E_DIR/package.json" ]; then
-  RESULT_CODE=2
-  RESULT_REASON="E2E directory not found: $E2E_DIR"
-  exit 2
-fi
-
 if ! podman image exists "$IMAGE_NAME"; then
   echo "Build the E2E CI image with: ./scripts/images/build-e2e-image.sh"
   RESULT_CODE=2
   RESULT_REASON="E2E CI image not found: $IMAGE_NAME"
   exit 2
-fi
-
-# The containers mount the project, so the shards use the host's node_modules.
-cd "$FRONTEND_DIR" || exit 2
-if [ ! -d "node_modules" ]; then
-  echo "📦 Installing frontend npm dependencies..."
-  npm ci || exit 1
-fi
-cd "$E2E_DIR" || exit 2
-if [ ! -d "node_modules" ]; then
-  echo "📦 Installing E2E npm dependencies..."
-  npm ci || exit 1
 fi
 
 cleanup_containers

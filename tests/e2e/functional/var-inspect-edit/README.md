@@ -7,8 +7,8 @@ the field's Open editor opens.
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 
 ## V-VMGR-06-EDIT
 

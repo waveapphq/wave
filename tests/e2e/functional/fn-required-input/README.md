@@ -12,7 +12,7 @@ Spec: `v-fn-required-input-functional.spec.ts`.
 
 ## Pre-requisites
 
-- Backend and frontend on the per-worker ports (Playwright fixtures).
+- Backend and frontend on the shard's ports (Playwright fixtures).
 - The shared environment `E2E Execution Env` (provisioned by `ensureEnvironment`).
 - No stack services.
 - Seeds (API): `zz-` library Functions with a Required string input and a body Log printing

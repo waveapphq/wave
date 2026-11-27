@@ -548,7 +548,7 @@ export default defineConfig({
   // Store all test artifacts in tests/e2e/playwright-artifacts/ (gitignored)
   outputDir: './playwright-artifacts/test-results',
 
-  // Fallback; playwright-fixtures.ts sets each worker's baseURL.
+  // The shard's own frontend.
   use: {
     baseURL: `http://localhost:${FRONTEND_PORT}`,
     actionTimeout: 15_000,

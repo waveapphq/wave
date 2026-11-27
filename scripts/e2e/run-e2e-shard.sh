@@ -1,32 +1,15 @@
 #!/bin/bash
-# Entrypoint for a single E2E shard running inside a wave-e2e container.
+# One E2E shard in a wave-e2e container: its own backend and frontend, then the functional and visual dark tests.
 #
-# Starts a fully isolated stack:
-#   - uvicorn backend on 127.0.0.1:8000 with its own WAVE_STORAGE_BASE_PATH
-#     and its own config file (the example with a throwaway key, WAVE_CONFIG_FILE)
-#   - vite preview on 127.0.0.1:3000 serving the pre-built frontend bundle
-# HTTP/TLS/proxy and Netcat targets are shared compose services (see
-# tests/e2e/services/), reached over the slirp gateway like the SSH stack.
-# Then runs, in order:
-#   1. tsc type-check of tests/e2e (shard 1 of a full-suite run only, no spec list)
-#   2. playwright functional tests (planned bin; --shard=K/N without a profile)
-#   3. playwright visual dark-theme tests (same; empty-db-dark once per run)
-#
-# Each shard has its own PID namespace + network namespace + cgroup, so
-# there is zero cross-shard interference: no shared DB, no shared session,
-# no shared CPU time. Combined with --cpuset-cpus on `podman run` this
-# eliminates the CPU contention + seed race conditions that flaked the
-# old host-side N-stack layout.
-#
-# Required env vars (set by scripts/gate/15-playwright.sh):
-#   SHARD_INDEX     - 1-based shard number (1..SHARD_TOTAL)
-#   SHARD_TOTAL     - total number of shards
-#   ARTIFACTS_DIR   - absolute path (inside container) for test results,
-#                     defaults to /artifacts. The orchestrator mounts a
-#                     per-shard host dir here so traces/screenshots for
-#                     each shard land in their own directory.
+# Callers: scripts/gate/15-playwright.sh and scripts/e2e/e2e-targeted-local.sh.
+# Required env vars:
+#   SHARD_INDEX          1-based shard number (1..SHARD_TOTAL)
+#   SHARD_TOTAL          total number of shards
 # Optional:
-#   WAVE_E2E_SPECS  - comma-separated spec paths relative to tests/e2e
+#   ARTIFACTS_DIR        test results folder inside the container (default /artifacts)
+#   WAVE_E2E_SPECS       comma-separated spec paths relative to tests/e2e
+#   TARGET_SPECS         space-separated functional spec paths; targeted mode, no type check
+#   TARGET_VISUAL_SPECS  space-separated visual spec paths; targeted mode, no type check
 #
 # Exit code: non-zero if either the functional or visual run failed.
 
@@ -68,23 +51,17 @@ DATA_DIR="$(dirname "$(mktemp -u)")/wave-shard-data"
 CONFIG_FILE="${DATA_DIR}.config.yaml"
 mkdir -p "$DATA_DIR" "$ARTIFACTS_DIR"
 
-# Per-shard fixed ports. Each container has its own network namespace so
-# every shard can bind 8000/3000 without collision.
+# Fixed ports: each shard container has its own network namespace.
 BE_PORT=8000
 FE_PORT=3000
 
-# The SSH/Remote suites talk to the shared compose stack on the host loopback,
-# reached from inside the shard via the slirp gateway (the shard is launched with
-# --network slirp4netns:allow_host_loopback=true). SSH_TARGET_HOST is injected
-# into SSH fixtures by the test harness (helpers/config.ts + fixture-import.ts).
+# The shared compose stack on the host loopback, reached over the slirp gateway.
 SSH_TARGET_HOST=10.0.2.2
 SSH_MAIN_PORT=9445
 SSH_NO_SFTP_PORT=9447
 SSH_NO_FWD_PORT=9448
 
-# HTTP-side compose services publish on the same gateway (config.ts defaults
-# HTTP_TARGET_HOST=10.0.2.2 in this mode - no export needed). Gate ports only.
-# netcat-echo is reached as SSH_TARGET_HOST; gated on TCP (UDP has no accept).
+# HTTP-side services on the same gateway; config.ts already defaults HTTP_TARGET_HOST to it.
 HTTP_ECHO_PORT=9449
 TLS_LAB_PORT=9454
 PROXY_PORT=9458
@@ -111,20 +88,13 @@ WAVE_LOG_LEVEL=WARN \
 BE_PID=$!
 
 # ---------------------------------------------------------------------------
-# Start frontend (vite preview) - bundle already built on host and mounted.
-# The build has VITE_API_BASE_URL=http://localhost:8000 baked in, which is
-# exactly what the browser sees inside the container network namespace.
+# Start frontend (vite preview) of the bundle built on the host and mounted.
 # ---------------------------------------------------------------------------
 log "starting frontend (vite preview) on 127.0.0.1:${FE_PORT}"
 cd /workspace/frontend
 "${VITE[@]}" preview --outDir build --port "$FE_PORT" --strictPort --host 127.0.0.1 \
   > "$ARTIFACTS_DIR/frontend.log" 2>&1 &
 FE_PID=$!
-
-# The SSH/Remote suites run against the shared compose stack (real sshd +
-# interpreters, nested jump host, internal HTTP target), brought up on the host
-# by scripts/gate/15-playwright.sh before the shards launch and reached here over the
-# slirp gateway. This shard starts no SSH service of its own.
 
 # ---------------------------------------------------------------------------
 # Clean shutdown on exit, even on failure.
@@ -174,9 +144,7 @@ wait_for_url() {
   return 1
 }
 
-# TCP-accept gate for the compose stack's published sshd ports (no HTTP health;
-# the host already brought the stack up healthy - this is the shard's reachability
-# check over the slirp gateway).
+# Reachability over the slirp gateway of a compose port that has no HTTP health check.
 wait_for_tcp() {
   local name="$1" host="$2" port="$3"
   local deadline=$(( $(date +%s) + 60 ))
@@ -205,15 +173,9 @@ wait_for_tcp netcat-echo "$SSH_TARGET_HOST" "$NETCAT_TCP_ECHO_PORT" || exit 1
 log "all services ready"
 
 # ---------------------------------------------------------------------------
-# Export test-config env for every Playwright invocation.
-#
-# WAVE_E2E_EXTERNAL_SERVICES=1 points the helpers at the shard's services.
-# WAVE_E2E_N_STACKS=1 collapses per-worker stack routing to a single
-# target (127.0.0.1:8000/3000) - matches what we actually started.
+# Test config env for every Playwright run.
 # ---------------------------------------------------------------------------
 cd /workspace/tests/e2e
-export WAVE_E2E_EXTERNAL_SERVICES=1
-export WAVE_E2E_N_STACKS=1
 export WAVE_E2E_BACKEND_PORT="$BE_PORT"
 export WAVE_E2E_FRONTEND_PORT="$FE_PORT"
 export SSH_TARGET_HOST="$SSH_TARGET_HOST"

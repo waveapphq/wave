@@ -29,7 +29,7 @@ blocks and the default lanes of each lane control).
 - The scopes spec's Remote Execution case needs the `sshd` service of the
   real-service stack (see `tests/e2e/services/README.md`); the fixture carries
   the `127.0.0.1` sentinel in the SSH Session Open Host row and
-  `injectServiceHost` rewrites it per mode. User and password are the
+  `injectServiceHost` rewrites it. User and password are the
   `helpers/config.ts` constants.
 
   ```bash

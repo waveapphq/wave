@@ -7,8 +7,8 @@ both the Visual and the Code view, so Save is held the same way; the rules mirro
 
 ## Pre-requisites
 
-- Backend on the per-worker port (Playwright fixtures).
-- Frontend on the matching per-worker port.
+- Backend on the shard's port (Playwright fixtures).
+- Frontend on the shard's frontend port.
 
 ## Execution Steps
 
