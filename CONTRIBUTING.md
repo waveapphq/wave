@@ -113,7 +113,7 @@ Each script prints one result line, such as `08 Backend tests: passed` or `08 Ba
 
 The frontend tests fail below 100% coverage of lines, branches and statements. They also fail when a test writes a warning to stderr.
 
-While the tests run, gates 08, 09 and 15 print a line such as `Progress: 40%` once a minute. The Playwright line gives each container its own share, such as `Progress: shard 1/8 40%, shard 2/8 35%`. Set `WAVE_CI_PROGRESS_SECONDS` to print the line at another interval, in seconds. Gate 09 also prints each failed test, with its file and its error, as soon as it fails, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`.
+While the tests run, gate 08 prints a line such as `Progress: 40%` each time pytest's percentage changes, and gates 09 and 15 print one once a minute. The Playwright line gives each container its own share, such as `Progress: shard 1/8 40%, shard 2/8 35%`. Set `WAVE_CI_PROGRESS_SECONDS` to print the line at another interval, in seconds. Gate 09 also prints each failed test, with its file and its error, as soon as it fails, and ends with the line `Tests: <passed> passed, <failed> failed, <skipped> skipped (<files> files)`.
 
 The text checks fail on spelling that `typos.toml` does not allow, on an em or en dash in any text file that `.gitignore` does not exclude, and on a reference to a roadmap, a phase, a session or a ticket in a source comment, a Python docstring or a line of a `/* */` comment. They never fail on `REQ-*`, design IDs or `COV-*`. `poetry install` in `backend/` installs `typos`, the tool of the first check, at the version that `backend/poetry.lock` pins. Its settings are in `typos.toml`. Fix each line that the checks list.
 

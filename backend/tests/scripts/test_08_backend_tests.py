@@ -234,10 +234,10 @@ class TestCoveragePaths:
 
 
 class TestProgress:
-    """A progress line every WAVE_CI_PROGRESS_SECONDS while the tests run."""
+    """pytest's own percentage as Progress lines, one each time the number changes."""
 
     def test_progress_lines_are_printed(self, repo: Repo, stubs: Stubs, tmp_path: Path) -> None:
-        result = backend_ci(repo, stubs, tmp_path, WAVE_CI_PROGRESS_SECONDS="1")
+        result = backend_ci(repo, stubs, tmp_path)
 
         assert result.code == 0, result.lines
         progress = [line for line in result.lines if line.startswith("Progress:")]
@@ -245,13 +245,20 @@ class TestProgress:
         for line in progress:
             assert line in STUB_PROGRESS, line
 
-    def test_the_default_interval_prints_nothing_in_a_short_run(
+    def test_each_percentage_shows_once_in_order(
         self, repo: Repo, stubs: Stubs, tmp_path: Path
     ) -> None:
-        result = backend_ci(repo, stubs, tmp_path, STUB_PYTEST_PAUSE="0.2")
+        result = backend_ci(repo, stubs, tmp_path)
 
-        assert result.code == 0, result.lines
-        assert not [line for line in result.lines if line.startswith("Progress:")]
+        progress = [line for line in result.lines if line.startswith("Progress:")]
+        assert progress == sorted(set(progress), key=lambda line: int(line[10:-1])), progress
+
+    def test_no_row_of_dots_reaches_the_screen(
+        self, repo: Repo, stubs: Stubs, tmp_path: Path
+    ) -> None:
+        result = backend_ci(repo, stubs, tmp_path)
+
+        assert not [line for line in result.lines if line.rstrip().endswith("%]")], result.lines
 
 
 def logged_lines(result: Run) -> list[str]:
@@ -260,13 +267,13 @@ def logged_lines(result: Run) -> list[str]:
     return file_lines(Path(paths[0])) if paths else []
 
 
-# A green run with progress lines, one stopped inside the default interval, and a red run.
+# A green run, a short green run and a red run.
 STOP_CASES = [
-    {"WAVE_CI_PROGRESS_SECONDS": "1"},
+    {},
     {"STUB_PYTEST_PAUSE": "0.2"},
-    {"WAVE_CI_PROGRESS_SECONDS": "1", "STUB_FAIL": "pytest"},
+    {"STUB_FAIL": "pytest"},
 ]
-STOP_IDS = ["progress-lines", "default-interval", "failing-tests"]
+STOP_IDS = ["green", "short-run", "failing-tests"]
 
 # The real pkill, then a pause: a shell that reports a killed job always has time to print it,
 # as on a busy machine, so the report shows up on every run and not only when the race is lost.

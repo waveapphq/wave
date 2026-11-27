@@ -49,7 +49,7 @@ wave-new-secret-key = "wavecore.core.secrets.key_provider:print_new_secret_key"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
-pytest-asyncio = "^0.24.0"
+pytest-asyncio = "^1.5.0"
 mypy = "^1.13.0"
 black = "^24.10.0"
 ruff = "^0.8.2"
@@ -87,6 +87,8 @@ addopts = [
 data_file = ".coverage/.coverage"
 parallel = true
 source = ["wavecore"]
+# sys.monitoring tracer: much cheaper than the C tracer on Python 3.12 (line coverage only).
+core = "sysmon"
 
 [tool.black]
 line-length = 100
