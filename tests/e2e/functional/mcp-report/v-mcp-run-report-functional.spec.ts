@@ -46,7 +46,7 @@ import {
 } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const TERMINAL_STATUSES = ['passed', 'failed', 'stopped']

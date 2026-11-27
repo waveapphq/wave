@@ -192,7 +192,7 @@ function blockOf(fixture: Fixture, description: string): FixtureNode {
   return found[0]
 }
 
-/** Each Aggregate dials the host-mode address as `wave` and stores no secret; the password and CA come from config. */
+/** Each Aggregate carries the 127.0.0.1 address, logs in as `wave` and stores no secret; the password and CA come from config. */
 function prepareFixture(fixture: Fixture): Fixture {
   const blocks = fixture.workflow.nodes.filter((node) => node.data.elementType === 'opensearch')
   expect(blocks.map((node) => node.data.description), 'one Aggregate per case, in case order').toEqual(
@@ -203,7 +203,7 @@ function prepareFixture(fixture: Fixture): Fixture {
     const values = node.data.config.values
     const what = `"${c.block}"`
     expect(node.data.label, `${what} is named as it is described`).toBe(c.block)
-    expect(values.url, `${what} carries the host-mode address the import rewrites`).toBe(DIRECT_URL)
+    expect(values.url, `${what} carries the 127.0.0.1 address the import rewrites`).toBe(DIRECT_URL)
     expect(values.index, `${what} reads the run's own index`).toBe(openSearchIndexName(token, c.index))
     expect(values.username, `${what} logs in as wave`).toBe(OPENSEARCH_USER)
     expect(values.mode, `${what} aggregates`).toBe('aggregate')

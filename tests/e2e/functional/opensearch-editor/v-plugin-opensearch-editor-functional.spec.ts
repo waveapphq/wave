@@ -137,7 +137,7 @@ const RUN_PATTERN = openSearchIndexName(TOKEN, '*')
 const LIMITED_PATTERN = 'wave-e2e-*'
 
 const CLUSTER_URL = `https://${OPENSEARCH_TARGET_HOST}:${OPENSEARCH_PORT}`
-/** Nothing listens on 9479, inside a shard container as on the host. */
+/** Nothing listens on 9479. */
 const UNREACHABLE_REASON =
   'Could not connect to OpenSearch at 127.0.0.1:9479: [Errno 111] Connection refused'
 const FIELDS_FAILED = 'Could not get fields'

@@ -46,7 +46,7 @@ import { getActiveSessionId, getSessionVariables } from '../../helpers/fixture-i
 import { enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
 import { selectEnvironment } from '../../helpers/workbench'
 
-// One MCP port per stack so host-mode parallel workers never collide (8765, 8766, ...).
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const BASE_NAME = 'Recipe E2E Branch Loop Assert'

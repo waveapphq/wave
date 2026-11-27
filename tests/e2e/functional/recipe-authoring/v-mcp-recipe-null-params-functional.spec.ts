@@ -36,7 +36,7 @@ import { deleteTest, getTest, runToken } from '../../helpers/element-types'
 import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers/mcp'
 import { resetOwnership } from '../../helpers/ownership'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const TERMINAL = ['passed', 'failed', 'stopped', 'skipped']

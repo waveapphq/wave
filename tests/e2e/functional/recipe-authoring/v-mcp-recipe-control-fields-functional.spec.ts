@@ -45,7 +45,7 @@ import { resetOwnership } from '../../helpers/ownership'
 import { SECRET_ENVELOPE } from '../../helpers/secret-canary'
 import { openBlockSheet } from '../../helpers/workbench'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const BASE_NAME = 'zz-mcp-recipe-control-fields-base'

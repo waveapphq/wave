@@ -18,7 +18,7 @@ section's `then` egress.
 
 ## Steps
 
-1. Enable the MCP listener until-restart via `PUT /mcp/settings` (per-stack port)
+1. Enable the MCP listener until-restart via `PUT /mcp/settings` (backend port + 765)
 2. Run `validate_recipe` over the live endpoint (dry-run)
 3. Run `create_test_from_recipe` over the live endpoint
 4. `POST /tests/{id}/validate` and inspect the persisted workflow via `GET /tests/{id}`
@@ -115,7 +115,7 @@ keeps every untouched block in place and leaves no two blocks overlapping
 
 ## Steps
 
-1. Enable the MCP listener until-restart via `PUT /mcp/settings` (per-stack port)
+1. Enable the MCP listener until-restart via `PUT /mcp/settings` (backend port + 765)
 2. `create_test_from_recipe` with three log blocks: a 28-character label, a
    51-character label and an unlabeled block
 3. Read the stored widths via `GET /tests/{id}`

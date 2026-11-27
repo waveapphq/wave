@@ -58,7 +58,7 @@ import { expandVariableManager, variableRow } from '../../helpers/variable-creat
 import { IMPORT_LEGS, runImportLeg } from './import-secrets-harness'
 
 const HTTP_BLOCK = 'http-secret'
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 771
 const NULL_PASSWORD = "'auth_password' is null"
 const FOREIGN_WARNING =

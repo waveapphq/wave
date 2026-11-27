@@ -20,7 +20,7 @@ amend loop refuses it instead of silently deleting blocks.
 
 1. Import the fixture via `POST /tests` and confirm `POST /tests/{id}/validate`
    reports zero errors
-2. Enable the MCP listener until-restart via `PUT /mcp/settings` (per-stack port)
+2. Enable the MCP listener until-restart via `PUT /mcp/settings` (backend port + 765)
 3. Run `get_test_recipe` over the live endpoint
 4. For the switch fixture, feed the readback recipe straight back into
    `amend_test_from_recipe`

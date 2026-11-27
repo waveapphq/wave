@@ -26,7 +26,7 @@ answer against what the backend stores, as `GET /suites/<id>` (and, for
 Each spec names its entities `zz-mcp-<tool>-<n>` and seeds what it reads
 through the backend API, never through MCP. Before and after each test it
 deletes every Regression, Suite and Test whose name starts with its own
-prefix. The MCP listener runs until-restart on a per-stack port and is reset
+prefix. The MCP listener runs until-restart on the backend port + 765 and is reset
 in teardown. The shared variables reveal is turned on only for one read of a
 secret's stored value and turned off right after.
 

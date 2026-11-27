@@ -30,7 +30,7 @@ import { callTool, enableMcpUntilRestart, resetMcpSettings } from '../../helpers
 import { resetOwnership } from '../../helpers/ownership'
 import { openConfig } from '../canvas-lanes/lanes-helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const TARGET_URL = `https://${HTTP_TARGET_HOST}:${HTTP_MAIN_PORT}/health`
 

@@ -11,7 +11,7 @@ same record as an unwatched one).
 
 - Backend and frontend running (standard functional-stack ports)
 - Shared E2E environment present (created by `ensureEnvironment` at test start)
-- MCP specs enable the listener until-restart on the per-stack port
+- MCP specs enable the listener until-restart on the MCP port
   (backend port + 765) and drive it through
   `../recipe-authoring/mcp_tool_client.py` in the backend poetry env
 

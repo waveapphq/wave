@@ -162,7 +162,7 @@ function prepareFixture(fixture: Fixture): Fixture {
     expect(expressionFields, `${what} expression rows (save rule 2)`).toEqual(
       EXPRESSION_ROWS[description] ?? [],
     )
-    expect(config.values.url, `${what} carries the host-mode address the import rewrites`).toBe(DIRECT_URL)
+    expect(config.values.url, `${what} carries the 127.0.0.1 address the import rewrites`).toBe(DIRECT_URL)
     expect(config.values.username, `${what} logs in as wave`).toBe(OPENSEARCH_USER)
     expect(config.values.verify_ssl, `${what} verifies the certificate`).toBe(true)
     expect(config.values.on_error, `${what} fails the block on error`).toBe('fail')

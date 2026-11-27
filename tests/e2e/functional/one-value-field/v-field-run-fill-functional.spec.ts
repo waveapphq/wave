@@ -79,7 +79,7 @@ import { runToEnd, saveTest, selectEnvironment } from '../../helpers/workbench'
 import { dropUnderLane } from '../canvas-lanes/lanes-helpers'
 import { consoleEntriesFromCopy } from '../shell-blocks/shell-helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const ECHO_URL = `https://${HTTP_TARGET_HOST}:${HTTP_MAIN_PORT}/echo`

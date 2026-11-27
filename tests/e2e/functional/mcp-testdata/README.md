@@ -28,12 +28,12 @@ Each test creates its own Test - imported from `fixture.json` or created through
 delete cascades and removes that test's data folder. Uploads go through
 `POST /tests/{id}/testdata/upload`, one file per request, with the multipart
 fields in the order `path`, `replace`, then the file part. The MCP listener runs
-until-restart on a per-stack port and is reset in teardown. No server state is
+until-restart on the backend port + 765 and is reset in teardown. No server state is
 reset and no other shard is affected.
 
 ## Steps
 
-1. Enable the MCP listener until-restart via `PUT /mcp/settings` (per-stack port)
+1. Enable the MCP listener until-restart via `PUT /mcp/settings` (backend port + 765)
 2. Import `fixture.json`, upload one file through the HTTP API, and list it back
    with `list_testdata`
 3. Create a folder, write a text file, a base64 file and a scratch file, retry

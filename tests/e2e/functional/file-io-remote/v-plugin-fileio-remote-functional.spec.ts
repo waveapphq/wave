@@ -109,7 +109,7 @@ function nodeOf(fixture: Fixture, id: string): FixtureNode {
 /** The SSH block must carry the harness constants, not a copy that drifted. */
 function expectStackSshTarget(fixture: Fixture): void {
   const values = nodeOf(fixture, 'open-session').data.config.values
-  expect(values.host, 'the fixture carries the host-mode sentinel the import helper rewrites').toBe(
+  expect(values.host, 'the fixture carries the 127.0.0.1 sentinel the import helper rewrites').toBe(
     SSH_FIXTURE_HOST_SENTINEL,
   )
   expect(String(values.port), 'the fixture targets the stack sshd port').toBe(SSH_MAIN_PORT)

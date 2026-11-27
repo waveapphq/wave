@@ -56,7 +56,7 @@ import {
   type ViewSample,
 } from './helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 const RECIPE_PATH = path.resolve(__dirname, 'recipe-watch-build.yaml')
 const CLIENT_PATH = path.resolve(__dirname, '../recipe-authoring/mcp_recipe_client.py')

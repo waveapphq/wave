@@ -42,7 +42,7 @@ import { callTool, callToolAsync, enableMcpUntilRestart, resetMcpSettings } from
 import { SEL, ownershipState, resetOwnership, waitUntilHeld } from '../../helpers/ownership'
 import { openHolder, openWatcher, recordView, uniqueName, viewSamples, type ViewSample } from '../watch-mode/helpers'
 
-// One MCP port per stack so host-mode parallel workers never collide.
+// The MCP listener port sits 765 above the shard backend port.
 const MCP_PORT = Number(BACKEND_PORT) + 765
 
 const CONNECT = 'Connect to App Server'

@@ -7,8 +7,7 @@
  *
  * One workflow chains every local permutation. The loopback and the gateway answer echo; the
  * TEST-NET-1 address answers nowhere, so it carries every no-reply case. The gateway block carries
- * the 127.0.0.1 sentinel and the spec rewrites it to PING_GATEWAY_HOST, which is the loopback in
- * host mode and the slirp host gateway inside a shard container.
+ * the 127.0.0.1 sentinel and the spec rewrites it to PING_GATEWAY_HOST, the slirp host gateway.
  *
  * Pass Criteria:
  * 1. The fixture imports through POST /tests and validates with zero errors.
