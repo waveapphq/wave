@@ -357,6 +357,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: ./scripts/gate/10-sonar-backend.sh ${PR:+--pr "$PR"}
 
   sonar-frontend:
@@ -388,6 +389,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: ./scripts/gate/11-sonar-frontend.sh ${PR:+--pr "$PR"}
 
   sonar-exclusions:

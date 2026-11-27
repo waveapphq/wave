@@ -135,7 +135,7 @@ The scan goes to SonarQube Cloud, to the project `waveapphq_wave-backend` or `wa
 
 The scan stops when one of these is missing. To scan on another SonarQube server, set `SONAR_URL` to its address and `SONAR_TOKEN` to a token of that server.
 
-The check fails on a failed condition of the quality gate, on an issue or a security hotspot on a line your branch changed, and on `NOT PROVEN`, when the scan counted no line of the code your branch changed (exit 3). A coverage condition counts only once the coverage of gate 08 or 09 is on disk.
+The check fails on a failed condition of the quality gate, on an issue or a security hotspot on a line your branch changed, and on `NOT PROVEN`, when the scan counted no line of the code your branch changed (exit 3). On a fix or feature branch, changed lines count from its release branch; on master or a release branch, from that branch on origin. A coverage condition counts only once the coverage of gate 08 or 09 is on disk.
 
 ### The CodeQL check
 

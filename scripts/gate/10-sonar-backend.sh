@@ -2,6 +2,8 @@
 # Gate 10: the SonarQube scan of the backend with its quality gate, then its results report.
 # Fails on a failed gate condition (a coverage condition counts only once backend/coverage.xml
 # exists), on an issue or hotspot on a changed line, and on NOT PROVEN (exit 3).
+# Changed lines count from the pull request's base; on a GitHub push, from the commit before
+# the push (BEFORE_SHA). A push that creates the branch has no changed lines and no NOT PROVEN.
 #
 # Usage: ./scripts/gate/10-sonar-backend.sh [--pr <number>]
 #   --pr <number>  read that pull request's results, as GitHub CI does
@@ -55,15 +57,26 @@ fi
 # shellcheck source=../lib/sonar-env.sh
 source "$ROOT/scripts/lib/sonar-env.sh"
 
-# The changed lines are compared with the pull request's base, or the branch's release branch.
+# Changed lines: since the PR base, the pre-push commit, the release branch, origin's own branch, or origin/master.
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+NO_BEFORE="0000000000000000000000000000000000000000"
+BASE_REF=""
 if [ -n "${GITHUB_BASE_REF:-}" ]; then
   BASE_REF="origin/$GITHUB_BASE_REF"
+elif [ -n "${BEFORE_SHA:-}" ]; then
+  # A push that created the branch has no earlier commit, so no line counts as changed.
+  [ "$BEFORE_SHA" = "$NO_BEFORE" ] || BASE_REF="$BEFORE_SHA"
 elif [ -n "$SONAR_BRANCH_TARGET" ]; then
   BASE_REF="origin/$SONAR_BRANCH_TARGET"
+elif [ "$CURRENT_BRANCH" = "master" ] || [[ "$CURRENT_BRANCH" == release/* ]]; then
+  BASE_REF="origin/$CURRENT_BRANCH"
 else
   BASE_REF="origin/master"
 fi
-BASE_SHA="$(git merge-base HEAD "$BASE_REF" 2> /dev/null)" || result 2 "$BASE_REF is not in this clone; run git fetch origin"
+BASE_SHA=""
+if [ -n "$BASE_REF" ]; then
+  BASE_SHA="$(git merge-base HEAD "$BASE_REF" 2> /dev/null)" || result 2 "$BASE_REF is not in this clone; run git fetch origin"
+fi
 
 # The scanner reads SONAR_TOKEN from the environment, so the token stays off the command line.
 SCAN_ARGS=(-Dsonar.host.url="$SONAR_URL" -Dsonar.qualitygate.wait=true)
@@ -85,7 +98,7 @@ trap 'rm -rf "$REPORT_DIR"' EXIT
 REPORT="$REPORT_DIR/results.txt"
 "$ROOT/scripts/report/sonar-results-$PROJECT.sh" "${PR_ARGS[@]}" | tee "$REPORT"
 REPORT_EXIT=${PIPESTATUS[0]}
-if [ "$REPORT_EXIT" -eq 3 ]; then
+if [ "$REPORT_EXIT" -eq 3 ] && [ -n "$BASE_SHA" ]; then
   result 3 "NOT PROVEN: the scan analyzed 0 lines of changed code"
 fi
 [ "$REPORT_EXIT" -eq 0 ] || result 1 "the results report failed, exit $REPORT_EXIT"
@@ -105,7 +118,7 @@ counted = [c for c in failed if coverage_on_disk == "1" or "coverage" not in c]
 diff = subprocess.run(
     ["git", "diff", "-U0", "--no-renames", base, "HEAD", "--", f"{project}/"],
     capture_output=True, text=True, check=True,
-).stdout
+).stdout if base else ""
 changed, path = set(), None
 for line in diff.splitlines():
     if line.startswith("+++ "):

@@ -192,6 +192,18 @@ class TestCoverageArtifacts:
         assert len(names) == len(SONAR), names
 
 
+class TestSonarQubePushBase:
+    """A push's SonarQube job counts only the lines the push brought, from its previous commit."""
+
+    @pytest.mark.parametrize("name", list(SONAR))
+    def test_the_gate_step_gets_the_commit_before_the_push(self, name: str) -> None:
+        script = f"scripts/gate/{gate_file(int(name[:2]))}"
+        steps = [s for s in job(name).get("steps", []) if script in str(s.get("run", ""))]
+
+        assert len(steps) == 1, job(name)
+        assert steps[0].get("env", {}).get("BEFORE_SHA") == "${{ github.event.before }}", steps[0]
+
+
 GRAMMAR = "02 Grammar and Comments"
 # The jobs that install the backend's dependencies with Poetry.
 BACKEND_INSTALLS = ["04 Backend static", "08 Backend tests"]

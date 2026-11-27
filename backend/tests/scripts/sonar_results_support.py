@@ -164,6 +164,8 @@ class FakeSonarQube:
     issues: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     hotspots: list[dict[str, Any]] = field(default_factory=list)
     failures: dict[str, int] = field(default_factory=dict)
+    # The gate of each branch the test names; a read of any other branch, or of none, gets gate.
+    branch_gates: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         p = self.project
@@ -219,7 +221,7 @@ class FakeSonarQube:
             measures = [{"metric": k, "value": v} for k, v in self.measures.items()]
             return 200, {"component": {"key": self.project.key, "measures": measures}}
         if path == GATE_PATH:
-            return 200, {"projectStatus": self.gate}
+            return 200, {"projectStatus": self.branch_gates.get(query.get("branch", ""), self.gate)}
         if path == ISSUES_PATH:
             types = query.get("types", "")
             wanted = types.split(",") if types else list(self.issues)
@@ -360,6 +362,51 @@ def run_results(
     env = {k: v for k, v in env.items() if v != ""}
     result = run(tree.repo, [str(tree.repo.root / tree.project.script), *args], env, timeout=60)
     return Results(result, fake)
+
+
+# A push to a release branch or master, as GitHub Actions runs it: no pull request, no target.
+PUSH_BRANCHES = [RELEASE, "master"]
+PUSH_IDS = ["release", "master"]
+
+
+def push_env(branch: str) -> dict[str, str]:
+    """The variables GitHub Actions sets for a push to the branch."""
+    return {
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_EVENT_NAME": "push",
+        "GITHUB_REF": f"refs/heads/{branch}",
+        "GITHUB_REF_NAME": branch,
+    }
+
+
+def passed_gate() -> dict[str, Any]:
+    return {
+        "status": "OK",
+        "conditions": [
+            {
+                "status": "OK",
+                "metricKey": "new_violations",
+                "comparator": "GT",
+                "errorThreshold": "0",
+                "actualValue": "0",
+            }
+        ],
+    }
+
+
+def failed_gate() -> dict[str, Any]:
+    return {
+        "status": "ERROR",
+        "conditions": [
+            {
+                "status": "ERROR",
+                "metricKey": "new_violations",
+                "comparator": "GT",
+                "errorThreshold": "0",
+                "actualValue": "14",
+            }
+        ],
+    }
 
 
 def lines_of_code(count: str) -> str:
@@ -654,6 +701,66 @@ class SonarResultsCases:
         assert got.has(r"^  ERROR fetching the quality gate: HTTP Error 500: .+$")
         for path in FINDING_PATHS:
             assert fake.requests_to(path) == [], f"read {path} after the error"
+
+    # --- A push to a release branch or master ---
+
+    @pytest.mark.parametrize("branch", PUSH_BRANCHES, ids=PUSH_IDS)
+    def test_push_run_reads_the_gate_of_the_pushed_branch(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project, branch: str
+    ) -> None:
+        if branch != "master":
+            tree.branch(branch, origin=False)
+        tree.change(project.code_file)
+        fake.gate = failed_gate()
+        fake.branch_gates[branch] = passed_gate()
+        got = run_results(tmp_path, tree, fake, **push_env(branch))
+        assert got.code == 0, "\n".join(got.lines)
+        reads = fake.requests_to(GATE_PATH)
+        assert len(reads) == 1
+        assert reads[0].query.get("projectKey") == project.key
+        assert reads[0].query.get("branch") == branch, reads[0]
+        assert "pullRequest" not in reads[0].query
+        gate = got.index("  Quality Gate:        OK")
+        assert got.lines[gate : gate + 2] == [
+            "  Quality Gate:        OK",
+            "    OK     new_violations: 0, fails above 0",
+        ]
+        assert "  Quality Gate:        ERROR" not in got.lines
+
+    @pytest.mark.parametrize("branch", PUSH_BRANCHES, ids=PUSH_IDS)
+    def test_push_run_scopes_every_read_and_the_dashboard_to_the_pushed_branch(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project, branch: str
+    ) -> None:
+        if branch != "master":
+            tree.branch(branch, origin=False)
+        tree.change(project.code_file)
+        got = run_results(tmp_path, tree, fake, **push_env(branch))
+        assert got.code == 0, "\n".join(got.lines)
+        assert dashboard(project, {"branch": branch}) in got.lines
+        for path in (MEASURES_PATH, GATE_PATH, ISSUES_PATH, HOTSPOTS_PATH, TREE_PATH):
+            assert fake.requests_to(path), f"no read of {path}"
+        for request in fake.requests:
+            if request.path in SCOPED_PATHS:
+                assert request.query.get("branch") == branch, request
+                assert "pullRequest" not in request.query, request
+
+    @pytest.mark.parametrize("branch", PUSH_BRANCHES, ids=PUSH_IDS)
+    def test_push_run_with_a_failed_gate_on_the_pushed_branch_prints_it(
+        self, tmp_path: Path, tree: Tree, fake: FakeSonarQube, project: Project, branch: str
+    ) -> None:
+        if branch != "master":
+            tree.branch(branch, origin=False)
+        tree.change(project.code_file)
+        fake.gate = passed_gate()
+        fake.branch_gates[branch] = failed_gate()
+        got = run_results(tmp_path, tree, fake, **push_env(branch))
+        assert got.code == 0, "\n".join(got.lines)
+        gate = got.index("  Quality Gate:        ERROR")
+        assert got.lines[gate : gate + 2] == [
+            "  Quality Gate:        ERROR",
+            "    ERROR  new_violations: 14, fails above 0",
+        ]
+        assert "  Quality Gate:        OK" not in got.lines
 
     # --- --pr <number> ---
 
