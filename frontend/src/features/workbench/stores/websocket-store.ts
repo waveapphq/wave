@@ -157,7 +157,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
     return _client.subscribe(topic, handler, options)
   },
 
-  subscribeAsync: async <T = unknown>(
+  subscribeAsync: <T = unknown>(
     topic: string,
     handler: EventHandler<T>,
     options?: SubscriptionOptions,
@@ -166,10 +166,10 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
     const { _client } = get()
     if (!_client) {
       // Return a no-op subscription if not connected
-      return {
+      return Promise.resolve({
         topic,
         unsubscribe: () => {},
-      }
+      })
     }
     return _client.subscribeAsync(topic, handler, options, timeout)
   },
